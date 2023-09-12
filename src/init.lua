@@ -14,7 +14,8 @@
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
-]]--
+]]
+--
 
 --// Services \\--
 local Players = game:GetService("Players")
@@ -27,12 +28,12 @@ local RunService = game:GetService("RunService")
 local Types = require(script.Types)
 local api = {}
 local baseSettings = {
-	commandPrefix = "!";
-	isChatCommandsEnabled = false;
-	minRank = 255;
-	maxRank = 255;
-	isUIEnabled = false;
-	overrideGroupCheckForStudio = false;
+	commandPrefix = "!",
+	isChatCommandsEnabled = false,
+	minRank = 255,
+	maxRank = 255,
+	isUIEnabled = false,
+	overrideGroupCheckForStudio = false,
 }
 
 --// Private Functions \\--
@@ -41,8 +42,15 @@ local baseSettings = {
 	 - Socket hang up is possible if the api key is invalid when trying to make a request!
 	* Params Route<string>, Method<string>, Headers<{[string]: any}>, Body<{any}?>
 	* Returns Success<boolean>, Response<{any}>
-]]--
-function api:Http(Route: string, Method: string?, Headers: {[string]: any}?, Body: {any}?, useNewApi: boolean?): (boolean, Types.httpResponse)
+]]
+--
+function api:Http(
+	Route: string,
+	Method: string?,
+	Headers: { [string]: any }?,
+	Body: { any }?,
+	useNewApi: boolean?
+): (boolean, Types.httpResponse)
 	Route = (typeof(Route) == "string") and Route or "/"
 	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
 	Headers = (typeof(Headers) == "table") and Headers or { ["Content-Type"] = "application/json" }
@@ -51,15 +59,15 @@ function api:Http(Route: string, Method: string?, Headers: {[string]: any}?, Bod
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
 
 	Headers["x-api-key"] = self.Settings.apiKey
-	
-    local apiToUse = (useNewApi == true) and self._private.newApiUrl or self._private.apiUrl
+
+	local apiToUse = (useNewApi == true) and self._private.newApiUrl or self._private.apiUrl
 	local Options = {
-		Url = apiToUse .. Route;
-		Method = Method;
-		Headers = Headers;
-		Body = (Body) and HttpService:JSONEncode(Body) or nil;
+		Url = apiToUse .. Route,
+		Method = Method,
+		Headers = Headers,
+		Body = Body and HttpService:JSONEncode(Body) or nil,
 	}
-	
+
 	local success, data = pcall(HttpService.RequestAsync, HttpService, Options)
 	local successBody, decodedBody = pcall(HttpService.JSONDecode, HttpService, data.Body)
 
@@ -74,7 +82,8 @@ end
 --[[
 	* Fetches the group associated with the api key.
 	* Returns groupId<number> - a number symbolizing the group identifier attached to the api key.
-]]--
+]]
+--
 function api:getGroupId()
 	if self.GroupId ~= -1 then
 		return self.GroupId
@@ -82,18 +91,19 @@ function api:getGroupId()
 
 	local isOk, res = self:Http("/ranking/groupid")
 	local Body: groupIdResponse = res.Body
-	return (isOk) and Body.groupId or -1
+	return isOk and Body.groupId or -1
 end
 
 --[[
 	* Uses roblox's group service to get a player's rank.
 	* Params groupId<number>, userId<number>
 	* Returns groupRank<number>
-]]--
-function api:getGroupFromUser(groupId: number, userId: number): {any}?
+]]
+--
+function api:getGroupFromUser(groupId: number, userId: number): { any }?
 	if self.Settings.overrideGroupCheckForStudio and RunService:IsStudio() then
 		return {
-			Rank = self.Settings.maxRank;
+			Rank = self.Settings.maxRank,
 		}
 	end
 
@@ -115,7 +125,8 @@ end
 --[[
 	* Handles players joining the game and connecting chatting event to them.
 	* Params Player<Player>
-]]--
+]]
+--
 function api:onPlayerAdded(Player: Player)
 	-- This is only here in case they toggle commands in the middle of a game.
 	if not self.Settings.isChatCommandsEnabled then
@@ -133,20 +144,24 @@ function api:onPlayerAdded(Player: Player)
 	-- disconnect them later on, this will stop any memory
 	-- leaks from occurring by vibez's api wrapper.
 
-	self._private.Maid[Player.UserId] = {};
-	table.insert(self._private.Maid[Player.UserId], Player.Chatted:Connect(function(message: string)
-		return self:onPlayerChatted(Player, message)
-	end))
+	self._private.Maid[Player.UserId] = {}
+	table.insert(
+		self._private.Maid[Player.UserId],
+		Player.Chatted:Connect(function(message: string)
+			return self:onPlayerChatted(Player, message)
+		end)
+	)
 end
 
 --[[
 	* Handles players leaving the game and disconnects any events.
 	* Params Player<Player>
-]]--
+]]
+--
 function api:onPlayerRemoved(Player: Player)
 	-- Remove player from validated staff table.
 	self._private.validStaff[Player.UserId] = nil
-	
+
 	-- Check for and delete any existing connections with the player.
 	if self._private.Maid[Player.UserId] == nil then
 		return
@@ -163,7 +178,8 @@ end
 	* Compares rank to min/max rank for commands or UI.
 	* Params rank<number>
 	* Returns isOk<boolean>
-]]--
+]]
+--
 function api:isPlayerRankOkToProceed(playerRank: number): boolean
 	return (playerRank >= self.Settings.minRank and playerRank <= self.Settings.maxRank)
 end
@@ -172,16 +188,18 @@ end
 	* Gets player's user identifers without needing to be in game.
 	* Params username<string>
 	* Returns userId<number?>
-]]--
+]]
+--
 function api:getUserIdByName(username: string): number
 	local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, username)
-	return (isOk) and userId or -1
+	return isOk and userId or -1
 end
 
 --[[
 	* Creates or fetches the current remote used for client communication.
 	* Returns Remote<RemoteEvent>
-]]--
+]]
+--
 function api:createRemote()
 	local currentRemote = ReplicatedStorage:FindFirstChild("__Vibez API__")
 
@@ -197,7 +215,8 @@ end
 --[[
 	* Handles the main chatting event.
 	* Params Player<Player>, message<string>
-]]--
+]]
+--
 function api:onPlayerChatted(Player: Player, message: string)
 	local args = string.split(message)
 	local commandPrefix = self.Settings.commandPrefix
@@ -251,8 +270,8 @@ end
 -- Sets the rank of an employee
 function api:SetRank(userId: string | number, rankId: string | number): Types.responseBody
 	local _, response = self:Http("/ranking/changerank", "post", nil, {
-		userId = tostring(userId);
-		rankId = tostring(rankId);
+		userId = tostring(userId),
+		rankId = tostring(rankId),
 	}, true)
 	return response.Body
 end
@@ -260,7 +279,7 @@ end
 -- Promotes an employee
 function api:Promote(userId: string | number): Types.responseBody
 	local _, response = self:Http("/ranking/promote", "post", nil, {
-		userId = tostring(userId);
+		userId = tostring(userId),
 	}, true)
 	return response.Body
 end
@@ -268,7 +287,7 @@ end
 -- Demotes an employee
 function api:Demote(userId: string | number): Types.responseBody
 	local _, response = self:Http("/ranking/demote", "post", nil, {
-		userId = tostring(userId);
+		userId = tostring(userId),
 	}, true)
 	return response.Body
 end
@@ -276,7 +295,7 @@ end
 -- Fires an employee
 function api:Fire(userId: string | number): Types.responseBody
 	local _, response = self:Http("/ranking/fire", "post", nil, {
-		userId = tostring(userId);
+		userId = tostring(userId),
 	}, true)
 	return response.Body
 end
@@ -296,10 +315,10 @@ end
 -- Updates the api key
 function api:UpdateKey(newApiKey: string): boolean
 	local savedKey = table.clone(self.Settings).apiKey
-	
+
 	self.Settings.apiKey = newApiKey
 	local groupId = self:getGroupId()
-	
+
 	if groupId == -1 and savedKey ~= nil then
 		self.Settings.apiKey = savedKey
 		warn(debug.traceback(`[Vibez]: New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
@@ -308,7 +327,7 @@ function api:UpdateKey(newApiKey: string): boolean
 		warn(debug.traceback(`[Vibez]: New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
 		return
 	end
-	
+
 	self.GroupId = groupId
 end
 
@@ -334,51 +353,56 @@ end
 -- Gets the player's current activity (NO CLUE IF THIS IS A ROUTE)
 function api:getActivity(userId: string | number)
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
-	
-	local isOk, response = self:Http('/activty/get', "activity", "post", nil, {
-		playerId = userId
-	})
+
+	local _, response = self:Http("/activty/get", "activity", "post", nil, {
+		playerId = userId,
+	}, true)
+
+	return response
 end
 
 -- Saves the player's current activity
-function api:saveActivity(userId: string | number, secondsSpent: number, messagesSent: (number | {string})?)
+function api:saveActivity(userId: string | number, secondsSpent: number, messagesSent: (number | { string })?)
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent or (messagesSent == nil) and 0 or messagesSent
-	
+
 	if not tonumber(messagesSent) then
 		warn(debug.traceback(`[Vibez]: Cannot save activity with an invalid 'number' as the 'messagesSent'!`, 2))
 		return
 	end
-	
+
 	if not tonumber(secondsSpent) then
 		warn(debug.traceback(`[Vibez]: 'secondsSpent' parameter is required for this function!`, 2))
 		return
 	end
-	
-	-- Response won't load on 9/12/2023
-	local isOk, response = self:Http('/activity/save', "activity", "post", nil, {
+
+	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
+
+	local _, response = self:Http("/activity/save", "activity", "post", nil, {
 		playerId = userId,
 		playtime = secondsSpent,
 		messageCount = messagesSent,
-		--joinTime = joinTime,
-		--leaveTime = leaveTime,
-	})
+		joinTime = DateTime.now().UnixTimestamp - secondsSpent,
+		leaveTime = DateTime.now().UnixTimestamp,
+	}, true)
+
+	return response
 end
 
 --// Constructor \\--
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
 	api.__index = api
 	local self = setmetatable({}, api)
-	
+
 	self.GroupId = -1
 	self.Settings = table.clone(baseSettings)
 	self._private = {
-        newApiUrl = "https://leina.vibez.dev";
-		apiUrl = "https://api.vibez.dev/api";
-		Maid = {};
-		validStaff = {};
+		newApiUrl = "https://leina.vibez.dev",
+		apiUrl = "https://api.vibez.dev/api",
+		Maid = {},
+		validStaff = {},
 	}
-	
+
 	extraOptions = extraOptions or {}
 	for key, value in pairs(extraOptions) do
 		if self.Settings[key] == nil then
@@ -391,7 +415,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		self.Settings[key] = value
 	end
-	
+
 	-- UI communication handler
 	local communicationRemote = self:createRemote() :: RemoteFunction
 	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, Target: Player)
@@ -414,7 +438,9 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		-- Maybe actually log it somewhere... I have no clue where though.
 		if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
-			Player:Kick("Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services.")
+			Player:Kick(
+				"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
+			)
 			return false
 		end
 
