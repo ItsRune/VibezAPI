@@ -17,7 +17,7 @@ local function onSetup()
 	eventHolder["Promote"] = Instance.new("BindableEvent")
 	eventHolder["Demote"] = Instance.new("BindableEvent")
 	eventHolder["Fire"] = Instance.new("BindableEvent")
-	
+
 	local function promote(target)
 		game.ReplicatedStorage.__VibezEvent__:InvokeServer("promote", target)
 	end
@@ -33,7 +33,7 @@ local function onSetup()
 	Maid.Promote.Event:Connect(promote)
 	Maid.Demote.Event:Connect(demote)
 	Maid.Fire.Event:Connect(fire)
-	
+
 	StarterGui:SetCore("AvatarContextMenuEnabled", true)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.Friend)
@@ -54,21 +54,21 @@ local function undoSetup()
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Promote")
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Demote")
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Fire")
-	
+
 	for _, connections: RBXScriptConnection in pairs(Maid) do
 		connections:Disconnect()
 	end
 	Maid = {}
-	
+
 	for _, binds in pairs(eventHolder) do
 		binds:Destroy()
 	end
 	eventHolder = {}
-	
+
 	if State == true then
 		return
 	end
-	
+
 	StarterGui:SetCore("AvatarContextMenuEnabled", false)
 end
 

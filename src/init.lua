@@ -10,7 +10,7 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 9/12/2023 17:21 EST
+	Updated: 9/12/2023 14:01 EST
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -34,6 +34,7 @@ local baseSettings = {
 	maxRank = 255,
 	isUIEnabled = false,
 	overrideGroupCheckForStudio = false,
+	loggingOriginName = game.Name,
 }
 
 --// Private Functions \\--
@@ -55,6 +56,10 @@ function api:Http(
 	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
 	Headers = (typeof(Headers) == "table") and Headers or { ["Content-Type"] = "application/json" }
 	Body = (Method ~= "GET" and Method ~= "HEAD") and Body or nil
+
+	if Body then
+		Body["origin"] = self.Settings.loggingOriginName
+	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
 
@@ -89,8 +94,9 @@ function api:getGroupId()
 		return self.GroupId
 	end
 
-	local isOk, res = self:Http("/ranking/groupid")
+	local isOk, res = self:Http("/ranking/groupid", "post", nil, nil, true)
 	local Body: groupIdResponse = res.Body
+
 	return isOk and Body.groupId or -1
 end
 
@@ -196,6 +202,16 @@ function api:getUserIdByName(username: string): number
 end
 
 --[[
+	* Gets player's username.
+	* Params userId<number>
+	* returns username<string?>
+]]
+function api:getNameById(userId: number): string?
+	local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, userId)
+	return isOk and userName or "Unknown"
+end
+
+--[[
 	* Creates or fetches the current remote used for client communication.
 	* Returns Remote<RemoteEvent>
 ]]
@@ -218,6 +234,10 @@ end
 ]]
 --
 function api:onPlayerChatted(Player: Player, message: string)
+	if not self._private.validStaff[Player.UserId] then
+		return
+	end
+
 	local args = string.split(message)
 	local commandPrefix = self.Settings.commandPrefix
 
@@ -228,76 +248,186 @@ function api:onPlayerChatted(Player: Player, message: string)
 	local command = string.sub(string.lower(args[1]), string.len(commandPrefix) + 1, #args[1])
 	table.remove(args, 1)
 
-	local function checkUserId(argIndex: number?)
-		local username = args[argIndex or 1]
-		local userId = -1
+	local username = args[1]
+	local userId = -1
 
-		if not tonumber(username) then
-			userId = self:getUserIdByName(username)
-		end
+	if not tonumber(username) then
+		userId = self:getUserIdByName(username)
+	end
 
-		return userId
+	if userId == -1 or userId == Player.UserId then
+		return
 	end
 
 	if command == "promote" then
-		local userId = checkUserId()
-
-		if userId == -1 or userId == Player.UserId then
-			return
-		end
-
-		api:Promote(userId)
+		self:Promote(userId)
 	elseif command == "demote" then
-		local userId = checkUserId()
-
-		if userId == -1 or userId == Player.UserId then
-			return
-		end
-
-		api:Demote(userId)
+		self:Demote(userId)
 	elseif command == "fire" then
-		local userId = checkUserId()
-
-		if userId == -1 or userId == Player.UserId then
-			return
-		end
-
-		api:Fire(userId)
+		self:Fire(userId)
 	end
+end
+
+--[[
+	* Sets the rank of a player and creates a fake "whoCalled" parameter if none is supplied.
+	* Params userId<string | number>, rankId<string | number>, whoCalled<{ userName: string, userId: number }?>
+	* Returns 
+]]
+function api:_setRank(
+	userId: string | number,
+	rankId: string | number,
+	whoCalled: { userName: string, userId: number }?
+)
+	local userName = self:getNameById(userId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
+	end
+
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
+	end
+
+	local _, response = self:Http("/ranking/changerank", "post", nil, {
+		userToRank = {
+			userId = tostring(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tostring(userId),
+		rankId = tostring(rankId),
+	}, true)
+
+	return response
+end
+
+--[[
+	* Promotes a player and creates a fake "whoCalled" parameter if none is supplied.
+	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
+	* Returns 
+]]
+function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?)
+	local userName = self:getNameById(userId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
+	end
+
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
+	end
+
+	local _, response = self:Http("/ranking/promote", "post", nil, {
+		userToRank = {
+			userId = tostring(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tostring(userId),
+	}, true)
+
+	return response
+end
+
+--[[
+	* Demotes a player and creates a fake "whoCalled" parameter if none is supplied.
+	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
+	* Returns 
+]]
+function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?)
+	local userName = self:getNameById(userId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
+	end
+
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
+	end
+
+	local _, response = self:Http("/ranking/demote", "post", nil, {
+		userToRank = {
+			userId = tostring(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tostring(userId),
+	}, true)
+
+	return response
+end
+
+--[[
+	* Fires a player and creates a fake "whoCalled" parameter if none is supplied.
+	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
+	* Returns 
+]]
+function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?)
+	local userName = self:getNameById(userId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
+	end
+
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
+	end
+
+	local _, response = self:Http("/ranking/fire", "post", nil, {
+		userToRank = {
+			userId = tostring(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tostring(userId),
+	}, true)
+
+	return response
 end
 
 --// Public Functions \\--
 -- Sets the rank of an employee
 function api:SetRank(userId: string | number, rankId: string | number): Types.responseBody
-	local _, response = self:Http("/ranking/changerank", "post", nil, {
-		userId = tostring(userId),
-		rankId = tostring(rankId),
-	}, true)
-	return response.Body
+	return self:_setRank(userId, rankId)
 end
 
 -- Promotes an employee
 function api:Promote(userId: string | number): Types.responseBody
-	local _, response = self:Http("/ranking/promote", "post", nil, {
-		userId = tostring(userId),
-	}, true)
-	return response.Body
+	return self:_Promote(userId)
 end
 
 -- Demotes an employee
 function api:Demote(userId: string | number): Types.responseBody
-	local _, response = self:Http("/ranking/demote", "post", nil, {
-		userId = tostring(userId),
-	}, true)
-	return response.Body
+	return self:_Demote(userId)
 end
 
 -- Fires an employee
 function api:Fire(userId: string | number): Types.responseBody
-	local _, response = self:Http("/ranking/fire", "post", nil, {
-		userId = tostring(userId),
-	}, true)
-	return response.Body
+	return self:_Fire(userId)
 end
 
 -- Toggles commands
@@ -312,6 +442,11 @@ function api:ToggleCommands(): nil
 	end
 end
 
+-- Updates the origin name
+function api:UpdateLoggerTitle(newTitle: string): nil
+	self.Settings.loggingOriginName = tostring(newTitle)
+end
+
 -- Updates the api key
 function api:UpdateKey(newApiKey: string): boolean
 	local savedKey = table.clone(self.Settings).apiKey
@@ -324,7 +459,12 @@ function api:UpdateKey(newApiKey: string): boolean
 		warn(debug.traceback(`[Vibez]: New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
 		return
 	elseif groupId == -1 and not savedKey then
-		warn(debug.traceback(`[Vibez]: New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
+		warn(
+			debug.traceback(
+				`[Vibez]: Api key "{newApiKey}" was invalid! Please make sure there are no special characters or spaces in your key!`,
+				2
+			)
+		)
 		return
 	end
 
@@ -350,21 +490,29 @@ function api:ToggleUI(): nil
 	end
 end
 
--- Gets the player's current activity (NO CLUE IF THIS IS A ROUTE)
-function api:getActivity(userId: string | number)
-	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
+-- Gets the player's current activity (Route has been said to be buggy)
+-- function api:getActivity(userId: string | number)
+-- 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 
-	local _, response = self:Http("/activty/get", "activity", "post", nil, {
-		playerId = userId,
-	}, true)
+-- 	local _, response = self:Http("/activty/get", "post", nil, {
+-- 		playerId = userId,
+-- 	}, true)
 
-	return response
-end
+-- 	return response
+-- end
 
 -- Saves the player's current activity
-function api:saveActivity(userId: string | number, secondsSpent: number, messagesSent: (number | { string })?)
+function api:saveActivity(
+	userId: string | number,
+	secondsSpent: number,
+	messagesSent: (number | { string })?,
+	joinTime: number?,
+	leaveTime: number?
+): Types.httpResponse
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent or (messagesSent == nil) and 0 or messagesSent
+	joinTime = (typeof(joinTime) == "number") and joinTime or DateTime.now().UnixTimestamp
+	leaveTime = (typeof(leaveTime) == "number") and leaveTime or DateTime.now().UnixTimestamp
 
 	if not tonumber(messagesSent) then
 		warn(debug.traceback(`[Vibez]: Cannot save activity with an invalid 'number' as the 'messagesSent'!`, 2))
@@ -376,14 +524,17 @@ function api:saveActivity(userId: string | number, secondsSpent: number, message
 		return
 	end
 
-	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
+	if joinTime == leaveTime then
+		joinTime -= secondsSpent
+	end
 
-	local _, response = self:Http("/activity/save", "activity", "post", nil, {
+	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
+	local _, response = self:Http("/activity/save", "post", nil, {
 		playerId = userId,
 		playtime = secondsSpent,
 		messageCount = messagesSent,
-		joinTime = DateTime.now().UnixTimestamp - secondsSpent,
-		leaveTime = DateTime.now().UnixTimestamp,
+		joinTime = joinTime,
+		leaveTime = leaveTime,
 	}, true)
 
 	return response
@@ -391,6 +542,10 @@ end
 
 --// Constructor \\--
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
+	if RunService:IsClient() then
+		return nil
+	end
+
 	api.__index = api
 	local self = setmetatable({}, api)
 
@@ -419,8 +574,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- UI communication handler
 	local communicationRemote = self:createRemote() :: RemoteFunction
 	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, Target: Player)
-		warn(Player, Action, Target)
-
 		if Player == Target then
 			return
 		end
@@ -445,11 +598,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 
 		if Action == "promote" then
-			self:Promote(userId)
+			self:_Promote(userId, { userName = Player.Name, userId = Player.UserId })
 		elseif Action == "demote" then
-			self:Demote(userId)
+			self:_Demote(userId, { userName = Player.Name, userId = Player.UserId })
 		elseif Action == "fire" then
-			self:Fire(userId)
+			self:_Fire(userId, { userName = Player.Name, userId = Player.UserId })
 		end
 
 		return true
@@ -457,6 +610,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- Chat command connections
 	Players.PlayerAdded:Connect(function(Player)
+		warn(`[Vibez]: Loaded for player {Player.Name}.`)
 		self:onPlayerAdded(Player)
 	end)
 
