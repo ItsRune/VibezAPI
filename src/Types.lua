@@ -91,4 +91,6 @@ export type vibezApi = {
 	) -> responseBody,
 }
 
+export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi
+
 return nil

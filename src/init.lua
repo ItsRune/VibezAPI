@@ -277,7 +277,7 @@ function api:_setRank(
 	userId: string | number,
 	rankId: string | number,
 	whoCalled: { userName: string, userId: number }?
-)
+): Types.rankResponse
 	local userName = self:getNameById(userId)
 
 	if not whoCalled then
@@ -312,7 +312,7 @@ end
 	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
 ]]
-function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?)
+function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
 	if not whoCalled then
@@ -346,7 +346,7 @@ end
 	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
 ]]
-function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?)
+function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
 	if not whoCalled then
@@ -380,7 +380,7 @@ end
 	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
 ]]
-function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?)
+function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
 	if not whoCalled then
@@ -411,22 +411,22 @@ end
 
 --// Public Functions \\--
 -- Sets the rank of an employee
-function api:SetRank(userId: string | number, rankId: string | number): Types.responseBody
+function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
 	return self:_setRank(userId, rankId)
 end
 
 -- Promotes an employee
-function api:Promote(userId: string | number): Types.responseBody
+function api:Promote(userId: string | number): Types.rankResponse
 	return self:_Promote(userId)
 end
 
 -- Demotes an employee
-function api:Demote(userId: string | number): Types.responseBody
+function api:Demote(userId: string | number): Types.rankResponse
 	return self:_Demote(userId)
 end
 
 -- Fires an employee
-function api:Fire(userId: string | number): Types.responseBody
+function api:Fire(userId: string | number): Types.rankResponse
 	return self:_Fire(userId)
 end
 
@@ -610,7 +610,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- Chat command connections
 	Players.PlayerAdded:Connect(function(Player)
-		warn(`[Vibez]: Loaded for player {Player.Name}.`)
 		self:onPlayerAdded(Player)
 	end)
 
@@ -625,4 +624,4 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	return self
 end
 
-return Constructor
+return Constructor :: Types.vibezConstructor
