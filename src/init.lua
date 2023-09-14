@@ -106,7 +106,7 @@ local baseSettings = {
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:Http(
 	Route: string,
 	Method: string?,
@@ -175,7 +175,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
---
+---
 function api:getGroupId()
 	if self.GroupId ~= -1 then
 		return self.GroupId
@@ -198,7 +198,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:getGroupFromUser(groupId: number, userId: number): { any }?
 	if self.Settings.overrideGroupCheckForStudio and RunService:IsStudio() then
 		return {
@@ -229,7 +229,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:onPlayerAdded(Player: Player)
 	-- This is only here in case they toggle commands in the middle of a game.
 	if not self.Settings.isChatCommandsEnabled then
@@ -270,7 +270,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:onPlayerRemoved(Player: Player)
 	-- Remove player from validated staff table.
 	self._private.validStaff[Player.UserId] = nil
@@ -296,7 +296,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:isPlayerRankOkToProceed(playerRank: number): boolean
 	return (playerRank >= self.Settings.minRank and playerRank <= self.Settings.maxRank)
 end
@@ -311,7 +311,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:getUserIdByName(username: string): number
 	local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, username)
 	return isOk and userId or -1
@@ -327,7 +327,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:getNameById(userId: number): string?
 	local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, userId)
 	return isOk and userName or "Unknown"
@@ -341,7 +341,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:createRemote()
 	local currentRemote = ReplicatedStorage:FindFirstChild("__VibezEvent__")
 
@@ -364,7 +364,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:onPlayerChatted(Player: Player, message: string)
 	warn(1)
 	if not self._private.validStaff[Player.UserId] then
@@ -410,7 +410,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:_checkHttp()
 	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
 	return success
@@ -427,7 +427,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:_setRank(
 	userId: string | number,
 	rankId: string | number,
@@ -473,7 +473,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
@@ -514,7 +514,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
@@ -555,7 +555,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
@@ -592,7 +592,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:_destroy()
 	setmetatable(self, nil)
 	self = nil
@@ -606,7 +606,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
---
+---
 function api:_warn(...: string)
 	if self.Settings.ignoreWarnings then
 		return
@@ -631,6 +631,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
 	return self:_setRank(userId, rankId)
 end
@@ -649,6 +650,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:Promote(userId: string | number): Types.rankResponse
 	return self:_Promote(userId)
 end
@@ -667,6 +669,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:Demote(userId: string | number): Types.rankResponse
 	return self:_Demote(userId)
 end
@@ -680,6 +683,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:Fire(userId: string | number): Types.rankResponse
 	return self:_Fire(userId)
 end
@@ -691,6 +695,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:ToggleCommands(): nil
 	self.Settings.isChatCommandsEnabled = not self.Settings.isChatCommandsEnabled
 
@@ -709,6 +714,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:UpdateLoggerTitle(newTitle: string): nil
 	self.Settings.loggingOriginName = tostring(newTitle)
 end
@@ -723,6 +729,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:UpdateKey(newApiKey: string): boolean
 	local savedKey = table.clone(self.Settings).apiKey
 
@@ -754,6 +761,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:Destroy()
 	return self:_destroy()
 end
@@ -765,6 +773,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:ToggleUI(): nil
 	self.Settings.isUIEnabled = not self.Settings.isUIEnabled
 
@@ -783,6 +792,7 @@ end
 	@tag Public
 	@unreleased
 ]=]
+---
 function api:getActivity(userId: string | number)
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 
@@ -806,6 +816,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:saveActivity(
 	userId: string | number,
 	secondsSpent: number,
@@ -861,6 +872,7 @@ end
 	local Vibez = VibezAPI(myKey)
 	```
 ]=]
+---
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
 	if RunService:IsClient() then
 		return nil
