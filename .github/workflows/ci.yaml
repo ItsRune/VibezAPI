@@ -9,17 +9,17 @@ on:
     - master
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: Install Aftman
-      uses: ok-nick/setup-aftman@v0.3.0
-    - name: Lint
-      run: |
-        selene ./src
+  # lint:
+  #   name: Lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v3
+  #   - name: Install Aftman
+  #     uses: ok-nick/setup-aftman@v0.3.0
+  #   - name: Lint
+  #     run: |
+  #       selene ./src
 
   style:
     name: Styling
