@@ -6,7 +6,11 @@
     "ReplicatedStorage": {
       "$ignoreUnknownInstances": true,
       "VibezAPI": {
-        "$path": "src"
+        "$path": "src/Basic"
+      },
+
+      "VibezAPI_Premium": {
+        "$path": "src/Premium"
       }
     },
 

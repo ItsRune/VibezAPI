@@ -24,6 +24,7 @@ local RunService = game:GetService("RunService")
 
 --// Constants \\--
 local Types = require(script.Types)
+local RateLimit = require(script.RateLimit)
 local api = {}
 local baseSettings = {
 	overrideGroupCheckForStudio = false,
@@ -45,6 +46,26 @@ function api:Http(
 	Body: { any }?,
 	useNewApi: boolean?
 ): (boolean, Types.httpResponse)
+	local canContinue, err = self._private.rateLimiter:Check()
+	if not canContinue then
+		local message = `You're being rate limited! {err}`
+
+		return {
+			Success = false,
+			StatusCode = 429,
+			StatusMessage = message,
+			rawBody = "{}",
+			Headers = {
+				["Content-Type"] = "application/json",
+				["x-api-key"] = self.Settings.apiKey,
+			},
+			Body = {
+				success = false,
+				errorMessage = message,
+			},
+		}
+	end
+
 	Route = (typeof(Route) == "string") and Route or "/"
 	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
 	Headers = (typeof(Headers) == "table") and Headers or { ["Content-Type"] = "application/json" }
@@ -369,6 +390,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self._private = {
 		newApiUrl = "https://leina.vibez.dev",
 		apiUrl = "https://api.vibez.dev/api",
+		rateLimiter = RateLimit.new(60, 60),
 	}
 
 	extraOptions = extraOptions or {}

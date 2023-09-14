@@ -26,6 +26,7 @@ local RunService = game:GetService("RunService")
 
 --// Constants \\--
 local Types = require(script.Types)
+local RateLimit = require(script.RateLimit)
 local api = {}
 local baseSettings = {
 	commandPrefix = "!",
@@ -52,6 +53,26 @@ function api:Http(
 	Body: { any }?,
 	useNewApi: boolean?
 ): (boolean, Types.httpResponse)
+	local canContinue, err = self._private.rateLimiter:Check()
+	if not canContinue then
+		local message = `You're being rate limited! {err}`
+
+		return {
+			Success = false,
+			StatusCode = 429,
+			StatusMessage = message,
+			rawBody = "{}",
+			Headers = {
+				["Content-Type"] = "application/json",
+				["x-api-key"] = self.Settings.apiKey,
+			},
+			Body = {
+				success = false,
+				errorMessage = message,
+			},
+		}
+	end
+
 	Route = (typeof(Route) == "string") and Route or "/"
 	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
 	Headers = (typeof(Headers) == "table") and Headers or { ["Content-Type"] = "application/json" }
@@ -217,11 +238,11 @@ end
 ]]
 --
 function api:createRemote()
-	local currentRemote = ReplicatedStorage:FindFirstChild("__Vibez API__")
+	local currentRemote = ReplicatedStorage:FindFirstChild("__VibezEvent__")
 
 	if not currentRemote then
 		currentRemote = Instance.new("RemoteFunction")
-		currentRemote.Name = "__Vibez API__"
+		currentRemote.Name = "__VibezEvent__"
 		currentRemote.Parent = ReplicatedStorage
 	end
 
@@ -556,6 +577,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		apiUrl = "https://api.vibez.dev/api",
 		Maid = {},
 		validStaff = {},
+		rateLimiter = RateLimit.new(60, 60),
 	}
 
 	extraOptions = extraOptions or {}
