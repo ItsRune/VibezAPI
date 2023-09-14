@@ -40,6 +40,7 @@ export type httpResponse = {
 export type vibezSettings = {
 	overrideGroupCheckForStudio: boolean,
 	loggingOriginName: string,
+	ignoreWarnings: boolean,
 }
 
 export type vibezInternalApi = {
@@ -60,6 +61,7 @@ export type vibezInternalApi = {
 		whoCalled: { userName: string, userId: number }
 	) -> rankResponse,
 	_destroy: () -> nil,
+	_warn: (...string) -> nil,
 }
 
 export type vibezApi = {

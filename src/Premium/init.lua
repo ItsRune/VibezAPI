@@ -37,6 +37,7 @@ local baseSettings = {
 	isUIEnabled = false,
 	overrideGroupCheckForStudio = false,
 	loggingOriginName = game.Name,
+	ignoreWarnings = false,
 }
 
 --// Private Functions \\--
@@ -447,6 +448,18 @@ function api:_destroy()
 	self = nil
 end
 
+--[[
+	Displays a warning with the prefix of "[Vibez]", will do nothing if 'ignoreWarnings' is set to true
+	@param ...<...string>
+]]
+function api:_warn(...: string)
+	if self.Settings.ignoreWarnings then
+		return
+	end
+
+	warn("[Vibez]:", table.unpack({ ... }))
+end
+
 --// Public Functions \\--
 -- Sets the rank of an employee
 function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
@@ -494,12 +507,12 @@ function api:UpdateKey(newApiKey: string): boolean
 
 	if groupId == -1 and savedKey ~= nil then
 		self.Settings.apiKey = savedKey
-		warn(debug.traceback(`[Vibez]: New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
+		self:_warn(debug.traceback(`New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
 		return false
 	elseif groupId == -1 and not savedKey then
-		warn(
+		self:_warn(
 			debug.traceback(
-				`[Vibez]: Api key "{newApiKey}" was invalid! Please make sure there are no special characters or spaces in your key!`,
+				`Api key "{newApiKey}" was invalid! Please make sure there are no special characters or spaces in your key!`,
 				2
 			)
 		)
@@ -527,7 +540,7 @@ end
 -- function api:getActivity(userId: string | number)
 -- 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 
--- 	local _, response = self:Http("/activty/get", "post", nil, {
+-- 	local _, response = self:Http("/activty/askJacobForTheRoute", "post", nil, {
 -- 		playerId = userId,
 -- 	}, true)
 
@@ -548,12 +561,12 @@ function api:saveActivity(
 	leaveTime = (typeof(leaveTime) == "number") and leaveTime or DateTime.now().UnixTimestamp
 
 	if not tonumber(messagesSent) then
-		warn(debug.traceback(`[Vibez]: Cannot save activity with an invalid 'number' as the 'messagesSent'!`, 2))
+		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'messagesSent'!`, 2))
 		return
 	end
 
 	if not tonumber(secondsSpent) then
-		warn(debug.traceback(`[Vibez]: 'secondsSpent' parameter is required for this function!`, 2))
+		self:_warn(debug.traceback(`'secondsSpent' parameter is required for this function!`, 2))
 		return
 	end
 
@@ -583,7 +596,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	local self = setmetatable({}, api)
 
 	if not self:_checkHttp() then
-		warn("[Vibez]: Http is not enabled! Please enable it before trying to interact with our API!")
+		self:_warn("Http is not enabled! Please enable it before trying to interact with our API!")
 
 		-- Allow for GC to clean up the class.
 		return self:Destroy()
@@ -602,10 +615,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	extraOptions = extraOptions or {}
 	for key, value in pairs(extraOptions) do
 		if self.Settings[key] == nil then
-			warn(`[Vibez]: Optional key '{key}' is not a valid option.`)
+			self:_warn(`Optional key '{key}' is not a valid option.`)
 			continue
 		elseif typeof(self.Settings[key]) ~= typeof(value) then
-			warn(`[Vibez]: Optional key '{key}' is not the same as it's defined value of {typeof(self.Settings[key])}!`)
+			self:_warn(`Optional key '{key}' is not the same as it's defined value of {typeof(self.Settings[key])}!`)
 			continue
 		end
 
