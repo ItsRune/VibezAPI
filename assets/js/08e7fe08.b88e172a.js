@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[764],{63891:e=>{e.exports=JSON.parse('{"sourceUrl":"https://github.com/ItsRune/VibezAPI/blob/master","baseUrl":"/VibezAPI/","classOrder":["VibezAPI","RateLimiter"],"apiCategories":[]}')}}]);
