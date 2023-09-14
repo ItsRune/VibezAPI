@@ -23,6 +23,7 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 --// Constants \\--
 local Types = require(script.Types)
@@ -290,6 +291,14 @@ function api:onPlayerChatted(Player: Player, message: string)
 end
 
 --[[
+	* Checks for if Http is enabled.
+]]
+function api:_checkHttp()
+	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
+	return success
+end
+
+--[[
 	* Sets the rank of a player and creates a fake "whoCalled" parameter if none is supplied.
 	* Params userId<string | number>, rankId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
@@ -430,6 +439,14 @@ function api:_Fire(userId: string | number, whoCalled: { userName: string, userI
 	return response
 end
 
+--[[
+	* Destroys the class and sets it up to be GC'ed.
+]]
+function api:_destroy()
+	setmetatable(self, nil)
+	self = nil
+end
+
 --// Public Functions \\--
 -- Sets the rank of an employee
 function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
@@ -478,7 +495,7 @@ function api:UpdateKey(newApiKey: string): boolean
 	if groupId == -1 and savedKey ~= nil then
 		self.Settings.apiKey = savedKey
 		warn(debug.traceback(`[Vibez]: New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
-		return
+		return false
 	elseif groupId == -1 and not savedKey then
 		warn(
 			debug.traceback(
@@ -486,10 +503,16 @@ function api:UpdateKey(newApiKey: string): boolean
 				2
 			)
 		)
-		return
+		return false
 	end
 
 	self.GroupId = groupId
+	return true
+end
+
+-- Destroys the class
+function api:Destroy()
+	return self:_destroy()
 end
 
 -- Toggles ui handler
@@ -497,18 +520,7 @@ function api:ToggleUI(): nil
 	self.Settings.isUIEnabled = not self.Settings.isUIEnabled
 
 	local status = self.Settings.isUIEnabled
-	local currentRemote = self:createRemote() :: RemoteFunction
-
-	for _, player in pairs(Players:GetPlayers()) do
-		coroutine.wrap(function()
-			local playerGroup = self:getGroupFromUser(self.GroupId, player.UserId)
-			if not playerGroup or not self:isPlayerRankOkToProceed(playerGroup.Rank) then
-				return
-			end
-
-			currentRemote:InvokeClient(player, (status == true) and "Setup" or "Reset")
-		end)()
-	end
+	Workspace:SetAttribute("__Vibez UI__", status)
 end
 
 -- Gets the player's current activity (Route has been said to be buggy)
@@ -569,6 +581,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	api.__index = api
 	local self = setmetatable({}, api)
+
+	if not self:_checkHttp() then
+		warn("[Vibez]: Http is not enabled! Please enable it before trying to interact with our API!")
+
+		-- Allow for GC to clean up the class.
+		return self:Destroy()
+	end
 
 	self.GroupId = -1
 	self.Settings = table.clone(baseSettings)

@@ -276,6 +276,14 @@ function api:_Fire(userId: string | number, whoCalled: { userName: string, userI
 	return response
 end
 
+--[[
+	* Destroys the class and sets it up to be GC'ed.
+]]
+function api:_destroy()
+	setmetatable(self, nil)
+	self = nil
+end
+
 --// Public Functions \\--
 -- Sets the rank of an employee
 function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
@@ -300,6 +308,11 @@ end
 -- Updates the origin name
 function api:UpdateLoggerTitle(newTitle: string): nil
 	self.Settings.loggingOriginName = tostring(newTitle)
+end
+
+-- Destroys the class
+function api:Destroy()
+	return self:_destroy()
 end
 
 -- Updates the api key

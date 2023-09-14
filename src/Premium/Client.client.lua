@@ -1,9 +1,11 @@
 --// Services \\--
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 --// Constants \\--
+local Player = Players.LocalPlayer
 local eventHolder = {}
 local Maid = {}
 local State = false
@@ -43,6 +45,56 @@ local function onSetup()
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Promote", eventHolder.Promote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Demote", eventHolder.Demote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Fire", eventHolder.Fire })
+
+	local currentClosest = nil
+	local function getClosestPlayer(): Player?
+		local closest = nil
+		local playerChar = Player.Character
+
+		if not playerChar then
+			return nil
+		end
+
+		for _, player in pairs(Players:GetPlayers()) do
+			-- if player == Player then
+			-- 	continue
+			-- end
+
+			local otherCharacter = player.Character
+			if not otherCharacter then
+				continue
+			end
+
+			if
+				(
+					closest ~= nil
+					and (closest.Character.PrimaryPart.Position - otherCharacter.PrimaryPart.Position).Magnitude
+						< 10
+				)
+				or (
+					not closest
+					and (playerChar.PrimaryPart.Position - otherCharacter.PrimaryPart.Position).Magnitude < 10
+				)
+			then
+				closest = player
+			end
+		end
+
+		return closest
+	end
+
+	table.insert(
+		Maid,
+		RunService.RenderStepped:Connect(function()
+			local closestPlayer = getClosestPlayer()
+
+			if closestPlayer == currentClosest or not closestPlayer then
+				return
+			end
+
+			StarterGui:SetCore("AvatarContextMenuTarget", closestPlayer)
+		end)
+	)
 end
 
 local function undoSetup()
@@ -72,13 +124,8 @@ local function undoSetup()
 	StarterGui:SetCore("AvatarContextMenuEnabled", false)
 end
 
-local Remote = nil
-repeat
-	task.wait()
-	Remote = ReplicatedStorage:FindFirstChild("__Vibez API__")
-until Remote ~= nil
-
-Remote.OnClientInvoke = function(Action: string)
+local function onAttributeChanged(isEnabled: boolean)
+	local Action = isEnabled and "Setup" or "Reset"
 	if Action == "Setup" then
 		onSetup()
 	elseif Action == "Reset" then
@@ -86,8 +133,20 @@ Remote.OnClientInvoke = function(Action: string)
 	end
 end
 
-Workspace.CurrentCamera.ChildAdded:Connect(function(child)
-	if child.Name == "ContextMenuArrow" then
-		child:WaitForChild("Union").Color = Color3.fromRGB(251, 189, 226)
+local function onStart()
+	local attrValue = Workspace:GetAttribute("__Vibez UI__")
+	if attrValue ~= nil then
+		onAttributeChanged(attrValue)
 	end
-end)
+
+	Workspace:GetAttributeChangedSignal("__Vibez UI__"):Connect(onAttributeChanged)
+
+	Workspace.CurrentCamera.ChildAdded:Connect(function(child)
+		if child.Name == "ContextMenuArrow" then
+			child:WaitForChild("Union").Color = Color3.fromRGB(251, 189, 226)
+		end
+	end)
+end
+
+--// Main \\--
+onStart()

@@ -38,7 +38,6 @@ export type httpResponse = {
 }
 
 export type vibezSettings = {
-	apiKey: string,
 	isChatCommandsEnabled: boolean,
 	isUIEnabled: boolean,
 	commandPrefix: string,
@@ -69,6 +68,7 @@ export type vibezInternalApi = {
 		rankId: string | number,
 		whoCalled: { userName: string, userId: number }
 	) -> rankResponse,
+	_destroy: () -> nil,
 }
 
 export type vibezApi = {
@@ -89,6 +89,7 @@ export type vibezApi = {
 		joinTime: number?,
 		leaveTime: number?
 	) -> responseBody,
+	Destroy: () -> nil,
 }
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi

@@ -38,9 +38,6 @@ export type httpResponse = {
 }
 
 export type vibezSettings = {
-	apiKey: string,
-	minRank: number,
-	maxRank: number,
 	overrideGroupCheckForStudio: boolean,
 	loggingOriginName: string,
 }
@@ -53,10 +50,6 @@ export type vibezInternalApi = {
 		Headers: { [string]: any },
 		Body: { [string]: any }
 	) -> httpResponse,
-	onPlayerChatted: (Player: Player, message: string) -> nil,
-	onPlayerAdded: (Player: Player) -> nil,
-	onPlayerRemoved: (Player: Player) -> nil,
-	getGroupFromUser: (groupId: number, userId: number) -> { any }?,
 	getGroupId: () -> number?,
 	_Fire: (userId: string | number, whoCalled: { userName: string, userId: number }) -> rankResponse,
 	_Demote: (userId: string | number, whoCalled: { userName: string, userId: number }) -> rankResponse,
@@ -66,6 +59,7 @@ export type vibezInternalApi = {
 		rankId: string | number,
 		whoCalled: { userName: string, userId: number }
 	) -> rankResponse,
+	_destroy: () -> nil,
 }
 
 export type vibezApi = {
@@ -76,8 +70,6 @@ export type vibezApi = {
 	Demote: (self: vibezApi, userId: string | number) -> responseBody,
 	Fire: (self: vibezApi, userId: string | number) -> responseBody,
 	SetRank: (self: vibezApi, userId: string | number, rankId: string | number) -> responseBody,
-	ToggleCommands: (self: vibezApi) -> nil,
-	ToggleUI: (self: vibezApi) -> nil,
 	saveActivity: (
 		self: vibezApi,
 		userId: string | number,
@@ -86,6 +78,7 @@ export type vibezApi = {
 		joinTime: number?,
 		leaveTime: number?
 	) -> responseBody,
+	Destroy: () -> nil,
 }
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi
