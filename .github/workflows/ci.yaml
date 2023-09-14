@@ -3,10 +3,10 @@ name: CI
 on:
   push:
     branches:
-    - main
+    - master
   pull_request:
     branches:
-    - main
+    - master
 
 jobs:
   lint:
@@ -31,5 +31,5 @@ jobs:
     - uses: JohnnyMorganz/stylua-action@v2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        version: v0.16.0
+        version: v0.18.1
         args: --check ./src
