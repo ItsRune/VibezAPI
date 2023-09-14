@@ -28,6 +28,8 @@ export type rankResponse = {
 	},
 }
 
+export type responseBody = groupIdResponse | errorResponse | rankResponse
+
 export type httpResponse = {
 	Body: responseBody,
 	Headers: { [string]: any },

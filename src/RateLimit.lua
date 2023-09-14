@@ -1,9 +1,37 @@
 --!strict
+--// Documentation \\--
+
+--[=[
+	@class RateLimiter
+]=]
+
+--[=[
+	@interface RateLimit
+	.isLimited boolean
+	._retryAfter number
+	._counter number
+	._maxCounter number
+	._counterStartedAt number
+	@within RateLimiter
+]=]
+
+--// Class Variables \\--
 local Limiter = {}
 local Class = {}
 Class.__index = Class
 
 --// Constructor \\--
+--[=[
+	@function new
+	Creates the rate limiting class.
+
+	@param requestsPerRetry number
+	@param retryAfter number
+	@return RateLimiter
+	
+	@within RateLimiter
+	@since 0.1.0
+]=]
 function Limiter.new(requestsPerRetry: number, retryAfter: number)
 	local self = setmetatable({}, Class)
 
@@ -17,7 +45,14 @@ function Limiter.new(requestsPerRetry: number, retryAfter: number)
 end
 
 --// Private Functions \\--
-function Class:Check()
+--[=[
+	Checks to see if the developer is currently being rate limited.
+	@return (boolean, string?)
+	
+	@within RateLimiter
+	@since 0.1.0
+]=]
+function Class:Check(): (boolean, string?)
 	local durationSinceStart = os.time() - self._counterStartedAt
 
 	if durationSinceStart > self._retryAfter then

@@ -17,6 +17,57 @@
 ]]
 --
 
+--// Documentation \\--
+--[=[
+	@interface extraOptionsType
+	.isChatCommandsEnabled boolean
+	.isUIEnabled boolean
+	.commandPrefix string
+	.minRank number
+	.maxRank number
+	.overrideGroupCheckForStudio boolean
+	.loggingOriginName string
+	.ignoreWarnings boolean
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface groupIdResponse
+	.success boolean
+	.groupId number?
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface errorResponse
+	.success boolean
+	.errorMessage string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface rankResponse
+	.newRank { id: number, name: string, rank: number, memberCount: number },
+	.oldRank { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } }
+	@within VibezAPI
+]=]
+
+--[=[
+	@type responseBody groupIdResponse | errorResponse | rankResponse
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface httpResponse
+	.Body responseBody
+	.Headers { [string]: any }
+	.StatusCode number
+	.StatusMessage string?
+	.Success boolean
+	.rawBody string
+	@within VibezAPI
+]=]
+
 --// Services \\--
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
@@ -41,12 +92,20 @@ local baseSettings = {
 }
 
 --// Private Functions \\--
---[[
-	* Fetches the group associated with the api key.
-	 - Socket hang up is possible if the api key is invalid when trying to make a request!
-	* Params Route<string>, Method<string>, Headers<{[string]: any}>, Body<{any}?>
-	* Returns Success<boolean>, Response<{any}>
-]]
+--[=[
+	Uses `RequestAsync` to fetch required assets to make this API wrapper work properly. Automatically handles the API key and necessary headers associated with different routes.
+	@param Route string
+	@param Method string?
+	@param Headers { [string]: any }?
+	@param Body { any }?
+	@param useNewApi boolean?
+	@return boolean, httpResponse?
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:Http(
 	Route: string,
@@ -107,10 +166,15 @@ function api:Http(
 	return (success or (data.StatusCode >= 200 and data.StatusCode < 300)), data
 end
 
---[[
-	* Fetches the group associated with the api key.
-	* Returns groupId<number> - a number symbolizing the group identifier attached to the api key.
-]]
+--[=[
+	Fetches the group associated with the api key.
+	@return number?
+
+	@yields
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 --
 function api:getGroupId()
 	if self.GroupId ~= -1 then
@@ -123,11 +187,17 @@ function api:getGroupId()
 	return isOk and Body.groupId or -1
 end
 
---[[
-	* Uses roblox's group service to get a player's rank.
-	* Params groupId<number>, userId<number>
-	* Returns groupRank<number>
-]]
+--[=[
+	Uses roblox's group service to get a player's rank.
+	@param groupId number
+	@param userId number
+	@return number
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:getGroupFromUser(groupId: number, userId: number): { any }?
 	if self.Settings.overrideGroupCheckForStudio and RunService:IsStudio() then
@@ -151,10 +221,14 @@ function api:getGroupFromUser(groupId: number, userId: number): { any }?
 	return nil
 end
 
---[[
-	* Handles players joining the game and connecting chatting event to them.
-	* Params Player<Player>
-]]
+--[=[
+	Handles players joining the game and checks for if commands/ui are enabled.
+	@param Player Player
+
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:onPlayerAdded(Player: Player)
 	-- This is only here in case they toggle commands in the middle of a game.
@@ -188,10 +262,14 @@ function api:onPlayerAdded(Player: Player)
 	)
 end
 
---[[
-	* Handles players leaving the game and disconnects any events.
-	* Params Player<Player>
-]]
+--[=[
+	Handles players leaving the game and disconnects any events.
+	@param Player Player
+
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:onPlayerRemoved(Player: Player)
 	-- Remove player from validated staff table.
@@ -209,42 +287,60 @@ function api:onPlayerRemoved(Player: Player)
 	self._private.Maid[Player.UserId] = nil
 end
 
---[[
-	* Compares rank to min/max rank for commands or UI.
-	* Params rank<number>
-	* Returns isOk<boolean>
-]]
+--[=[
+	Compares a rank to the min/max ranks in settings for the commands/ui.
+	@param playerRank number
+	@return boolean
+
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:isPlayerRankOkToProceed(playerRank: number): boolean
 	return (playerRank >= self.Settings.minRank and playerRank <= self.Settings.maxRank)
 end
 
---[[
-	* Gets player's user identifers without needing to be in game.
-	* Params username<string>
-	* Returns userId<number?>
-]]
+--[=[
+	Gets a player's user identifier via their username.
+	@param username string
+	@return number?
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:getUserIdByName(username: string): number
 	local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, username)
 	return isOk and userId or -1
 end
 
---[[
-	* Gets player's username.
-	* Params userId<number>
-	* returns username<string?>
-]]
+--[=[
+	Gets a player's username by their userId
+	@param userId number
+	@return string?
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:getNameById(userId: number): string?
 	local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, userId)
 	return isOk and userName or "Unknown"
 end
 
---[[
-	* Creates or fetches the current remote used for client communication.
-	* Returns Remote<RemoteEvent>
-]]
+--[=[
+	Creates / Fetches a remote function in replicated storage for client communication.
+	@return Remote RemoteFunction
+
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:createRemote()
 	local currentRemote = ReplicatedStorage:FindFirstChild("__VibezEvent__")
@@ -258,10 +354,16 @@ function api:createRemote()
 	return currentRemote
 end
 
---[[
-	* Handles the main chatting event.
-	* Params Player<Player>, message<string>
-]]
+--[=[
+	Handles the main chatting event for commands.
+	@param Player Player
+	@param message string
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:onPlayerChatted(Player: Player, message: string)
 	warn(1)
@@ -299,20 +401,32 @@ function api:onPlayerChatted(Player: Player, message: string)
 	end
 end
 
---[[
-	* Checks for if Http is enabled.
-]]
+--[=[
+	Checks for if HTTP is enabled
+	@return boolean
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:_checkHttp()
 	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
 	return success
 end
 
---[[
-	* Sets the rank of a player and creates a fake "whoCalled" parameter if none is supplied.
-	* Params userId<string | number>, rankId<string | number>, whoCalled<{ userName: string, userId: number }?>
-	* Returns 
-]]
+--[=[
+	Sets the rank of a player and uses "whoCalled" to send a message with origin logging name.
+	@param userId string | number
+	@param whoCalled { userName: string, userId: number }
+	@return rankResponse
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:_setRank(
 	userId: string | number,
@@ -348,11 +462,17 @@ function api:_setRank(
 	return response
 end
 
---[[
-	* Promotes a player and creates a fake "whoCalled" parameter if none is supplied.
-	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
-	* Returns 
-]]
+--[=[
+	Promotes a player and creates a fake "whoCalled" variable.
+	@param userId string | number
+	@param whoCalled { userName: string, userId: number }
+	@return rankResponse
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
@@ -383,11 +503,17 @@ function api:_Promote(userId: string | number, whoCalled: { userName: string, us
 	return response
 end
 
---[[
-	* Demotes a player and creates a fake "whoCalled" parameter if none is supplied.
-	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
-	* Returns 
-]]
+--[=[
+	Demotes a player and uses "whoCalled", creates one if none is added.
+	@param userId string | number
+	@param whoCalled { userName: string, userId: number }
+	@return rankResponse
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
@@ -418,11 +544,17 @@ function api:_Demote(userId: string | number, whoCalled: { userName: string, use
 	return response
 end
 
---[[
-	* Fires a player and creates a fake "whoCalled" parameter if none is supplied.
-	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
-	* Returns 
-]]
+--[=[
+	Fires a player and creates a fake "whoCalled" variable if none is supplied.
+	@param userId string | number
+	@param whoCalled { userName: string, userId: number }
+	@return rankResponse
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
@@ -453,19 +585,27 @@ function api:_Fire(userId: string | number, whoCalled: { userName: string, userI
 	return response
 end
 
---[[
-	* Destroys the class and sets it up to be GC'ed.
-]]
+--[=[
+	Destroys the class.
+
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:_destroy()
 	setmetatable(self, nil)
 	self = nil
 end
 
---[[
-	Displays a warning with the prefix of "[Vibez]", will do nothing if 'ignoreWarnings' is set to true
-	@param ...<...string>
-]]
+--[=[
+	Displays a warning with the prefix of "[Vibez]"
+	@param ... ...string
+
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
 --
 function api:_warn(...: string)
 	if self.Settings.ignoreWarnings then
@@ -476,27 +616,81 @@ function api:_warn(...: string)
 end
 
 --// Public Functions \\--
--- Sets the rank of an employee
+--[=[
+	Changes the rank of a player.
+	@param userId string | number
+	@param rankId string | number
+
+	```lua
+	local userId, rankId = 1, 200
+	Vibez:SetRank(userId, rankId)
+	```
+
+	@yields
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
 	return self:_setRank(userId, rankId)
 end
 
--- Promotes an employee
+--[=[
+	Promotes a player.
+	@param userId string | number
+
+	```lua
+	local userId = 1
+	local response = Vibez:Promote(userId)
+	```
+
+	@yields
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:Promote(userId: string | number): Types.rankResponse
 	return self:_Promote(userId)
 end
 
--- Demotes an employee
+--[=[
+	Demotes a player.
+	@param userId string | number
+
+	```lua
+	local userId = 1
+	local response = Vibez:Demote(userId)
+	```
+
+	@yields
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:Demote(userId: string | number): Types.rankResponse
 	return self:_Demote(userId)
 end
 
--- Fires an employee
+--[=[
+	Fires a player from the group.
+	@param userId string | number
+
+	@yields
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:Fire(userId: string | number): Types.rankResponse
 	return self:_Fire(userId)
 end
 
--- Toggles commands
+--[=[
+	Toggles the usage of commands within the experience.
+
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:ToggleCommands(): nil
 	self.Settings.isChatCommandsEnabled = not self.Settings.isChatCommandsEnabled
 
@@ -508,12 +702,27 @@ function api:ToggleCommands(): nil
 	end
 end
 
--- Updates the origin name
+--[=[
+	Updates the logger's origin name.
+
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:UpdateLoggerTitle(newTitle: string): nil
 	self.Settings.loggingOriginName = tostring(newTitle)
 end
 
--- Updates the api key
+--[=[
+	Updates the api key.
+	@param newApiKey string
+	@return boolean
+
+	@yields
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:UpdateKey(newApiKey: string): boolean
 	local savedKey = table.clone(self.Settings).apiKey
 
@@ -538,12 +747,24 @@ function api:UpdateKey(newApiKey: string): boolean
 	return true
 end
 
--- Destroys the class
+--[=[
+	Destroys the VibezAPI class.
+
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:Destroy()
 	return self:_destroy()
 end
 
--- Toggles ui handler
+--[=[
+	Toggles the client promote/demote/fire UI.
+
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:ToggleUI(): nil
 	self.Settings.isUIEnabled = not self.Settings.isUIEnabled
 
@@ -552,17 +773,39 @@ function api:ToggleUI(): nil
 end
 
 -- Gets the player's current activity (Route has been said to be buggy)
--- function api:getActivity(userId: string | number)
--- 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
+--[=[
+	Gets the player's current activity.
+	@param userId string | number
+	@return httpResponse
 
--- 	local _, response = self:Http("/activty/askJacobForTheRoute", "post", nil, {
--- 		playerId = userId,
--- 	}, true)
+	@yields
+	@within VibezAPI
+	@tag Public
+	@unreleased
+]=]
+function api:getActivity(userId: string | number)
+	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 
--- 	return response
--- end
+	local _, response = self:Http("/activty/askJacobForTheRoute", "post", nil, {
+		playerId = userId,
+	}, true)
 
--- Saves the player's current activity
+	return response
+end
+
+--[=[
+	Saves the player's current activity
+	@param userId string | number
+	@param secondsSpent number
+	@param messagesSent (number | { string })?
+	@param joinTime number?
+	@param leaveTime number?
+	@return httpResponse
+
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
 function api:saveActivity(
 	userId: string | number,
 	secondsSpent: number,
@@ -602,10 +845,30 @@ function api:saveActivity(
 end
 
 --// Constructor \\--
+--[=[
+	@function new
+	@within VibezAPI
+
+	@param apiKey string -- Your Vibez API key.
+	@param extraOptions extraOptionsType -- Extra settings to configure the api to work for you.
+	@return VibezAPI
+
+	Constructs the main Vibez API class.
+
+	```lua
+	local myKey = "YOUR_API_KEY_HERE"
+	local VibezAPI = require(script.VibezAPI)
+	local Vibez = VibezAPI(myKey)
+	```
+]=]
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
 	if RunService:IsClient() then
 		return nil
 	end
+
+	--[=[
+		@class VibezAPI
+	]=]
 
 	api.__index = api
 	local self = setmetatable({}, api)
@@ -617,6 +880,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		return self:Destroy()
 	end
 
+	-- @prop GroupId number
 	self.GroupId = -1
 	self.Settings = table.clone(baseSettings)
 	self._private = {

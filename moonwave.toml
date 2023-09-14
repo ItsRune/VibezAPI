@@ -1,0 +1,50 @@
+gitRepoUrl = "https://github.com/ItsRune/VibezAPI"
+baseUrl = "/api/VibezAPI"
+
+classOrder = ["VibezAPI", "RateLimiter"]
+
+[home]
+enabled = true
+includeReadme = false
+
+[[navbar.items]]
+href = "https://discord.gg/vdev"
+label = "Discord"
+position = "right"
+
+[footer]
+style = "dark"
+copyright = "Copyright © 2023 ItsRune."
+
+[[footer.links]]
+title = "Docs"
+
+[[footer.links.items]]
+label = "Getting Started"
+href = "/VibezAPI/docs/intro"
+
+[[footer.links.items]]
+label = "API Reference"
+href = "/VibezAPI/api/VibezAPI"
+
+[[footer.links]]
+title = "Community"
+
+[[footer.links.items]]
+label = "Roblox Group"
+href = "https://www.roblox.com/groups/4604891/Vibez-Development#!/about"
+
+[[footer.links.items]]
+label = "Discord"
+href = "https://discord.gg/vdev"
+
+[[footer.links]]
+title = "More"
+
+[[footer.links.items]]
+label = "Roblox"
+href = "https://www.roblox.com/users/107392833/profile"
+
+[[footer.links.items]]
+label = "Github"
+href = "https://github.com/ItsRune/VibezAPI"
