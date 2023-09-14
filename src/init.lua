@@ -20,22 +20,31 @@
 --// Services \\--
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
+local GroupService = game:GetService("GroupService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 --// Constants \\--
 local Types = require(script.Types)
 local RateLimit = require(script.RateLimit)
 local api = {}
 local baseSettings = {
+	commandPrefix = "!",
+	isChatCommandsEnabled = false,
+	minRank = 255,
+	maxRank = 255,
+	isUIEnabled = false,
 	overrideGroupCheckForStudio = false,
 	loggingOriginName = game.Name,
+	ignoreWarnings = false,
 }
 
 --// Private Functions \\--
 --[[
-	* Sends an HTTP request to the appropriate route and api.
+	* Fetches the group associated with the api key.
 	 - Socket hang up is possible if the api key is invalid when trying to make a request!
-	* Params Route<string>, Method<string?>, Headers<{[string]: any}?>, Body<{any}?>, useNewApi<boolean?>
+	* Params Route<string>, Method<string>, Headers<{[string]: any}>, Body<{any}?>
 	* Returns Success<boolean>, Response<{any}>
 ]]
 --
@@ -115,6 +124,102 @@ function api:getGroupId()
 end
 
 --[[
+	* Uses roblox's group service to get a player's rank.
+	* Params groupId<number>, userId<number>
+	* Returns groupRank<number>
+]]
+--
+function api:getGroupFromUser(groupId: number, userId: number): { any }?
+	if self.Settings.overrideGroupCheckForStudio and RunService:IsStudio() then
+		return {
+			Rank = self.Settings.maxRank,
+		}
+	end
+
+	local isOk, playerGroups = pcall(GroupService.GetGroupsAsync, GroupService, userId)
+
+	if not isOk then
+		return nil
+	end
+
+	for _, groupData in pairs(playerGroups) do
+		if groupData.Id == groupId then
+			return groupData
+		end
+	end
+
+	return nil
+end
+
+--[[
+	* Handles players joining the game and connecting chatting event to them.
+	* Params Player<Player>
+]]
+--
+function api:onPlayerAdded(Player: Player)
+	-- This is only here in case they toggle commands in the middle of a game.
+	if not self.Settings.isChatCommandsEnabled then
+		return
+	end
+
+	if self._private.validStaff[Player.UserId] ~= nil then
+		return
+	end
+
+	self:_warn(`Settings up commands for user {Player.Name}.`)
+
+	local theirGroupData = self:getGroupFromUser(self.GroupId, Player.UserId)
+	if not theirGroupData or not self:isPlayerRankOkToProceed(theirGroupData.Rank) then
+		return
+	end
+
+	self._private.validStaff[Player.UserId] = Player
+
+	-- We want to hold all connections from users in order to
+	-- disconnect them later on, this will stop any memory
+	-- leaks from occurring by vibez's api wrapper.
+
+	self._private.Maid[Player.UserId] = {}
+	table.insert(
+		self._private.Maid[Player.UserId],
+		Player.Chatted:Connect(function(message: string)
+			return self:onPlayerChatted(Player, message)
+		end)
+	)
+end
+
+--[[
+	* Handles players leaving the game and disconnects any events.
+	* Params Player<Player>
+]]
+--
+function api:onPlayerRemoved(Player: Player)
+	-- Remove player from validated staff table.
+	self._private.validStaff[Player.UserId] = nil
+
+	-- Check for and delete any existing connections with the player.
+	if self._private.Maid[Player.UserId] == nil then
+		return
+	end
+
+	for _, connection: RBXScriptConnection in pairs(self._private.Maid[Player.UserId]) do
+		connection:Disconnect()
+	end
+
+	self._private.Maid[Player.UserId] = nil
+end
+
+--[[
+	* Compares rank to min/max rank for commands or UI.
+	* Params rank<number>
+	* Returns isOk<boolean>
+]]
+--
+function api:isPlayerRankOkToProceed(playerRank: number): boolean
+	return (playerRank >= self.Settings.minRank and playerRank <= self.Settings.maxRank)
+end
+
+--[[
 	* Gets player's user identifers without needing to be in game.
 	* Params username<string>
 	* Returns userId<number?>
@@ -130,9 +235,77 @@ end
 	* Params userId<number>
 	* returns username<string?>
 ]]
+--
 function api:getNameById(userId: number): string?
 	local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, userId)
 	return isOk and userName or "Unknown"
+end
+
+--[[
+	* Creates or fetches the current remote used for client communication.
+	* Returns Remote<RemoteEvent>
+]]
+--
+function api:createRemote()
+	local currentRemote = ReplicatedStorage:FindFirstChild("__VibezEvent__")
+
+	if not currentRemote then
+		currentRemote = Instance.new("RemoteFunction")
+		currentRemote.Name = "__VibezEvent__"
+		currentRemote.Parent = ReplicatedStorage
+	end
+
+	return currentRemote
+end
+
+--[[
+	* Handles the main chatting event.
+	* Params Player<Player>, message<string>
+]]
+--
+function api:onPlayerChatted(Player: Player, message: string)
+	warn(1)
+	if not self._private.validStaff[Player.UserId] then
+		return
+	end
+
+	local args = string.split(message, " ")
+	local commandPrefix = self.Settings.commandPrefix
+
+	if string.sub(args[1], 0, string.len(commandPrefix)) ~= commandPrefix then
+		return
+	end
+
+	local command = string.sub(string.lower(args[1]), string.len(commandPrefix) + 1, #args[1])
+	table.remove(args, 1)
+
+	local username = args[1]
+	local userId = -1
+
+	if not tonumber(username) then
+		userId = self:getUserIdByName(username)
+	end
+
+	if userId == -1 or userId == Player.UserId then
+		return
+	end
+
+	if command == "promote" then
+		self:Promote(userId)
+	elseif command == "demote" then
+		self:Demote(userId)
+	elseif command == "fire" then
+		self:Fire(userId)
+	end
+end
+
+--[[
+	* Checks for if Http is enabled.
+]]
+--
+function api:_checkHttp()
+	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
+	return success
 end
 
 --[[
@@ -140,6 +313,7 @@ end
 	* Params userId<string | number>, rankId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
 ]]
+--
 function api:_setRank(
 	userId: string | number,
 	rankId: string | number,
@@ -179,6 +353,7 @@ end
 	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
 ]]
+--
 function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
@@ -213,6 +388,7 @@ end
 	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
 ]]
+--
 function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
@@ -247,6 +423,7 @@ end
 	* Params userId<string | number>, whoCalled<{ userName: string, userId: number }?>
 	* Returns 
 ]]
+--
 function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
 	local userName = self:getNameById(userId)
 
@@ -279,6 +456,7 @@ end
 --[[
 	* Destroys the class and sets it up to be GC'ed.
 ]]
+--
 function api:_destroy()
 	setmetatable(self, nil)
 	self = nil
@@ -288,6 +466,7 @@ end
 	Displays a warning with the prefix of "[Vibez]", will do nothing if 'ignoreWarnings' is set to true
 	@param ...<...string>
 ]]
+--
 function api:_warn(...: string)
 	if self.Settings.ignoreWarnings then
 		return
@@ -317,14 +496,21 @@ function api:Fire(userId: string | number): Types.rankResponse
 	return self:_Fire(userId)
 end
 
+-- Toggles commands
+function api:ToggleCommands(): nil
+	self.Settings.isChatCommandsEnabled = not self.Settings.isChatCommandsEnabled
+
+	local status = self.Settings.isChatCommandsEnabled
+	local functionToUse = (not status) and "onPlayerRemoved" or "onPlayerAdded"
+
+	for _, player in pairs(Players:GetPlayers()) do
+		coroutine.wrap(self[functionToUse])(self, player)
+	end
+end
+
 -- Updates the origin name
 function api:UpdateLoggerTitle(newTitle: string): nil
 	self.Settings.loggingOriginName = tostring(newTitle)
-end
-
--- Destroys the class
-function api:Destroy()
-	return self:_destroy()
 end
 
 -- Updates the api key
@@ -337,7 +523,7 @@ function api:UpdateKey(newApiKey: string): boolean
 	if groupId == -1 and savedKey ~= nil then
 		self.Settings.apiKey = savedKey
 		self:_warn(debug.traceback(`New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
-		return
+		return false
 	elseif groupId == -1 and not savedKey then
 		self:_warn(
 			debug.traceback(
@@ -345,17 +531,31 @@ function api:UpdateKey(newApiKey: string): boolean
 				2
 			)
 		)
-		return
+		return false
 	end
 
 	self.GroupId = groupId
+	return true
+end
+
+-- Destroys the class
+function api:Destroy()
+	return self:_destroy()
+end
+
+-- Toggles ui handler
+function api:ToggleUI(): nil
+	self.Settings.isUIEnabled = not self.Settings.isUIEnabled
+
+	local status = self.Settings.isUIEnabled
+	Workspace:SetAttribute("__Vibez UI__", status)
 end
 
 -- Gets the player's current activity (Route has been said to be buggy)
 -- function api:getActivity(userId: string | number)
 -- 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 
--- 	local _, response = self:Http("/activity/askJacobForTheRoute", "post", nil, {
+-- 	local _, response = self:Http("/activty/askJacobForTheRoute", "post", nil, {
 -- 		playerId = userId,
 -- 	}, true)
 
@@ -410,11 +610,20 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	api.__index = api
 	local self = setmetatable({}, api)
 
+	if not self:_checkHttp() then
+		self:_warn("Http is not enabled! Please enable it before trying to interact with our API!")
+
+		-- Allow for GC to clean up the class.
+		return self:Destroy()
+	end
+
 	self.GroupId = -1
 	self.Settings = table.clone(baseSettings)
 	self._private = {
 		newApiUrl = "https://leina.vibez.dev",
 		apiUrl = "https://api.vibez.dev/api",
+		Maid = {},
+		validStaff = {},
 		rateLimiter = RateLimit.new(60, 60),
 	}
 
@@ -430,6 +639,57 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		self.Settings[key] = value
 	end
+
+	-- UI communication handler
+	local communicationRemote = self:createRemote() :: RemoteFunction
+	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, Target: Player)
+		if Player == Target then
+			return
+		end
+
+		if not self.Settings.isUIEnabled then
+			return false
+		end
+
+		local userId = self:getUserIdByName(Target.Name)
+		local theirGroupData = self:getGroupFromUser(self.GroupId, Player.UserId)
+
+		if not theirGroupData or userId == -1 or not self:isPlayerRankOkToProceed(theirGroupData.Rank) then
+			return false
+		end
+
+		-- Maybe actually log it somewhere... I have no clue where though.
+		if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
+			Player:Kick(
+				"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
+			)
+			return false
+		end
+
+		if Action == "promote" then
+			self:_Promote(userId, { userName = Player.Name, userId = Player.UserId })
+		elseif Action == "demote" then
+			self:_Demote(userId, { userName = Player.Name, userId = Player.UserId })
+		elseif Action == "fire" then
+			self:_Fire(userId, { userName = Player.Name, userId = Player.UserId })
+		end
+
+		return true
+	end
+
+	-- Chat command connections
+	Players.PlayerAdded:Connect(function(Player)
+		self:onPlayerAdded(Player)
+	end)
+
+	for _, player in pairs(Players:GetPlayers()) do
+		coroutine.wrap(self.onPlayerAdded)(self, player)
+	end
+
+	-- Connect the player's maid cleanup function.
+	Players.PlayerRemoving:Connect(function(Player)
+		self:onPlayerRemoved(Player)
+	end)
 
 	-- Update the api key using the public function, in case of errors it'll log them.
 	self:UpdateKey(apiKey)
