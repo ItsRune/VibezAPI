@@ -459,7 +459,7 @@ function api:_setRank(
 		rankId = tostring(rankId),
 	}, true)
 
-	return response
+	return response.Body
 end
 
 --[=[
@@ -973,4 +973,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	return self
 end
 
-return Constructor :: Types.vibezConstructor
+return setmetatable({
+	["new"] = Constructor,
+}, {
+	__call = Constructor,
+})
