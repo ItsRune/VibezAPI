@@ -3,19 +3,36 @@ baseUrl = "/api/VibezAPI"
 
 classOrder = ["VibezAPI", "RateLimiter"]
 
+# Home page settings
 [home]
 enabled = true
 includeReadme = false
 
+# Home page features
+[[home.features]]
+title = "Flexibility"
+description = "VibezAPI is designed to be flexible and easy to use. It's designed to be used in any project, big or small."
+
+[[home.features]]
+title = "Easy to Use"
+description = "Simplicity is key, and VibezAPI is no exception. It's designed to be easy to use, and easy to understand."
+
+[[home.features]]
+title = "Open Source"
+description = "VibezAPI is open source, meaning you can contribute to it, and make it better for everyone."
+
+# Navigation bar items
 [[navbar.items]]
 href = "https://discord.gg/vdev"
 label = "Discord"
 position = "right"
 
+# Footer
 [footer]
 style = "dark"
 copyright = "Copyright © 2023 ItsRune."
 
+# Footer Items
 [[footer.links]]
 title = "Docs"
 

@@ -762,7 +762,7 @@ end
 	-- This command operation comes by default, no need to rewrite it.
 	Vibez:addCommandOperation(
 		"Team", -- Name of the operation.
-		"#", -- Prefix before the operation argument.
+		"%", -- Prefix before the operation argument.
 		function(playerToCheck: Player, incomingArgument: string) -> boolean)
 			return playerToCheck.Team ~= nil
 				and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
@@ -781,9 +781,15 @@ function api:addCommandOperation(
 	operationCode: string,
 	operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
 ): Types.vibezApi
-	if self._private.commandOperationCodes[operationCode] then
+	if self._private.commandOperationCodes[operationName] then
 		self:_warn(`Command operation code '{operationCode}' already exists!`)
 		return
+	end
+
+	for opName, opData in pairs(self._private.commandOperationCodes) do
+		if operationCode == opData[1] then
+			return self:_warn(`Operation code '{operationCode}' already exists for the operation '{opName}'!`)
+		end
 	end
 
 	self._private.commandOperationCodes[operationName] = { operationCode, operationFunction }
@@ -1005,18 +1011,50 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		rateLimiter = RateLimit.new(60, 60),
 		commandOperationCodes = {
 			["Team"] = {
-				"#", -- Operation Code
-				function(fromPlayer: Player, incomingArgument: string): boolean
-					return fromPlayer.Team ~= nil
-						and string.sub(string.lower(fromPlayer.Team.Name), 0, #incomingArgument)
+				"%", -- Operation Code
+				function(playerToCheck: Player, incomingArgument: string): boolean
+					return playerToCheck.Team ~= nil
+						and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
 							== string.lower(incomingArgument)
 				end,
 			},
 
+			["Rank"] = {
+				"r:",
+				function(playerToCheck: Player, incomingArgument: string): boolean
+					local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
+
+					if not tonumber(rank) then
+						return false
+					end
+
+					tolerance = tolerance or "<="
+
+					local isOk, currentPlayerRank = pcall(playerToCheck.GetRankInGroup, playerToCheck, tonumber(rank))
+					if not isOk or currentPlayerRank == 0 then
+						return false
+					end
+
+					if tolerance == "<=" then
+						return currentPlayerRank <= tonumber(rank)
+					elseif tolerance == ">=" then
+						return currentPlayerRank >= tonumber(rank)
+					elseif tolerance == "<" then
+						return currentPlayerRank < tonumber(rank)
+					elseif tolerance == ">" then
+						return currentPlayerRank > tonumber(rank)
+					elseif tolerance == "==" then
+						return currentPlayerRank == tonumber(rank)
+					end
+
+					return false
+				end,
+			},
+
 			["shortenedUsername"] = {
-				"", -- Operation Code
-				function(fromPlayer: Player, incomingArgument: string): boolean
-					return string.sub(string.lower(fromPlayer.Name), 0, string.len(incomingArgument))
+				"", -- Operation Code (Empty on purpose)
+				function(playerToCheck: Player, incomingArgument: string): boolean
+					return string.sub(string.lower(playerToCheck.Name), 0, string.len(incomingArgument))
 						== string.lower(incomingArgument)
 				end,
 			},
