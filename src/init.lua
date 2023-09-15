@@ -10,7 +10,7 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 9/12/2023 14:01 EST
+	Updated: 9/15/2023 01:58 EST
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -118,6 +118,7 @@ function api:Http(
 	if not canContinue then
 		local message = `You're being rate limited! {err}`
 
+		-- Create a fake http response
 		return {
 			Success = false,
 			StatusCode = 429,
@@ -247,7 +248,7 @@ function api:onPlayerAdded(Player: Player)
 		return
 	end
 
-	self._private.validStaff[Player.UserId] = Player
+	self._private.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
 
 	-- We want to hold all connections from users in order to
 	-- disconnect them later on, this will stop any memory
@@ -257,7 +258,7 @@ function api:onPlayerAdded(Player: Player)
 	table.insert(
 		self._private.Maid[Player.UserId],
 		Player.Chatted:Connect(function(message: string)
-			return self:onPlayerChatted(Player, message)
+			return self:_onPlayerChatted(Player, message)
 		end)
 	)
 end
@@ -342,7 +343,7 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:createRemote()
+function api:_createRemote()
 	local currentRemote = ReplicatedStorage:FindFirstChild("__VibezEvent__")
 
 	if not currentRemote then
@@ -352,6 +353,46 @@ function api:createRemote()
 	end
 
 	return currentRemote
+end
+
+--[=[
+	Gets the closest match to a player's username who's in game.
+	@param usernames {string}
+	@return {Player?}
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
+function api:_getPlayers(usernames: { string }): { Player? }
+	local found = {}
+
+	for _, username in pairs(usernames) do
+		for _, player in pairs(Players:GetPlayers()) do
+			for _, operationData in pairs(self._private.commandOperationCodes) do
+				local operationCode, operationFunction = operationData[1], operationData[2]
+
+				if
+					string.sub(string.lower(username), 0, string.len(tostring(operationCode)))
+					~= string.lower(operationCode)
+				then
+					continue
+				end
+
+				local operationResult = operationFunction(
+					player,
+					string.sub(username, string.len(tostring(operationCode)) + 1, string.len(username))
+				)
+
+				if operationResult == true then
+					table.insert(found, player)
+				end
+			end
+		end
+	end
+
+	return found
 end
 
 --[=[
@@ -365,9 +406,9 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:onPlayerChatted(Player: Player, message: string)
-	warn(1)
-	if not self._private.validStaff[Player.UserId] then
+function api:_onPlayerChatted(Player: Player, message: string)
+	local theirCache = self._private.validStaff[Player.UserId]
+	if not theirCache then
 		return
 	end
 
@@ -381,23 +422,26 @@ function api:onPlayerChatted(Player: Player, message: string)
 	local command = string.sub(string.lower(args[1]), string.len(commandPrefix) + 1, #args[1])
 	table.remove(args, 1)
 
-	local username = args[1]
-	local userId = -1
+	local users = self:_getPlayers(string.split(args[1], ","))
+	for _, player in pairs(users) do
+		if player == Player then
+			continue
+		end
 
-	if not tonumber(username) then
-		userId = self:getUserIdByName(username)
-	end
+		local playerRank = player:GetRankInGroup(self.Settings.GroupId)
+		if playerRank >= theirCache[2] then -- Check if player running the command can use it.
+			continue
+		end
 
-	if userId == -1 or userId == Player.UserId then
-		return
-	end
+		local commandCallParameters = { player.UserId, { userId = Player.UserId, userName = Player.Name } }
 
-	if command == "promote" then
-		self:Promote(userId)
-	elseif command == "demote" then
-		self:Demote(userId)
-	elseif command == "fire" then
-		self:Fire(userId)
+		if command == "promote" then
+			self:_Promote(table.unpack(commandCallParameters))
+		elseif command == "demote" then
+			self:_Demote(table.unpack(commandCallParameters))
+		elseif command == "fire" then
+			self:_Fire(table.unpack(commandCallParameters))
+		end
 	end
 end
 
@@ -708,6 +752,64 @@ function api:ToggleCommands(): nil
 end
 
 --[=[
+	Adds a command operation code.
+	@param operationName string
+	@param operationCode string
+	@param operationFunction (playerToCheck: Player, incomingArgument: string) -> boolean
+	@return VibezAPI
+
+	```lua
+	-- This command operation comes by default, no need to rewrite it.
+	Vibez:addCommandOperation(
+		"Team", -- Name of the operation.
+		"#", -- Prefix before the operation argument.
+		function(playerToCheck: Player, incomingArgument: string) -> boolean)
+			return playerToCheck.Team ~= nil
+				and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
+					== string.lower(incomingArgument)
+		end
+	)
+	```
+
+	@within VibezAPI
+	@tag Chainable
+	@tag Public
+	@since 0.1.0
+]=]
+function api:addCommandOperation(
+	operationName: string,
+	operationCode: string,
+	operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
+): Types.vibezApi
+	if self._private.commandOperationCodes[operationCode] then
+		self:_warn(`Command operation code '{operationCode}' already exists!`)
+		return
+	end
+
+	self._private.commandOperationCodes[operationName] = { operationCode, operationFunction }
+	return self
+end
+
+--[=[
+	Removes a command operation code.
+	@param operationName string
+	@return VibezAPI
+
+	```lua
+	Vibez:removeCommandOperation("Team")
+	```
+
+	@within VibezAPI
+	@tag Chainable
+	@tag Public
+	@since 0.1.0
+]=]
+function api:removeCommandOperation(operationName: string): Types.vibezApi
+	self._private.commandOperationCodes[operationName] = nil
+	return self
+end
+
+--[=[
 	Updates the logger's origin name.
 
 	@within VibezAPI
@@ -901,6 +1003,24 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		Maid = {},
 		validStaff = {},
 		rateLimiter = RateLimit.new(60, 60),
+		commandOperationCodes = {
+			["Team"] = {
+				"#", -- Operation Code
+				function(fromPlayer: Player, incomingArgument: string): boolean
+					return fromPlayer.Team ~= nil
+						and string.sub(string.lower(fromPlayer.Team.Name), 0, #incomingArgument)
+							== string.lower(incomingArgument)
+				end,
+			},
+
+			["shortenedUsername"] = {
+				"", -- Operation Code
+				function(fromPlayer: Player, incomingArgument: string): boolean
+					return string.sub(string.lower(fromPlayer.Name), 0, string.len(incomingArgument))
+						== string.lower(incomingArgument)
+				end,
+			},
+		},
 	}
 
 	extraOptions = extraOptions or {}
@@ -917,7 +1037,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	end
 
 	-- UI communication handler
-	local communicationRemote = self:createRemote() :: RemoteFunction
+	local communicationRemote = self:_createRemote() :: RemoteFunction
 	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, Target: Player)
 		if Player == Target then
 			return
@@ -973,8 +1093,4 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	return self
 end
 
-return setmetatable({
-	["new"] = Constructor,
-}, {
-	__call = Constructor,
-})
+return Constructor :: Types.vibezConstructor

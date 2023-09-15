@@ -93,6 +93,13 @@ export type vibezApi = {
 		joinTime: number?,
 		leaveTime: number?
 	) -> responseBody,
+	addCommandOperation: (
+		self: vibezApi,
+		operationName: string,
+		operationCode: string,
+		operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
+	) -> vibezApi,
+	removeCommandOperation: (self: vibezApi, operationName: string) -> vibezApi,
 	Destroy: () -> nil,
 }
 
