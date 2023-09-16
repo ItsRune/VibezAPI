@@ -47,8 +47,9 @@
 
 --[=[
 	@interface rankResponse
-	.newRank { id: number, name: string, rank: number, memberCount: number },
-	.oldRank { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } }
+	.success boolean
+	.message string
+	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
 	@within VibezAPI
 ]=]
 
@@ -118,7 +119,7 @@ function api:Http(
 	if not canContinue then
 		local message = `You're being rate limited! {err}`
 
-		-- Create a fake http response
+		-- Create a fake error response
 		return {
 			Success = false,
 			StatusCode = 429,
@@ -800,6 +801,10 @@ end
 	@param operationCode string
 	@param operationFunction (playerToCheck: Player, incomingArgument: string) -> boolean
 	@return VibezAPI
+
+	:::caution
+	This method will not work if there's already an existing operation name!
+	:::
 
 	```lua
 	-- This command operation comes by default, no need to rewrite it.
