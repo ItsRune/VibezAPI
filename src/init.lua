@@ -1161,7 +1161,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
 	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, Target: Player)
-		warn(Player, Action, Target)
+		self:_warn(`{Player.Name} is attempting to {Action} {Target.Name}!`)
+
 		if Player == Target then
 			return
 		end
