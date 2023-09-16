@@ -1,11 +1,10 @@
 --// Services \\--
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
 
 --// Constants \\--
-local Player = Players.LocalPlayer
 local eventHolder = {}
 local Maid = {}
 local State = false
@@ -32,9 +31,9 @@ local function onSetup()
 		game.ReplicatedStorage.__VibezEvent__:InvokeServer("fire", target)
 	end
 
-	Maid.Promote.Event:Connect(promote)
-	Maid.Demote.Event:Connect(demote)
-	Maid.Fire.Event:Connect(fire)
+	eventHolder.Promote.Event:Connect(promote)
+	eventHolder.Demote.Event:Connect(demote)
+	eventHolder.Fire.Event:Connect(fire)
 
 	StarterGui:SetCore("AvatarContextMenuEnabled", true)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
@@ -45,56 +44,6 @@ local function onSetup()
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Promote", eventHolder.Promote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Demote", eventHolder.Demote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Fire", eventHolder.Fire })
-
-	local currentClosest = nil
-	local function getClosestPlayer(): Player?
-		local closest = nil
-		local playerChar = Player.Character
-
-		if not playerChar then
-			return nil
-		end
-
-		for _, player in pairs(Players:GetPlayers()) do
-			-- if player == Player then
-			-- 	continue
-			-- end
-
-			local otherCharacter = player.Character
-			if not otherCharacter then
-				continue
-			end
-
-			if
-				(
-					closest ~= nil
-					and (closest.Character.PrimaryPart.Position - otherCharacter.PrimaryPart.Position).Magnitude
-						< 10
-				)
-				or (
-					not closest
-					and (playerChar.PrimaryPart.Position - otherCharacter.PrimaryPart.Position).Magnitude < 10
-				)
-			then
-				closest = player
-			end
-		end
-
-		return closest
-	end
-
-	table.insert(
-		Maid,
-		RunService.RenderStepped:Connect(function()
-			local closestPlayer = getClosestPlayer()
-
-			if closestPlayer == currentClosest or not closestPlayer then
-				return
-			end
-
-			StarterGui:SetCore("AvatarContextMenuTarget", closestPlayer)
-		end)
-	)
 end
 
 local function undoSetup()
@@ -134,16 +83,60 @@ local function onAttributeChanged(isEnabled: boolean)
 end
 
 local function onStart()
-	local attrValue = Workspace:GetAttribute("__Vibez UI__")
+	if StarterGui:FindFirstChild(script.Name) == nil then
+		script:Clone().Parent = StarterGui
+	end
+
+	local attrValue = Workspace:GetAttribute(script.Name)
 	if attrValue ~= nil then
 		onAttributeChanged(attrValue)
 	end
 
-	Workspace:GetAttributeChangedSignal("__Vibez UI__"):Connect(onAttributeChanged)
+	Workspace:GetAttributeChangedSignal(script.Name):Connect(onAttributeChanged)
+
+	local highLight = nil
+	RunService:BindToRenderStep("Vibez_Client_HoverEffect", Enum.RenderPriority.Camera.Value + 1, function()
+		local Mouse = Players.LocalPlayer:GetMouse()
+		local possiblePlayer = (Mouse.Target and Players:GetPlayerFromCharacter(Mouse.Target.Parent))
+
+		if not possiblePlayer then
+			if highLight then
+				highLight.Enabled = false
+			end
+			return
+		end
+
+		if highLight then
+			highLight.Enabled = true
+			highLight.Adornee = possiblePlayer.Character
+			return
+		end
+
+		highLight = Instance.new("Highlight")
+		highLight.Parent = script
+		highLight.Adornee = possiblePlayer.Character
+		highLight.FillTransparency = 1
+
+		highLight.OutlineColor = Color3.fromRGB(255, 100, 255)
+		highLight.Enabled = true
+	end)
+
+	local transparencyCounter = 0
+	local dir = 1
+	RunService:BindToRenderStep("Vibez_Client_Highlight_Flash", Enum.RenderPriority.Camera.Value + 1, function()
+		if not highLight or not highLight.Enabled then
+			return
+		end
+
+		dir = (transparencyCounter >= 0.75 and -1) or (transparencyCounter <= 0 and 1) or dir
+		transparencyCounter += 0.02 * dir
+
+		highLight.OutlineTransparency = transparencyCounter
+	end)
 
 	Workspace.CurrentCamera.ChildAdded:Connect(function(child)
 		if child.Name == "ContextMenuArrow" then
-			child:WaitForChild("Union").Color = Color3.fromRGB(251, 189, 226)
+			child:WaitForChild("Union").Color = Color3.fromRGB(251, 155, 213)
 		end
 	end)
 end

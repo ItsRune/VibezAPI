@@ -242,6 +242,14 @@ function api:onPlayerAdded(Player: Player)
 		return
 	end
 
+	if self.Settings.isUIEnabled then
+		local client = script.Client:Clone()
+
+		client.Name = self._private.clientScriptName
+		client.Enabled = true
+		client.Parent = Player:WaitForChild("PlayerGui", math.huge)
+	end
+
 	self:_warn(`Settings up commands for user {Player.Name}.`)
 
 	local theirGroupData = self:getGroupFromUser(self.GroupId, Player.UserId)
@@ -784,8 +792,12 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:ToggleCommands(): nil
-	self.Settings.isChatCommandsEnabled = not self.Settings.isChatCommandsEnabled
+function api:ToggleCommands(override: boolean?): nil
+	if override ~= nil then
+		self.Settings.isChatCommandsEnabled = override
+	else
+		self.Settings.isChatCommandsEnabled = not self.Settings.isChatCommandsEnabled
+	end
 
 	local status = self.Settings.isChatCommandsEnabled
 	local functionToUse = (not status) and "onPlayerRemoved" or "onPlayerAdded"
@@ -924,17 +936,40 @@ end
 
 --[=[
 	Toggles the client promote/demote/fire UI.
+	@param override boolean?
 
 	@within VibezAPI
 	@tag Public
 	@since 0.1.0
 ]=]
 ---
-function api:ToggleUI(): nil
-	self.Settings.isUIEnabled = not self.Settings.isUIEnabled
+function api:ToggleUI(override: boolean?): nil
+	if override ~= nil then
+		self.Settings.isUIEnabled = override
+	else
+		self.Settings.isUIEnabled = not self.Settings.isUIEnabled
+	end
+
+	warn(self.Settings.isUIEnabled)
+
+	for _, playerData in pairs(self._private.validStaff) do
+		local player = playerData[1]
+
+		if player.PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
+			continue
+		end
+
+		coroutine.wrap(function()
+			local client = script.Client:Clone()
+
+			client.Name = self._private.clientScriptName
+			client.Enabled = true
+			client.Parent = player:WaitForChild("PlayerGui", math.huge)
+		end)()
+	end
 
 	local status = self.Settings.isUIEnabled
-	Workspace:SetAttribute("__Vibez UI__", status)
+	Workspace:SetAttribute(self._private.clientScriptName, status)
 end
 
 -- Gets the player's current activity (Route has been said to be buggy)
@@ -1056,6 +1091,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		apiUrl = "https://api.vibez.dev/api",
 		Maid = {},
 		validStaff = {},
+		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
 		rateLimiter = RateLimit.new(60, 60),
 		commandOperationCodes = {
 			["Team"] = {
@@ -1125,6 +1161,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
 	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, Target: Player)
+		warn(Player, Action, Target)
 		if Player == Target then
 			return
 		end
@@ -1148,12 +1185,21 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			return false
 		end
 
+		local actionFunc
 		if Action == "promote" then
-			self:_Promote(userId, { userName = Player.Name, userId = Player.UserId })
+			actionFunc = "_Promote"
 		elseif Action == "demote" then
-			self:_Demote(userId, { userName = Player.Name, userId = Player.UserId })
+			actionFunc = "_Demote"
 		elseif Action == "fire" then
-			self:_Fire(userId, { userName = Player.Name, userId = Player.UserId })
+			actionFunc = "_Fire"
+		else
+			return false
+		end
+
+		local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
+
+		if not result["success"] then
+			return false
 		end
 
 		return true
@@ -1175,6 +1221,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- Update the api key using the public function, in case of errors it'll log them.
 	self:UpdateKey(apiKey)
+
+	-- Initialize the workspace attribute
+	local status = self.Settings.isUIEnabled
+	Workspace:SetAttribute(self._private.clientScriptName, status)
 
 	return self
 end
