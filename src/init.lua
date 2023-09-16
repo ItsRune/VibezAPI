@@ -356,6 +356,48 @@ function api:_createRemote()
 end
 
 --[=[
+	Gets the role id of a rank.
+	@param rank number | string
+	@return number?
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
+function api:_getRoleIdFromRank(rank: number | string): number?
+	-- Don't use normal HTTP function, it'll send the api key.
+	local url = `https://groups.roproxy.com/v1/groups/{self.GroupId}/roles`
+	local isOk, response = pcall(HttpService.GetAsync, HttpService, url)
+	local decodedResponse = nil
+
+	if not isOk then
+		return nil
+	end
+
+	isOk, decodedResponse = pcall(HttpService.JSONDecode, HttpService, response)
+
+	if not isOk then
+		return nil
+	end
+
+	local toSearch = "rank"
+	local canBeNumber = (tonumber(rank) ~= nil)
+
+	if not canBeNumber then
+		toSearch = "name"
+	end
+
+	for _, roleData in pairs(decodedResponse.roles) do
+		if string.lower(tostring(roleData[toSearch])) == string.lower(tostring(rank)) then
+			return roleData.id
+		end
+	end
+
+	return nil
+end
+
+--[=[
 	Gets the closest match to a player's username who's in game.
 	@param usernames {string}
 	@return {Player?}
@@ -428,7 +470,7 @@ function api:_onPlayerChatted(Player: Player, message: string)
 			continue
 		end
 
-		local playerRank = player:GetRankInGroup(self.Settings.GroupId)
+		local playerRank = player:GetRankInGroup(self.GroupId)
 		if playerRank >= theirCache[2] then -- Check if player running the command can use it.
 			continue
 		end
@@ -478,6 +520,7 @@ function api:_setRank(
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse
 	local userName = self:getNameById(userId)
+	local roleId = self:_getRoleIdFromRank(rankId)
 
 	if not whoCalled then
 		whoCalled = {
@@ -500,7 +543,7 @@ function api:_setRank(
 		},
 		userWhoRanked = whoCalled,
 		userId = tostring(userId),
-		rankId = tostring(rankId),
+		rankId = tostring(roleId),
 	}, true)
 
 	return response.Body
