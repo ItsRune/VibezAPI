@@ -950,8 +950,6 @@ function api:ToggleUI(override: boolean?): nil
 		self.Settings.isUIEnabled = not self.Settings.isUIEnabled
 	end
 
-	warn(self.Settings.isUIEnabled)
-
 	for _, playerData in pairs(self._private.validStaff) do
 		local player = playerData[1]
 
