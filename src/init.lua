@@ -10,7 +10,7 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 9/15/2023 01:58 EST
+	Updated: 9/17/2023 04:49 EST
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -117,7 +117,7 @@ function api:Http(
 ): (boolean, Types.httpResponse)
 	local canContinue, err = self._private.rateLimiter:Check()
 	if not canContinue then
-		local message = `You're being rate limited! {err}`
+		local message = "You're being rate limited! " .. err
 
 		-- Create a fake error response
 		return {
