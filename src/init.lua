@@ -1216,7 +1216,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_warn(`Optional key '{key}' is not a valid option.`)
 			continue
 		elseif typeof(self.Settings[key]) ~= typeof(value) then
-			self:_warn(`Optional key '{key}' is not the same as it\'s defined value of {typeof(self.Settings[key])}!`)
+			self:_warn( -- This is only made like this to fix github syntax highlights.
+				"Optional key '"
+					.. key
+					.. "' is not the same as it's defined value of "
+					.. typeof(self.Settings[key])
+					.. "!"
+			)
 			continue
 		end
 
