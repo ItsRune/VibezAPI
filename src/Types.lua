@@ -16,7 +16,7 @@ export type infoResponse = {
 export type activityResponse = {
 	success: boolean?,
 	message: string?,
-	[number]: {
+	detailedLogs: {
 		secondsUserHasSpent: number,
 		messagesUserHasSent: number,
 		detailedLogs: {
@@ -124,8 +124,8 @@ export type vibezApi = {
 		secondsSpent: number,
 		messagesSent: number | { string }
 	) -> httpResponse,
-	getActivity: (userId: (string | number)?) -> httpResponse,
-	UpdateLoggerTitle: (newTitle: string) -> nil,
+	getActivity: (self: vibezApi, userId: (string | number)?) -> activityResponse,
+	UpdateLoggerTitle: (self: vibezApi, newTitle: string) -> nil,
 	addCommandOperation: (
 		self: vibezApi,
 		operationName: string,

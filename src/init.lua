@@ -773,7 +773,7 @@ function api:_warn(...: string)
 		return
 	end
 
-	warn("[Vibez]:", table.unpack({ ... }))
+	warn("[Vibez]:", debug.traceback(table.concat({ ... }, " "), 2))
 end
 
 --// Public Functions \\--
@@ -1087,7 +1087,7 @@ function api:saveActivity(
 	userId: string | number,
 	secondsSpent: number,
 	messagesSent: (number | { string })?
-): Types.httpResponse
+): Types.infoResponse
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent or (messagesSent == nil) and 0 or messagesSent
 
