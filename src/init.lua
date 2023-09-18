@@ -54,6 +54,29 @@
 ]=]
 
 --[=[
+	@interface vibezCommandFunctions
+	.getGroupRankFromName (self: VibezAPI, groupRoleName: string) -> number?
+	.getGroupFromUser (self: VibezAPI, groupId: number, userId: number) -> { any }?
+	.Http (self: VibezAPI, Route: string, Method: string?, Headers: { [string]: any }, Body: { any }) -> httpResponse
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface infoResponse
+	.success boolean
+	.message string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface activityResponse
+	.success boolean?
+	.message string?
+	.[number] ({ secondsUserHasSpent: number, messagesUserHasSent: number, detailedLogs: [ { timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number } ] } })?
+	@within VibezAPI
+]=]
+
+--[=[
 	@type responseBody groupIdResponse | errorResponse | rankResponse
 	@within VibezAPI
 ]=]
@@ -149,7 +172,7 @@ function api:Http(
 
 	Headers["x-api-key"] = self.Settings.apiKey
 
-	local apiToUse = (useNewApi == true) and self._private.newApiUrl or self._private.apiUrl
+	local apiToUse = (useNewApi == true) and self._private.oldApiUrl or self._private.newApiUrl
 	local Options = {
 		Url = apiToUse .. Route,
 		Method = Method,
@@ -183,10 +206,47 @@ function api:getGroupId()
 		return self.GroupId
 	end
 
-	local isOk, res = self:Http("/ranking/groupid", "post", nil, nil, true)
+	local isOk, res = self:Http("/ranking/groupid", "post", nil, nil)
 	local Body: groupIdResponse = res.Body
 
 	return isOk and Body.groupId or -1
+end
+
+--[=[
+	Fetches the group's role name's rank value.
+	@param groupRoleName string
+	@return number?
+
+	Allows for partial naming, example:
+	```lua
+	-- Using Frivo's group ID
+	local rankNumber = VibezAPI:getGroupRankFromName("facili") --> Expected: 250 (Facility Developer)
+	```
+
+	@yields
+	@within VibezAPI
+	@tag Internal
+	@since 0.1.0
+]=]
+---
+function api:getGroupRankFromName(groupRoleName: string): number?
+	if not groupRoleName or typeof(groupRoleName) ~= "string" then
+		return nil
+	end
+
+	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, self.GroupId)
+
+	if not isOk then
+		return nil
+	end
+
+	for _, data in pairs(groupInfo.Roles) do
+		if string.sub(string.lower(data.Name), 0, #groupRoleName) == string.lower(groupRoleName) then
+			return data.Rank
+		end
+	end
+
+	return nil
 end
 
 --[=[
@@ -433,7 +493,12 @@ function api:_getPlayers(usernames: { string }): { Player? }
 
 				local operationResult = operationFunction(
 					player,
-					string.sub(username, string.len(tostring(operationCode)) + 1, string.len(username))
+					string.sub(username, string.len(tostring(operationCode)) + 1, string.len(username)),
+					{
+						getGroupRankFromName = self.getGroupRankFromName,
+						getGroupFromUser = self.getGroupFromUser,
+						Http = self.Http,
+					}
 				)
 
 				if operationResult == true then
@@ -553,7 +618,7 @@ function api:_setRank(
 		userWhoRanked = whoCalled,
 		userId = tostring(userId),
 		rankId = tostring(roleId),
-	}, true)
+	})
 
 	return response.Body
 end
@@ -594,7 +659,7 @@ function api:_Promote(userId: string | number, whoCalled: { userName: string, us
 		},
 		userWhoRanked = whoCalled,
 		userId = tostring(userId),
-	}, true)
+	})
 
 	return response
 end
@@ -635,7 +700,7 @@ function api:_Demote(userId: string | number, whoCalled: { userName: string, use
 		},
 		userWhoRanked = whoCalled,
 		userId = tostring(userId),
-	}, true)
+	})
 
 	return response
 end
@@ -676,7 +741,7 @@ function api:_Fire(userId: string | number, whoCalled: { userName: string, userI
 		},
 		userWhoRanked = whoCalled,
 		userId = tostring(userId),
-	}, true)
+	})
 
 	return response
 end
@@ -811,7 +876,7 @@ end
 	Adds a command operation code.
 	@param operationName string
 	@param operationCode string
-	@param operationFunction (playerToCheck: Player, incomingArgument: string) -> boolean
+	@param operationFunction (playerToCheck: Player, incomingArgument: string, internalFunctions: vibezCommandFunctions) -> boolean
 	@return VibezAPI
 
 	:::caution
@@ -819,14 +884,28 @@ end
 	:::
 
 	```lua
-	-- This command operation comes by default, no need to rewrite it.
+	-- This operation comes by default, no need to rewrite it.
 	Vibez:addCommandOperation(
 		"Team", -- Name of the operation.
 		"%", -- Prefix before the operation argument.
-		function(playerToCheck: Player, incomingArgument: string) -> boolean)
+		function(playerToCheck: Player, incomingArgument: string, internalFunctions)
 			return playerToCheck.Team ~= nil
 				and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
 					== string.lower(incomingArgument)
+		end
+	)
+	```
+
+	The `internalFunctions` parameter contains a table of functions that are meant to ease the developmental process of operations. Here's an example of one of them being used:
+	```lua
+	Vibez:addCommandOperation(
+		"SHR", -- Name of the operation.
+		"shr", -- Prefix before the operation argument.
+		function(playerToCheck: Player, incomingArgument: string, internalFunctions)
+			local playerGroupInfo = internalFunctions
+				.getGroupFromUser(Vibez.GroupId, playerToCheck.UserId)
+
+			return playerGroupInfo.Rank >= 250
 		end
 	)
 	```
@@ -839,7 +918,11 @@ end
 function api:addCommandOperation(
 	operationName: string,
 	operationCode: string,
-	operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
+	operationFunction: (
+		playerToCheck: Player,
+		incomingArgument: string,
+		internalFunctions: Types.vibezCommandFunctions
+	) -> boolean
 ): Types.vibezApi
 	if self._private.commandOperationCodes[operationName] then
 		self:_warn(`Command operation code '{operationCode}' already exists!`)
@@ -970,26 +1053,22 @@ function api:ToggleUI(override: boolean?): nil
 	Workspace:SetAttribute(self._private.clientScriptName, status)
 end
 
--- Gets the player's current activity (Route has been said to be buggy)
 --[=[
-	Gets the player's current activity.
-	@param userId string | number
-	@return httpResponse
+	Gets a player's or everyone's current activity
+	@param userId (string | number)?
+	@return activityResponse
 
-	@yields
 	@within VibezAPI
 	@tag Public
-	@unreleased
+	@since 0.1.0
 ]=]
 ---
-function api:getActivity(userId: string | number)
-	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
+function api:getActivity(userId: (string | number)?): Types.activityResponse
+	local _, result = self:Http("/activity/fetch2", "post", nil, {
+		userId = userId,
+	})
 
-	local _, response = self:Http("/activty/askJacobForTheRoute", "post", nil, {
-		playerId = userId,
-	}, true)
-
-	return response
+	return result.Body
 end
 
 --[=[
@@ -997,8 +1076,6 @@ end
 	@param userId string | number
 	@param secondsSpent number
 	@param messagesSent (number | { string })?
-	@param joinTime number?
-	@param leaveTime number?
 	@return httpResponse
 
 	@within VibezAPI
@@ -1009,14 +1086,10 @@ end
 function api:saveActivity(
 	userId: string | number,
 	secondsSpent: number,
-	messagesSent: (number | { string })?,
-	joinTime: number?,
-	leaveTime: number?
+	messagesSent: (number | { string })?
 ): Types.httpResponse
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent or (messagesSent == nil) and 0 or messagesSent
-	joinTime = (typeof(joinTime) == "number") and joinTime or DateTime.now().UnixTimestamp
-	leaveTime = (typeof(leaveTime) == "number") and leaveTime or DateTime.now().UnixTimestamp
 
 	if not tonumber(messagesSent) then
 		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'messagesSent'!`, 2))
@@ -1028,20 +1101,14 @@ function api:saveActivity(
 		return
 	end
 
-	if joinTime == leaveTime then
-		joinTime -= secondsSpent
-	end
-
 	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
-	local _, response = self:Http("/activity/save", "post", nil, {
-		playerId = userId,
-		playtime = secondsSpent,
-		messageCount = messagesSent,
-		joinTime = joinTime,
-		leaveTime = leaveTime,
-	}, true)
+	local _, response = self:Http("/activity/save2", "post", nil, {
+		userId = userId,
+		secondsUserHasSpent = secondsSpent,
+		messagesUserHasSent = messagesSent,
+	})
 
-	return response
+	return response.Body
 end
 
 --// Constructor \\--
@@ -1086,7 +1153,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Settings = table.clone(baseSettings)
 	self._private = {
 		newApiUrl = "https://leina.vibez.dev",
-		apiUrl = "https://api.vibez.dev/api",
+		oldApiUrl = "https://api.vibez.dev/api",
 		Maid = {},
 		validStaff = {},
 		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
@@ -1149,7 +1216,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_warn(`Optional key '{key}' is not a valid option.`)
 			continue
 		elseif typeof(self.Settings[key]) ~= typeof(value) then
-			self:_warn(`Optional key '{key}' is not the same as it's defined value of {typeof(self.Settings[key])}!`)
+			self:_warn(`Optional key '{key}' is not the same as it\'s defined value of {typeof(self.Settings[key])}!`)
 			continue
 		end
 

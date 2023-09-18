@@ -8,6 +8,27 @@ export type errorResponse = {
 	errorMessage: string,
 }
 
+export type infoResponse = {
+	success: boolean,
+	message: string,
+}
+
+export type activityResponse = {
+	success: boolean?,
+	message: string?,
+	[number]: {
+		secondsUserHasSpent: number,
+		messagesUserHasSent: number,
+		detailedLogs: {
+			{
+				timestampLeftAt: number,
+				secondsUserHasSpent: number,
+				messagesUserHasSent: number,
+			}
+		},
+	}?,
+}
+
 export type rankResponse = {
 	newRank: {
 		id: number,
@@ -28,7 +49,7 @@ export type rankResponse = {
 	},
 }
 
-export type responseBody = groupIdResponse | errorResponse | rankResponse
+export type responseBody = groupIdResponse | errorResponse | rankResponse | infoResponse
 
 export type httpResponse = {
 	Body: responseBody,
@@ -75,6 +96,18 @@ export type vibezInternalApi = {
 	_warn: (...string) -> nil,
 }
 
+export type vibezCommandFunctions = {
+	getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
+	getGroupFromUser: (self: vibezApi, groupId: number, userId: number) -> { any }?,
+	Http: (
+		self: vibezApi,
+		Route: string,
+		Method: string?,
+		Headers: { [string]: any },
+		Body: { [string]: any }
+	) -> httpResponse,
+}
+
 export type vibezApi = {
 	GroupId: number,
 	Settings: vibezSettings,
@@ -83,16 +116,16 @@ export type vibezApi = {
 	Demote: (self: vibezApi, userId: string | number) -> responseBody,
 	Fire: (self: vibezApi, userId: string | number) -> responseBody,
 	SetRank: (self: vibezApi, userId: string | number, rankId: string | number) -> responseBody,
-	ToggleCommands: (self: vibezApi) -> nil,
-	ToggleUI: (self: vibezApi) -> nil,
+	ToggleCommands: (self: vibezApi, override: boolean?) -> nil,
+	ToggleUI: (self: vibezApi, override: boolean?) -> nil,
 	saveActivity: (
 		self: vibezApi,
 		userId: string | number,
 		secondsSpent: number,
-		messagesSent: number | { string },
-		joinTime: number?,
-		leaveTime: number?
-	) -> responseBody,
+		messagesSent: number | { string }
+	) -> httpResponse,
+	getActivity: (userId: (string | number)?) -> httpResponse,
+	UpdateLoggerTitle: (newTitle: string) -> nil,
 	addCommandOperation: (
 		self: vibezApi,
 		operationName: string,
