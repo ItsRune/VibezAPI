@@ -191,10 +191,14 @@ export type Embed = {
 }
 
 export type embedCreator = {
-	addTitle: (self: embedCreator, title: string) -> embedCreator,
-	addDescription: (self: embedCreator, description: string) -> embedCreator,
+	setTitle: (self: embedCreator, title: string) -> embedCreator,
+	setDescription: (self: embedCreator, description: string) -> embedCreator,
 	addField: (self: embedCreator, name: string, value: string, isInline: boolean?) -> embedCreator,
 	setColor: (self: embedCreator, color: Color3 | string | number) -> embedCreator,
+	setAuthor: (self: embedCreator, name: string, url: string?, iconUrl: string) -> embedCreator,
+	setThumbnail: (self: embedCreator, url: string, height: number?, width: number?) -> embedCreator,
+	setFooter: (self: embedCreator, text: string, iconUrl: string?) -> embedCreator,
+	setTimestamp: (self: embedCreator, timeStamp: number | "Auto") -> embedCreator,
 }
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi

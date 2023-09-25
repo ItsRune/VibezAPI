@@ -10,7 +10,7 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 9/17/2023 04:49 EST
+	Updated: 9/25/2023 19:31 EST
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -1143,6 +1143,8 @@ end
 	local VibezAPI = require(script.VibezAPI)
 	local Vibez = VibezAPI(myKey)
 	```
+
+	@tag Constructor
 ]=]
 ---
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi

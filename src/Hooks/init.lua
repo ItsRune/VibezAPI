@@ -1,16 +1,17 @@
 --[=[
-    @class Hooks
-    Creates easy to use webhook creation / usage.
+	@class Webhooks
+	Creates easy to use webhook creation / usage.
 ]=]
 
 --[=[
-    @interface httpResponse
+	@interface httpResponse
 	.Body { any }
 	.Headers { [string]: any }
 	.StatusCode number
 	.StatusMessage string?
 	.Success boolean
 	.rawBody string
+	@within Webhooks
 ]=]
 local Hooks = {}
 local Class = {}
@@ -20,12 +21,13 @@ local embedClass = require(script.Embed)
 local Types = require(script.Parent.Types)
 
 --[=[
-    Creates the hook class.
-    @param vibezApi vibezApi
-    @param webhook string
-    @return Hooks
+	Creates the hook class.
+	@param vibezApi vibezApi
+	@param webhook string
+	@return Webhooks
 
-	@within Hooks
+	@tag Constructor
+	@within Webhooks
 	@since 0.2.0
 ]=]
 ---
@@ -50,9 +52,10 @@ end
 --[=[
 	Sets the webhook to a new one.
 	@param newWebhook string
-	@return Hooks
+	@return Webhooks
 
-	@within Hooks
+	@tag Chainable
+	@within Webhooks
 	@since 0.2.0
 ]=]
 ---
@@ -64,9 +67,10 @@ end
 --[=[
 	Sets the content of the webhook.
 	@param content string
-	@return Hooks
+	@return Webhooks
 
-	@within Hooks
+	@tag Chainable
+	@within Webhooks
 	@since 0.2.0
 ]=]
 function Class:setContent(content: string?)
@@ -77,9 +81,10 @@ end
 --[=[
 	Creates an embed with the embed creator.
 	@param handler (embedCreator: Embed) -> Embed
-	@return Hooks
+	@return Webhooks
 
-	@within Hooks
+	@tag Chainable
+	@within Webhooks
 	@since 0.2.0
 ]=]
 ---
@@ -105,9 +110,10 @@ end
 --[=[
 	Creates an embed with table data.
 	@param data {[string]: any}
-	@return Hooks
+	@return Webhooks
 
-	@within Hooks
+	@tag Chainable
+	@within Webhooks
 	@since 0.2.0
 ]=]
 ---
@@ -125,7 +131,7 @@ end
 	@param webhookToUse string?
 	@return { ID: string, Token: string }
 
-	@within Hooks
+	@within Webhooks
 	@since 0.2.0
 ]=]
 ---
@@ -145,18 +151,16 @@ function Class:_parseWebhook(webhookToUse: string?): { ID: string, Token: string
 end
 
 --[=[
-    Posts a new webhook.
-	@return Hooks
+	Posts a new webhook.
+	@return httpResponse
 
 	@yields
-	@within Hooks
+	@within Webhooks
 	@since 0.2.0
 ]=]
 ---
-function Class:Post()
+function Class:Post(): Types.httpResponse
 	local webhookData = self:_parseWebhook()
-
-	warn(self.toSend)
 	local isOk, response =
 		self.Api:Http(string.format("/hooks/%s/%s", webhookData.ID, webhookData.Token), "post", nil, self.toSend)
 
@@ -164,7 +168,7 @@ function Class:Post()
 		self.Api:_warn(response.Body.message)
 	end
 
-	return self
+	return response
 end
 
 return Hooks

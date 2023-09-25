@@ -28,7 +28,8 @@ Class.__index = Class
 	@param requestsPerRetry number
 	@param retryAfter number
 	@return RateLimiter
-	
+
+	@tag Constructor
 	@within RateLimiter
 	@since 0.1.0
 ]=]
