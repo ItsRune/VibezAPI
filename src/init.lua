@@ -102,6 +102,7 @@ local Workspace = game:GetService("Workspace")
 
 --// Constants \\--
 local Types = require(script.Types)
+local Hooks = require(script.Hooks)
 local RateLimit = require(script.RateLimit)
 local api = {}
 local baseSettings = {
@@ -122,7 +123,7 @@ local baseSettings = {
 	@param Method string?
 	@param Headers { [string]: any }?
 	@param Body { any }?
-	@param useNewApi boolean?
+	@param useOldApi boolean?
 	@return boolean, httpResponse?
 
 	@yields
@@ -136,7 +137,7 @@ function api:Http(
 	Method: string?,
 	Headers: { [string]: any }?,
 	Body: { any }?,
-	useNewApi: boolean?
+	useOldApi: boolean?
 ): (boolean, Types.httpResponse)
 	local canContinue, err = self._private.rateLimiter:Check()
 	if not canContinue then
@@ -172,7 +173,7 @@ function api:Http(
 
 	Headers["x-api-key"] = self.Settings.apiKey
 
-	local apiToUse = (useNewApi == true) and self._private.oldApiUrl or self._private.newApiUrl
+	local apiToUse = (useOldApi == true) and self._private.oldApiUrl or self._private.newApiUrl
 	local Options = {
 		Url = apiToUse .. Route,
 		Method = Method,
@@ -1051,6 +1052,21 @@ function api:ToggleUI(override: boolean?): nil
 
 	local status = self.Settings.isUIEnabled
 	Workspace:SetAttribute(self._private.clientScriptName, status)
+end
+
+--[=[
+	Initializes the Hooks class with the specified webhook.
+	@param webhook string
+	@return VibezHooks
+
+	@within VibezAPI
+	@tag Public
+	@since 0.1.0
+]=]
+---
+function api:getWebhookBuilder(webhook: string): Types.vibezHooks
+	local newHook = Hooks.new(self, webhook)
+	return newHook
 end
 
 --[=[

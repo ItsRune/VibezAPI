@@ -1,3 +1,16 @@
+-- If you're reading this... Don't even ask..
+
+-- Local Types
+type RateLimit = {
+	isLimited: boolean,
+	_retryAfter: number,
+	_counter: number,
+	_maxCount: number,
+	_counterStartedAt: number,
+	Check: (self: RateLimit) -> (boolean, string?),
+}
+
+-- Exported Types
 export type groupIdResponse = {
 	success: boolean,
 	groupId: number,
@@ -71,14 +84,17 @@ export type vibezSettings = {
 	ignoreWarnings: boolean,
 }
 
+export type httpFunction = (
+	self: vibezApi,
+	Route: string,
+	Method: string?,
+	Headers: { [string]: any },
+	Body: { [string]: any },
+	useOldApi: boolean?
+) -> (boolean, httpResponse)
+
 export type vibezInternalApi = {
-	Http: (
-		self: vibezApi,
-		Route: string,
-		Method: string?,
-		Headers: { [string]: any },
-		Body: { [string]: any }
-	) -> httpResponse,
+	Http: httpFunction,
 	onPlayerChatted: (Player: Player, message: string) -> nil,
 	onPlayerAdded: (Player: Player) -> nil,
 	onPlayerRemoved: (Player: Player) -> nil,
@@ -111,6 +127,15 @@ export type vibezCommandFunctions = {
 export type vibezApi = {
 	GroupId: number,
 	Settings: vibezSettings,
+	_private: {
+		newApiUrl: string,
+		oldApiUrl: string,
+		Maid: { RBXScriptConnection? },
+		validStaff: { [number]: {}? },
+		clientScriptName: string,
+		rateLimiter: RateLimit,
+		commandOperationCodes: { { any }? },
+	},
 
 	Promote: (self: vibezApi, userId: string | number) -> responseBody,
 	Demote: (self: vibezApi, userId: string | number) -> responseBody,
@@ -133,7 +158,43 @@ export type vibezApi = {
 		operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
 	) -> vibezApi,
 	removeCommandOperation: (self: vibezApi, operationName: string) -> vibezApi,
-	Destroy: () -> nil,
+	Destroy: (self: vibezApi) -> nil,
+	getWebhookBuilder: (self: vibezApi, webhook: string) -> vibezHooks,
+}
+
+export type vibezHooks = {
+	Api: { any },
+	webhook: string,
+	toSend: { any? },
+	new: (vibezApi: { any }, webhook: string) -> vibezHooks,
+	addEmbedWithCreator: (self: vibezHooks, handler: (embedCreator: embedCreator) -> Embed) -> vibezHooks,
+	addEmbedWithoutCreator: (self: vibezHooks, data: { [string]: any }) -> vibezHooks,
+	_parseWebhook: (self: vibezHooks, webhookToUse: string?) -> { ID: string, Token: string }?,
+	Post: (self: vibezHooks) -> vibezHooks,
+	setContent: (self: vibezHooks, content: string?) -> vibezHooks,
+	setWebhook: (self: vibezHooks, newWebhook: string) -> vibezHooks,
+}
+
+export type Embed = {
+	data: {
+		title: string,
+		description: string,
+		fields: {
+			{
+				name: string,
+				value: string,
+				inline: boolean?,
+			}?
+		},
+		color: string | number,
+	},
+}
+
+export type embedCreator = {
+	addTitle: (self: embedCreator, title: string) -> embedCreator,
+	addDescription: (self: embedCreator, description: string) -> embedCreator,
+	addField: (self: embedCreator, name: string, value: string, isInline: boolean?) -> embedCreator,
+	setColor: (self: embedCreator, color: Color3 | string | number) -> embedCreator,
 }
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi
