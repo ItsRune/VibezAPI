@@ -33,6 +33,7 @@ Class.__index = Class
 	@within RateLimiter
 	@since 0.1.0
 ]=]
+---
 function Limiter.new(requestsPerRetry: number, retryAfter: number)
 	local self = setmetatable({}, Class)
 
@@ -53,6 +54,7 @@ end
 	@within RateLimiter
 	@since 0.1.0
 ]=]
+---
 function Class:Check(): (boolean, string?)
 	local durationSinceStart = os.time() - self._counterStartedAt
 

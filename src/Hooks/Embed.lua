@@ -7,6 +7,22 @@ Class.__index = Class
 
 local embedTypes = require(script.Parent.Parent.Types)
 
+--// Local Functions \\--
+--[=[
+	Checks if a string is within the character limit.
+	@param value string
+	@param charLimit number
+	@return boolean
+
+	@within EmbedBuilder
+	@ignore
+]=]
+---
+local function checkCharLimit(value: string, charLimit: number): boolean
+	return (string.len(tostring(value)) <= charLimit)
+end
+
+--// Class Functions \\--
 --[=[
     @function new
     Creates the embed class
@@ -16,6 +32,7 @@ local embedTypes = require(script.Parent.Parent.Types)
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Embed.new()
 	local self = setmetatable({}, Class)
 
@@ -56,29 +73,43 @@ function Embed.new()
 end
 
 --[=[
-    Adds a description to the embed.
-    @param description string
-    @return EmbedBuilder
+	Adds a description to the embed.
+	@param description string
+	@return EmbedBuilder
 
-    @tag Chainable
-    @within EmbedBuilder
-    @since 0.2.0
+	@tag Required
+	@tag Chainable
+	@within EmbedBuilder
+	@since 0.2.0
 ]=]
+---
 function Class:setDescription(description: string): embedTypes.Embed
+	if not checkCharLimit(description, 4096) then
+		warn("[Vibez]: Setting the embed's description failed due to exceeded character limit of 4096!")
+		return self
+	end
+
 	self.data.description = description
 	return self
 end
 
 --[=[
-    Adds a title to the embed.
-    @param title string
-    @return EmbedBuilder
+	Adds a title to the embed.
+	@param title string
+	@return EmbedBuilder
 
-    @tag Chainable
-    @within EmbedBuilder
-    @since 0.2.0
+	@tag Required
+	@tag Chainable
+	@within EmbedBuilder
+	@since 0.2.0
 ]=]
+---
 function Class:setTitle(title: string): embedTypes.Embed
+	if not checkCharLimit(title, 256) then
+		warn("[Vibez]: Setting the embed's title failed due to exceeded character limit of 256!")
+		return self
+	end
+
 	self.data.title = title
 	return self
 end
@@ -94,13 +125,14 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:addField(name: string, value: string, isInline: boolean?): embedTypes.Embed
-	if string.len(tostring(name)) > 256 then
+	if not checkCharLimit(name, 256) then
 		warn("[Vibez]: Insertion of field has stopped due to a higher character limit of 256!")
 		return self
 	end
 
-	if string.len(tostring(value)) > 1024 then
+	if not checkCharLimit(name, 1024) then
 		warn("[Vibez]: Insertion of field has stopped due to a higher character limit of 1024!")
 		return self
 	end
@@ -121,6 +153,7 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:clearFields(): embedTypes.Embed
 	table.clear(self.data.fields)
 	return self
@@ -136,7 +169,13 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:setFooter(text: string, iconUrl: string?): embedTypes.Embed
+	if not checkCharLimit(text, 2048) then
+		warn("[Vibez]: Insertion of footer has suspended due to exceeding the character limit of 2048!")
+		return self
+	end
+
 	self.data.footer = {
 		text = text,
 		icon_url = iconUrl,
@@ -155,6 +194,7 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:setThumbnail(url: string, height: number?, width: number?): embedTypes.Embed
 	self.data.thumbnail = {
 		url = url,
@@ -173,6 +213,7 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:setColor(color: Color3 | string | number): embedTypes.Embed
 	if typeof(color) == "Color3" then
 		color = tonumber("0x" .. color:ToHex())
@@ -193,7 +234,13 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:setAuthor(name: string, url: string?, iconUrl: string): embedTypes.Embed
+	if not checkCharLimit(name, 256) then
+		warn("[Vibez]: Insertion of author name has stopped due to exceeding the character limit of 256!")
+		return self
+	end
+
 	self.data.author = {
 		name = name,
 		url = url,
@@ -211,8 +258,9 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:setTimestamp(timeStamp: number | "Auto"): embedTypes.Embed
-	self.data.timestamp = (timeStamp == "Auto") and DateTime.now().UnixTimestamp or timeStamp
+	self.data.timestamp = (string.lower(tostring(timeStamp)) == "auto") and DateTime.now().UnixTimestamp or timeStamp
 	return self
 end
 
@@ -224,6 +272,7 @@ end
     @within EmbedBuilder
     @since 0.2.0
 ]=]
+---
 function Class:_resolve(): { any }
 	return self.data
 end

@@ -435,6 +435,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
+---
 function api:_getRoleIdFromRank(rank: number | string): number?
 	-- Don't use normal HTTP function, it'll send the api key.
 	local url = `https://groups.roproxy.com/v1/groups/{self.GroupId}/roles`
@@ -477,6 +478,7 @@ end
 	@tag Internal
 	@since 0.1.0
 ]=]
+---
 function api:_getPlayers(usernames: { string }): { Player? }
 	local found = {}
 
@@ -954,6 +956,7 @@ end
 	@tag Public
 	@since 0.1.0
 ]=]
+---
 function api:removeCommandOperation(operationName: string): Types.vibezApi
 	self._private.commandOperationCodes[operationName] = nil
 	return self
@@ -1154,6 +1157,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@class VibezAPI
+		**IMPORTANT**: When using this module, we recommend using the number-based format rather than importing the scripts into the game.
 	]=]
 
 	api.__index = api

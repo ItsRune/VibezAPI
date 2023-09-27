@@ -1,7 +1,6 @@
 gitRepoUrl = "https://github.com/ItsRune/VibezAPI"
-baseUrl = "/api/VibezAPI"
 
-classOrder = ["VibezAPI", "RateLimiter"]
+classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
 
 # Home page settings
 [home]

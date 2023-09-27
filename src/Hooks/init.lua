@@ -50,6 +50,27 @@ function Hooks.new(vibezApi: Types.vibezApi, webhook: string): Types.vibezHooks
 end
 
 --[=[
+	Initializes the 'embeds' table
+	@return {any?}
+
+	@within Webhooks
+	@since 0.2.0
+]=]
+---
+function Hooks._createEmbedTable(): { any? }
+	return setmetatable({}, {
+		__newindex = function(tbl, index, value)
+			if #tbl > 9 then
+				table.remove(tbl, 1)
+				index -= 1
+			end
+
+			rawset(tbl, index, value)
+		end,
+	})
+end
+
+--[=[
 	Sets the webhook to a new one.
 	@param newWebhook string
 	@return Webhooks
@@ -73,8 +94,34 @@ end
 	@within Webhooks
 	@since 0.2.0
 ]=]
-function Class:setContent(content: string?)
+---
+function Class:setContent(content: string?): Types.vibezHooks
+	if string.len(tostring(content)) > 2000 then
+		warn("[Vibez]: Setting the webhook's content failed due to exceeded character limit of 2000!")
+		return self
+	end
+
 	self.toSend.content = content
+	return self
+end
+
+--[=[
+	Sets the username of the webhook.
+	@param username string
+	@return Webhooks
+
+	@tag Chainable
+	@within Webhooks
+	@since 0.2.0
+]=]
+---
+function Class:setUsername(username: string?): Types.vibezHooks
+	if string.len(tostring(username)) > 80 then
+		warn("[Vibez]: Setting the webhook's username failed due to exceeded character limit of 80!")
+		return self
+	end
+
+	self.toSend.username = username
 	return self
 end
 
@@ -88,7 +135,7 @@ end
 	@since 0.2.0
 ]=]
 ---
-function Class:addEmbedWithCreator(handler: (embedCreator: Types.embedCreator) -> Types.Embed): Types.vibezHooks
+function Class:addEmbedWithBuilder(handler: (embedCreator: Types.embedCreator) -> Types.Embed): Types.vibezHooks
 	assert(
 		typeof(handler) == "function",
 		"parameter 'handler' expected a 'function' but received a '" .. typeof(handler) .. "'"
@@ -97,11 +144,11 @@ function Class:addEmbedWithCreator(handler: (embedCreator: Types.embedCreator) -
 	local createdEmbed = handler(embedClass.new())
 
 	if not self.toSend["embeds"] then
-		self.toSend.embeds = {}
+		self.toSend.embeds = Hooks._createEmbedTable()
 	end
 
 	if createdEmbed["className"] ~= nil and createdEmbed["className"] == "Embed" then
-		table.insert(self.toSend.embeds, createdEmbed:_resolve())
+		self.toSend.embeds[#self.toSend.embeds + 1] = createdEmbed:_resolve()
 	end
 
 	return self
@@ -117,12 +164,37 @@ end
 	@since 0.2.0
 ]=]
 ---
-function Class:addEmbedWithoutCreator(data: { [string]: any }): Types.vibezHooks
+function Class:addEmbed(data: { [string]: any }): Types.vibezHooks
 	if not self.toSend["embeds"] then
-		self.toSend.embeds = {}
+		self.toSend.embeds = Hooks._createEmbedTable()
 	end
 
-	table.insert(self.toSend.embeds, data)
+	self.toSend.embeds[#self.toSend.embeds + 1] = data
+	return self
+end
+
+--[=[
+	Toggles text-to-speech. **Default: Disabled**
+	@param override boolean?
+	@return Webhooks
+
+	@tag Chainable
+	@within Webhooks
+	@since 0.2.0
+]=]
+---
+function Class:setTTS(override: boolean?): Types.vibezHooks
+	if self.toSend["tts"] == nil then
+		self.toSend["tts"] = false
+	end
+
+	local isToggled = not self.toSend["tts"]
+
+	if override ~= nil then
+		isToggled = override
+	end
+
+	self.toSend.tts = isToggled
 	return self
 end
 
@@ -159,7 +231,7 @@ end
 	@since 0.2.0
 ]=]
 ---
-function Class:Post(): Types.httpResponse
+function Class:Send(): Types.httpResponse
 	local webhookData = self:_parseWebhook()
 	local isOk, response =
 		self.Api:Http(string.format("/hooks/%s/%s", webhookData.ID, webhookData.Token), "post", nil, self.toSend)

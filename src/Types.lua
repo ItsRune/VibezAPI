@@ -167,12 +167,14 @@ export type vibezHooks = {
 	webhook: string,
 	toSend: { any? },
 	new: (vibezApi: { any }, webhook: string) -> vibezHooks,
-	addEmbedWithCreator: (self: vibezHooks, handler: (embedCreator: embedCreator) -> Embed) -> vibezHooks,
-	addEmbedWithoutCreator: (self: vibezHooks, data: { [string]: any }) -> vibezHooks,
+	addEmbedWithBuilder: (self: vibezHooks, handler: (embedCreator: embedCreator) -> Embed) -> vibezHooks,
+	addEmbed: (self: vibezHooks, data: { [string]: any }) -> vibezHooks,
 	_parseWebhook: (self: vibezHooks, webhookToUse: string?) -> { ID: string, Token: string }?,
-	Post: (self: vibezHooks) -> vibezHooks,
+	Send: (self: vibezHooks) -> vibezHooks,
 	setContent: (self: vibezHooks, content: string?) -> vibezHooks,
+	setUsername: (self: vibezHooks, username: string?) -> vibezHooks,
 	setWebhook: (self: vibezHooks, newWebhook: string) -> vibezHooks,
+	setTTS: (self: vibezHooks, override: boolean?) -> vibezHooks,
 }
 
 export type Embed = {
