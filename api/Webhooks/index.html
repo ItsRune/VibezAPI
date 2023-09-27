@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="plugin-moonwave plugin-id-moonwave">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v2.3.1">
+<title data-rh="true">Webhooks | VibezAPI</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://ItsRune.github.io/VibezAPI/api/Webhooks"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docusaurus_tag" content="default"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docsearch:docusaurus_tag" content="default"><meta data-rh="true" property="og:title" content="Webhooks | VibezAPI"><meta data-rh="true" name="description" content="Creates easy to use webhook creation / usage."><meta data-rh="true" property="og:description" content="Creates easy to use webhook creation / usage."><link data-rh="true" rel="canonical" href="https://ItsRune.github.io/VibezAPI/api/Webhooks"><link data-rh="true" rel="alternate" href="https://ItsRune.github.io/VibezAPI/api/Webhooks" hreflang="en"><link data-rh="true" rel="alternate" href="https://ItsRune.github.io/VibezAPI/api/Webhooks" hreflang="x-default"><link rel="stylesheet" href="/VibezAPI/assets/css/styles.e1adec2f.css">
+<link rel="preload" href="/VibezAPI/assets/js/runtime~main.ad2b7123.js" as="script">
+<link rel="preload" href="/VibezAPI/assets/js/main.6b036d41.js" as="script">
+</head>
+<body class="navigation-with-keyboard">
+<script>!function(){function e(e){document.documentElement.setAttribute("data-theme",e)}var t=function(){var e=null;try{e=localStorage.getItem("theme")}catch(e){}return e}();null!==t?e(t):window.matchMedia("(prefers-color-scheme: dark)").matches?e("dark"):(window.matchMedia("(prefers-color-scheme: light)").matches,e("light"))}()</script><div id="__docusaurus">
+<div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/VibezAPI/"><b class="navbar__title text--truncate">VibezAPI</b></a><a class="navbar__item navbar__link" href="/VibezAPI/docs/intro">Docs</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/VibezAPI/api/">API</a></div><div class="navbar__items navbar__items--right"><a href="https://discord.gg/vdev" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">Discord<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><a href="https://github.com/ItsRune/VibezAPI" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="Switch between dark and light mode (currently light mode)" aria-label="Switch between dark and light mode (currently light mode)" aria-live="polite"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="searchBox_ZlJk"><div class="navbar__search"><span aria-label="expand searchbar" role="button" class="search-icon" tabindex="0"></span><input type="search" id="search_input_react" placeholder="Press S to Search..." aria-label="Search" class="navbar__search-input search-bar"></div></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0 docPageContainer_wNNk"><div class="docPage_Dpn1"><div class="docSidebarContainer_o_re"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/VibezAPI/api/VibezAPI">​Vibez​A​P​I</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/VibezAPI/api/Webhooks">​Webhooks</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/VibezAPI/api/RateLimiter">​Rate​Limiter</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/VibezAPI/api/EmbedBuilder">​Embed​Builder</a></li></ul></nav></div></div><main class="docMainContainer_HJE1"><div class="container padding-vert--lg"><div class="row"><div class="col docItemCol_MU3C"><div class="docItemContainer_Wv98"><article><div class="member_J0w1 markdown"><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_oUs_"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><header><h1 class="docTitle_mZRt" style="text-decoration:none"><span style="display:inline-block">Webhooks</span></h1><div class="luaClassTags_EipM"></div><div>
+<p>Creates easy to use webhook creation / usage.</p>
+</div></header><h2 class="anchor anchorWithStickyNavbar_LWe7" id="functions">Functions<a href="#functions" class="hash-link" aria-label="Direct link to Functions" title="Direct link to Functions">​</a></h2><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="new"><code style="text-decoration:none">new</code><a href="#new" class="hash-link" aria-label="Direct link to new" title="Direct link to new">​</a></h3><span class="docTag__6UZ" style="border-color:#ff793f;color:#ff793f">Constructor</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L33"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->.</code><code class="green_DgR4">new</code><code>(</code><div class="inset_uKQm"><div><code>vibezApi<!-- -->: </code><code class="blue_P4bS">vibezApi</code><code>,</code></div><div><code>webhook<!-- -->: </code><code class="blue_P4bS">string</code></div></div><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks">Webhooks</a></code></div><div>
+<p>Creates the hook class.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="_createEmbedTable"><code style="text-decoration:none">_createEmbedTable</code><a href="#_createEmbedTable" class="hash-link" aria-label="Direct link to _createEmbedTable" title="Direct link to _createEmbedTable">​</a></h3><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L59"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->.</code><code class="green_DgR4">_createEmbedTable</code><code>(</code><code>) → </code><code class="purple_ieR2">{</code><code class="blue_P4bS">any?</code><code class="purple_ieR2">}</code></div><div>
+<p>Initializes the 'embeds' table</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="setWebhook"><code style="text-decoration:none">setWebhook</code><a href="#setWebhook" class="hash-link" aria-label="Direct link to setWebhook" title="Direct link to setWebhook">​</a></h3><span class="docTag__6UZ" style="border-color:#218c74;color:#218c74">Chainable</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L82"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">setWebhook</code><code>(</code><code>newWebhook<!-- -->: </code><code class="blue_P4bS">string</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks">Webhooks</a></code></div><div>
+<p>Sets the webhook to a new one.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="setContent"><code style="text-decoration:none">setContent</code><a href="#setContent" class="hash-link" aria-label="Direct link to setContent" title="Direct link to setContent">​</a></h3><span class="docTag__6UZ" style="border-color:#218c74;color:#218c74">Chainable</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L97"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">setContent</code><code>(</code><code>content<!-- -->: </code><code class="blue_P4bS">string</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks">Webhooks</a></code></div><div>
+<p>Sets the content of the webhook.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="setUsername"><code style="text-decoration:none">setUsername</code><a href="#setUsername" class="hash-link" aria-label="Direct link to setUsername" title="Direct link to setUsername">​</a></h3><span class="docTag__6UZ" style="border-color:#218c74;color:#218c74">Chainable</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L117"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">setUsername</code><code>(</code><code>username<!-- -->: </code><code class="blue_P4bS">string</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks">Webhooks</a></code></div><div>
+<p>Sets the username of the webhook.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="addEmbedWithBuilder"><code style="text-decoration:none">addEmbedWithBuilder</code><a href="#addEmbedWithBuilder" class="hash-link" aria-label="Direct link to addEmbedWithBuilder" title="Direct link to addEmbedWithBuilder">​</a></h3><span class="docTag__6UZ" style="border-color:#218c74;color:#218c74">Chainable</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L137"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">addEmbedWithBuilder</code><code>(</code><code>handler<!-- -->: </code><code class="purple_ieR2">(</code><code>embedCreator<!-- -->: </code><code class="blue_P4bS">Embed</code><code class="purple_ieR2">)</code><code class="purple_ieR2"> → </code><code class="blue_P4bS">Embed</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks">Webhooks</a></code></div><div>
+<p>Creates an embed with the embed creator.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="addEmbed"><code style="text-decoration:none">addEmbed</code><a href="#addEmbed" class="hash-link" aria-label="Direct link to addEmbed" title="Direct link to addEmbed">​</a></h3><span class="docTag__6UZ" style="border-color:#218c74;color:#218c74">Chainable</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L166"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">addEmbed</code><code>(</code><code>data<!-- -->: </code><code class="purple_ieR2">{</code><span><code>[</code><code class="blue_P4bS">string</code><code>]</code></span><code>: </code><code class="blue_P4bS">any</code><code class="purple_ieR2">}</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks">Webhooks</a></code></div><div>
+<p>Creates an embed with table data.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="setTTS"><code style="text-decoration:none">setTTS</code><a href="#setTTS" class="hash-link" aria-label="Direct link to setTTS" title="Direct link to setTTS">​</a></h3><span class="docTag__6UZ" style="border-color:#218c74;color:#218c74">Chainable</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L185"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">setTTS</code><code>(</code><code>override<!-- -->: </code><code class="blue_P4bS">boolean?</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks">Webhooks</a></code></div><div>
+<p>Toggles text-to-speech. <strong>Default: Disabled</strong></p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="_parseWebhook"><code style="text-decoration:none">_parseWebhook</code><a href="#_parseWebhook" class="hash-link" aria-label="Direct link to _parseWebhook" title="Direct link to _parseWebhook">​</a></h3><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L209"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">_parseWebhook</code><code>(</code><code>webhookToUse<!-- -->: </code><code class="blue_P4bS">string?</code><code>) → </code><code class="purple_ieR2">{</code><div class="inset_uKQm"><code>ID<!-- -->: </code><code class="blue_P4bS">string</code><code class="purple_ieR2">,</code></div><div class="inset_uKQm"><code>Token<!-- -->: </code><code class="blue_P4bS">string</code></div><code class="purple_ieR2">}</code></div><div>
+<p>Parses the webhook into the ID and Token.</p>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Send"><code style="text-decoration:none">Send</code><a href="#Send" class="hash-link" aria-label="Direct link to Send" title="Direct link to Send">​</a></h3><span class="badge_Ba2I" style="color:#f1c40f"><span class="badgeTooltip_cWXP">This is a yielding function. When called, it will pause the Lua thread that called the function until a result is ready to be returned, without interrupting other scripts.</span><span class="badgeToolTipTail_H9D_"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="#f1c40f" role="img" aria-label="This is a yielding function. When called, it will pause the Lua thread that called the function until a result is ready to be returned, without interrupting other scripts."><path d="M96.4 11.9c-1.4-2.5-4-4-6.9-4H10.8c-2.9 0-5.4 1.5-6.9 4-1.4 2.5-1.4 5.5 0 7.9L43.3 88c1.4 2.5 4 4 6.9 4 2.9 0 5.4-1.5 6.9-4l39.3-68.2c1.4-2.4 1.4-5.4 0-7.9zM46.3 54.5c1.1-1.1 2.3-1.6 3.8-1.6s2.8.5 3.8 1.6c1.1 1.1 1.6 2.3 1.6 3.8s-.5 2.8-1.6 3.8c-1.1 1.1-2.3 1.6-3.8 1.6s-2.8-.5-3.8-1.6c-1.1-1.1-1.6-2.3-1.6-3.8.1-1.5.6-2.8 1.6-3.8zm-.5-4.9V21.8h8.8v27.8h-8.8z"></path></svg> <!-- -->Yields</span></span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->0.2.0</span><a class="sourceButton_sEho" href="https://github.com/ItsRune/VibezAPI/blob/master/src/Hooks/init.lua#L233"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Webhooks<!-- -->:</code><code class="green_DgR4">Send</code><code>(</code><code>) → </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/VibezAPI/api/Webhooks#httpResponse">httpResponse</a></code></div><h3>Types</h3><h3 class="anchor anchorWithStickyNavbar_LWe7" id="httpResponse"><a href="#httpResponse" class="hash-link" aria-label="Direct link to httpResponse" title="Direct link to httpResponse">​</a></h3><div class="memberString_GwaU"><code class="purple_ieR2">interface</code> <code>httpResponse<!-- --> <!-- -->{</code><div class="inset_uKQm"><div><code>Body<!-- -->: </code><code class="purple_ieR2">{</code><code class="blue_P4bS">any</code><code class="purple_ieR2">}</code></div><div><code>Headers<!-- -->: </code><code class="purple_ieR2">{</code><span><code>[</code><code class="blue_P4bS">string</code><code>]</code></span><code>: </code><code class="blue_P4bS">any</code><code class="purple_ieR2">}</code></div><div><code>StatusCode<!-- -->: </code><code class="blue_P4bS">number</code></div><div><code>StatusMessage<!-- -->: </code><code class="blue_P4bS">string?</code></div><div><code>Success<!-- -->: </code><code class="blue_P4bS">boolean</code></div><div><code>rawBody<!-- -->: </code><code class="blue_P4bS">string</code></div></div><code>}</code></div><div></div><div>
+<p>Posts a new webhook.</p>
+</div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
+    &quot;functions&quot;: [
+        {
+            &quot;name&quot;: &quot;new&quot;,
+            &quot;desc&quot;: &quot;Creates the hook class.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;vibezApi&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;vibezApi&quot;
+                },
+                {
+                    &quot;name&quot;: &quot;webhook&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;string&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;Webhooks&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;tags&quot;: [
+                &quot;Constructor&quot;
+            ],
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 33,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;_createEmbedTable&quot;,
+            &quot;desc&quot;: &quot;Initializes the &#x27;embeds&#x27; table&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;{any?}&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;static&quot;,
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 59,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;setWebhook&quot;,
+            &quot;desc&quot;: &quot;Sets the webhook to a new one.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;newWebhook&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;string&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;Webhooks&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;tags&quot;: [
+                &quot;Chainable&quot;
+            ],
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 82,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;setContent&quot;,
+            &quot;desc&quot;: &quot;Sets the content of the webhook.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;content&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;string&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;Webhooks&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;tags&quot;: [
+                &quot;Chainable&quot;
+            ],
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 97,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;setUsername&quot;,
+            &quot;desc&quot;: &quot;Sets the username of the webhook.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;username&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;string&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;Webhooks&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;tags&quot;: [
+                &quot;Chainable&quot;
+            ],
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 117,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;addEmbedWithBuilder&quot;,
+            &quot;desc&quot;: &quot;Creates an embed with the embed creator.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;handler&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;(embedCreator: Embed) -&gt; Embed&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;Webhooks&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;tags&quot;: [
+                &quot;Chainable&quot;
+            ],
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 137,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;addEmbed&quot;,
+            &quot;desc&quot;: &quot;Creates an embed with table data.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;data&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;{[string]: any}&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;Webhooks&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;tags&quot;: [
+                &quot;Chainable&quot;
+            ],
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 166,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;setTTS&quot;,
+            &quot;desc&quot;: &quot;Toggles text-to-speech. **Default: Disabled**&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;override&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;boolean?&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;Webhooks&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;tags&quot;: [
+                &quot;Chainable&quot;
+            ],
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 185,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;_parseWebhook&quot;,
+            &quot;desc&quot;: &quot;Parses the webhook into the ID and Token.&quot;,
+            &quot;params&quot;: [
+                {
+                    &quot;name&quot;: &quot;webhookToUse&quot;,
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;string?&quot;
+                }
+            ],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;{ ID: string, Token: string }&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;source&quot;: {
+                &quot;line&quot;: 209,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        },
+        {
+            &quot;name&quot;: &quot;Send&quot;,
+            &quot;desc&quot;: &quot;Posts a new webhook.&quot;,
+            &quot;params&quot;: [],
+            &quot;returns&quot;: [
+                {
+                    &quot;desc&quot;: &quot;&quot;,
+                    &quot;lua_type&quot;: &quot;httpResponse&quot;
+                }
+            ],
+            &quot;function_type&quot;: &quot;method&quot;,
+            &quot;since&quot;: &quot;0.2.0&quot;,
+            &quot;yields&quot;: true,
+            &quot;source&quot;: {
+                &quot;line&quot;: 233,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        }
+    ],
+    &quot;properties&quot;: [],
+    &quot;types&quot;: [
+        {
+            &quot;name&quot;: &quot;httpResponse&quot;,
+            &quot;desc&quot;: &quot;&quot;,
+            &quot;fields&quot;: [
+                {
+                    &quot;name&quot;: &quot;Body&quot;,
+                    &quot;lua_type&quot;: &quot;{ any }&quot;,
+                    &quot;desc&quot;: &quot;&quot;
+                },
+                {
+                    &quot;name&quot;: &quot;Headers&quot;,
+                    &quot;lua_type&quot;: &quot;{ [string]: any }&quot;,
+                    &quot;desc&quot;: &quot;&quot;
+                },
+                {
+                    &quot;name&quot;: &quot;StatusCode&quot;,
+                    &quot;lua_type&quot;: &quot;number&quot;,
+                    &quot;desc&quot;: &quot;&quot;
+                },
+                {
+                    &quot;name&quot;: &quot;StatusMessage&quot;,
+                    &quot;lua_type&quot;: &quot;string?&quot;,
+                    &quot;desc&quot;: &quot;&quot;
+                },
+                {
+                    &quot;name&quot;: &quot;Success&quot;,
+                    &quot;lua_type&quot;: &quot;boolean&quot;,
+                    &quot;desc&quot;: &quot;&quot;
+                },
+                {
+                    &quot;name&quot;: &quot;rawBody&quot;,
+                    &quot;lua_type&quot;: &quot;string&quot;,
+                    &quot;desc&quot;: &quot;&quot;
+                }
+            ],
+            &quot;source&quot;: {
+                &quot;line&quot;: 16,
+                &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+            }
+        }
+    ],
+    &quot;name&quot;: &quot;Webhooks&quot;,
+    &quot;desc&quot;: &quot;Creates easy to use webhook creation / usage.&quot;,
+    &quot;source&quot;: {
+        &quot;line&quot;: 5,
+        &quot;path&quot;: &quot;src/Hooks/init.lua&quot;
+    }
+}</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a><ul><li><a href="#httpResponse" class="table-of-contents__link toc-highlight">httpResponse</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#_parseWebhook" class="table-of-contents__link toc-highlight">:_parseWebhook</a></li><li><a href="#addEmbed" class="table-of-contents__link toc-highlight">:addEmbed</a></li><li><a href="#addEmbedWithBuilder" class="table-of-contents__link toc-highlight">:addEmbedWithBuilder</a></li><li><a href="#Send" class="table-of-contents__link toc-highlight">:Send</a></li><li><a href="#setContent" class="table-of-contents__link toc-highlight">:setContent</a></li><li><a href="#setTTS" class="table-of-contents__link toc-highlight">:setTTS</a></li><li><a href="#setUsername" class="table-of-contents__link toc-highlight">:setUsername</a></li><li><a href="#setWebhook" class="table-of-contents__link toc-highlight">:setWebhook</a></li><li><a href="#_createEmbedTable" class="table-of-contents__link toc-highlight">._createEmbedTable</a></li><li><a href="#new" class="table-of-contents__link toc-highlight">.new</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="col footer__col"><div class="footer__title">Docs</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/VibezAPI/docs/intro">Getting Started</a></li><li class="footer__item"><a class="footer__link-item" href="/VibezAPI/api/VibezAPI">API Reference</a></li></ul></div><div class="col footer__col"><div class="footer__title">Community</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://www.roblox.com/groups/4604891/Vibez-Development#!/about" target="_blank" rel="noopener noreferrer" class="footer__link-item">Roblox Group<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a></li><li class="footer__item"><a href="https://discord.gg/vdev" target="_blank" rel="noopener noreferrer" class="footer__link-item">Discord<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a></li></ul></div><div class="col footer__col"><div class="footer__title">More</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://www.roblox.com/users/107392833/profile" target="_blank" rel="noopener noreferrer" class="footer__link-item">Roblox<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a></li><li class="footer__item"><a href="https://github.com/ItsRune/VibezAPI" target="_blank" rel="noopener noreferrer" class="footer__link-item">Github<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a></li></ul></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2023 ItsRune.</div></div></div></footer></div>
+<script src="/VibezAPI/assets/js/runtime~main.ad2b7123.js"></script>
+<script src="/VibezAPI/assets/js/main.6b036d41.js"></script>
+</body>
+</html>
