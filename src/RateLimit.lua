@@ -29,9 +29,9 @@ Class.__index = Class
 	@param retryAfter number
 	@return RateLimiter
 
-	@tag Constructor
+	@ignore
 	@within RateLimiter
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function Limiter.new(requestsPerRetry: number, retryAfter: number)
@@ -52,7 +52,7 @@ end
 	@return (boolean, string?)
 	
 	@within RateLimiter
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function Class:Check(): (boolean, string?)

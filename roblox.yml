@@ -2,6 +2,8 @@
 base: luau
 name: roblox
 globals:
+  script.Parent:
+    property: full-write
   Axes.new:
     args:
     - type: '...'

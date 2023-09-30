@@ -3,14 +3,18 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+local StarterPlayerScripts = game:GetService("StarterPlayer").StarterPlayerScripts
 
 --// Constants \\--
+local Player = Players.LocalPlayer
 local eventHolder = {}
 local Maid = {}
+local afkConnections = {}
 local State = false
 
 --// Functions \\--
-local function onSetup()
+local function onSetupUI()
 	if State == false then
 		State = StarterGui:GetCore("AvatarContextMenuEnabled")
 	end
@@ -31,9 +35,9 @@ local function onSetup()
 		game.ReplicatedStorage.__VibezEvent__:InvokeServer("fire", target)
 	end
 
-	eventHolder.Promote.Event:Connect(promote)
-	eventHolder.Demote.Event:Connect(demote)
-	eventHolder.Fire.Event:Connect(fire)
+	table.insert(Maid, eventHolder.Promote.Event:Connect(promote))
+	table.insert(Maid, eventHolder.Demote.Event:Connect(demote))
+	table.insert(Maid, eventHolder.Fire.Event:Connect(fire))
 
 	StarterGui:SetCore("AvatarContextMenuEnabled", true)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
@@ -44,9 +48,62 @@ local function onSetup()
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Promote", eventHolder.Promote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Demote", eventHolder.Demote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Fire", eventHolder.Fire })
+
+	local highLight = nil
+	pcall(function()
+		RunService:BindToRenderStep("Vibez_Client_HoverEffect", Enum.RenderPriority.Camera.Value + 1, function()
+			local Mouse = Players.LocalPlayer:GetMouse()
+			local possiblePlayer = (Mouse.Target and Players:GetPlayerFromCharacter(Mouse.Target.Parent))
+
+			if not possiblePlayer then
+				if highLight then
+					highLight.Enabled = false
+				end
+				return
+			end
+
+			if highLight then
+				highLight.Enabled = true
+				highLight.Adornee = possiblePlayer.Character
+				return
+			end
+
+			highLight = Instance.new("Highlight")
+			highLight.Parent = script
+			highLight.Adornee = possiblePlayer.Character
+			highLight.FillTransparency = 1
+
+			highLight.OutlineColor = Color3.fromRGB(255, 100, 255)
+			highLight.Enabled = true
+		end)
+	end)
+
+	local transparencyCounter = 0
+	local dir = 1
+	pcall(function()
+		RunService:BindToRenderStep("Vibez_Client_Highlight_Flash", Enum.RenderPriority.Camera.Value + 1, function()
+			if not highLight or not highLight.Enabled then
+				return
+			end
+
+			dir = (transparencyCounter >= 0.75 and -1) or (transparencyCounter <= 0 and 1) or dir
+			transparencyCounter += 0.02 * dir
+
+			highLight.OutlineTransparency = transparencyCounter
+		end)
+	end)
+
+	table.insert(
+		Maid,
+		Workspace.CurrentCamera.ChildAdded:Connect(function(child)
+			if child.Name == "ContextMenuArrow" then
+				child:WaitForChild("Union").Color = Color3.fromRGB(251, 155, 213)
+			end
+		end)
+	)
 end
 
-local function undoSetup()
+local function undoUISetup()
 	StarterGui:SetCore("AddAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
 	StarterGui:SetCore("AddAvatarContextMenuOption", Enum.AvatarContextMenuOption.Friend)
 	StarterGui:SetCore("AddAvatarContextMenuOption", Enum.AvatarContextMenuOption.Emote)
@@ -73,72 +130,112 @@ local function undoSetup()
 	StarterGui:SetCore("AvatarContextMenuEnabled", false)
 end
 
-local function onAttributeChanged(isEnabled: boolean)
-	local Action = isEnabled and "Setup" or "Reset"
-	if Action == "Setup" then
-		onSetup()
-	elseif Action == "Reset" then
-		undoSetup()
+local function setupAFKCheck()
+	local lastCheck = DateTime.now().UnixTimestamp
+	local Counter = 0
+
+	table.insert(
+		afkConnections,
+		UserInputService.WindowFocused:Connect(function()
+			game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", false)
+		end)
+	)
+
+	table.insert(
+		afkConnections,
+		UserInputService.WindowFocusReleased:Connect(function()
+			game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", true)
+		end)
+	)
+
+	table.insert(
+		afkConnections,
+		UserInputService.InputBegan:Connect(function()
+			if Counter >= 30 then
+				warn("undid Afk from counter")
+				game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", false)
+			end
+
+			Counter = 0
+		end)
+	)
+
+	pcall(function()
+		RunService:BindToRenderStep("Vibez_AFK_Tracker", Enum.RenderPriority.Last.Value, function()
+			local now = DateTime.now().UnixTimestamp
+
+			-- Prevent checks from force updating the AFK
+			if Counter == 30 then
+				return
+			end
+
+			if now - lastCheck < 1 then
+				return
+			end
+
+			lastCheck = now
+			Counter += 1
+
+			if Counter == 30 then
+				warn("Afk from counter")
+				game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", true)
+			end
+		end)
+	end)
+end
+
+local function undoAfkCheck()
+	for _, v in pairs(afkConnections) do
+		v:Disconnect()
+	end
+
+	pcall(function()
+		RunService:UnbindFromRenderStep("Vibez_AFK_Tracker")
+	end)
+
+	table.clear(afkConnections)
+end
+
+local function onAfkAttributeChanged()
+	local isEnabled = Workspace:GetAttribute(script.Name .. "_AFK")
+	if isEnabled then
+		setupAFKCheck()
+	else
+		undoAfkCheck()
+	end
+end
+
+local function onAttributeChanged()
+	local isEnabled = Workspace:GetAttribute(script.Name .. "_UI")
+	if isEnabled then
+		onSetupUI()
+	else
+		undoUISetup()
 	end
 end
 
 local function onStart()
-	if StarterGui:FindFirstChild(script.Name) == nil then
-		script:Clone().Parent = StarterGui
+	-- if StarterGui:FindFirstChild(script.Name) == nil then
+	-- 	coroutine.wrap(function()
+	-- 		task.wait(5)
+	-- 		script:Clone().Parent = StarterGui
+	-- 	end)()
+	-- end
+
+	onAfkAttributeChanged()
+	onAttributeChanged()
+
+	-- Attribute Checks
+	Workspace:GetAttributeChangedSignal(script.Name .. "_AFK"):Connect(onAfkAttributeChanged)
+	Workspace:GetAttributeChangedSignal(script.Name .. "_UI"):Connect(onAttributeChanged)
+
+	if script.Parent.Name ~= "PlayerScripts" then
+		task.wait(5)
+		script.Parent = Player:WaitForChild("PlayerScripts", math.huge)
+
+		local Clone = script:Clone()
+		Clone.Parent = StarterPlayerScripts
 	end
-
-	local attrValue = Workspace:GetAttribute(script.Name)
-	if attrValue ~= nil then
-		onAttributeChanged(attrValue)
-	end
-
-	Workspace:GetAttributeChangedSignal(script.Name):Connect(onAttributeChanged)
-
-	local highLight = nil
-	RunService:BindToRenderStep("Vibez_Client_HoverEffect", Enum.RenderPriority.Camera.Value + 1, function()
-		local Mouse = Players.LocalPlayer:GetMouse()
-		local possiblePlayer = (Mouse.Target and Players:GetPlayerFromCharacter(Mouse.Target.Parent))
-
-		if not possiblePlayer then
-			if highLight then
-				highLight.Enabled = false
-			end
-			return
-		end
-
-		if highLight then
-			highLight.Enabled = true
-			highLight.Adornee = possiblePlayer.Character
-			return
-		end
-
-		highLight = Instance.new("Highlight")
-		highLight.Parent = script
-		highLight.Adornee = possiblePlayer.Character
-		highLight.FillTransparency = 1
-
-		highLight.OutlineColor = Color3.fromRGB(255, 100, 255)
-		highLight.Enabled = true
-	end)
-
-	local transparencyCounter = 0
-	local dir = 1
-	RunService:BindToRenderStep("Vibez_Client_Highlight_Flash", Enum.RenderPriority.Camera.Value + 1, function()
-		if not highLight or not highLight.Enabled then
-			return
-		end
-
-		dir = (transparencyCounter >= 0.75 and -1) or (transparencyCounter <= 0 and 1) or dir
-		transparencyCounter += 0.02 * dir
-
-		highLight.OutlineTransparency = transparencyCounter
-	end)
-
-	Workspace.CurrentCamera.ChildAdded:Connect(function(child)
-		if child.Name == "ContextMenuArrow" then
-			child:WaitForChild("Union").Color = Color3.fromRGB(251, 155, 213)
-		end
-	end)
 end
 
 --// Main \\--

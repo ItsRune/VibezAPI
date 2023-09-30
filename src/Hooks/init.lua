@@ -4,6 +4,21 @@
 ]=]
 
 --[=[
+	@prop toSend {any}
+	@within Webhooks
+]=]
+
+--[=[
+	@prop Api VibezAPI
+	@within Webhooks
+]=]
+
+--[=[
+	@prop webhook string
+	@within Webhooks
+]=]
+
+--[=[
 	@interface httpResponse
 	.Body { any }
 	.Headers { [string]: any }
@@ -12,6 +27,7 @@
 	.Success boolean
 	.rawBody string
 	@within Webhooks
+	@private
 ]=]
 local Hooks = {}
 local Class = {}
@@ -25,10 +41,10 @@ local Types = require(script.Parent.Types)
 	@param vibezApi vibezApi
 	@param webhook string
 	@return Webhooks
-
-	@tag Constructor
+	
+	@ignore
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Hooks.new(vibezApi: Types.vibezApi, webhook: string): Types.vibezHooks
@@ -53,8 +69,9 @@ end
 	Initializes the 'embeds' table
 	@return {any?}
 
+	@private
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Hooks._createEmbedTable(): { any? }
@@ -77,7 +94,7 @@ end
 
 	@tag Chainable
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:setWebhook(newWebhook: string): Types.vibezHooks
@@ -92,7 +109,7 @@ end
 
 	@tag Chainable
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:setContent(content: string?): Types.vibezHooks
@@ -112,7 +129,7 @@ end
 
 	@tag Chainable
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:setUsername(username: string?): Types.vibezHooks
@@ -132,7 +149,7 @@ end
 
 	@tag Chainable
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:addEmbedWithBuilder(handler: (embedCreator: Types.embedCreator) -> Types.Embed): Types.vibezHooks
@@ -161,7 +178,7 @@ end
 
 	@tag Chainable
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:addEmbed(data: { [string]: any }): Types.vibezHooks
@@ -180,7 +197,7 @@ end
 
 	@tag Chainable
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:setTTS(override: boolean?): Types.vibezHooks
@@ -203,8 +220,9 @@ end
 	@param webhookToUse string?
 	@return { ID: string, Token: string }
 
+	@private
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:_parseWebhook(webhookToUse: string?): { ID: string, Token: string }?
@@ -223,12 +241,27 @@ function Class:_parseWebhook(webhookToUse: string?): { ID: string, Token: string
 end
 
 --[=[
+	Destroys the hook class.
+	@return nil
+
+	@within Webhooks
+	@since 1.1.0
+]=]
+---
+function Class:Destroy()
+	setmetatable(self, nil)
+	self = nil
+
+	return nil
+end
+
+--[=[
 	Posts a new webhook.
 	@return httpResponse
 
 	@yields
 	@within Webhooks
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:Send(): Types.httpResponse

@@ -77,11 +77,14 @@ export type vibezSettings = {
 	isChatCommandsEnabled: boolean,
 	isUIEnabled: boolean,
 	commandPrefix: string,
-	minRank: number,
-	maxRank: number,
+	minRankToUseCommandsAndUI: number,
+	maxRankToUseCommandsAndUI: number,
 	overrideGroupCheckForStudio: boolean,
 	loggingOriginName: string,
 	ignoreWarnings: boolean,
+	activityTrackingEnabled: boolean,
+	toggleTrackingOfAFKActivity: boolean,
+	rankToStartTrackingActivityFor: boolean,
 }
 
 export type httpFunction = (
@@ -175,6 +178,14 @@ export type vibezHooks = {
 	setUsername: (self: vibezHooks, username: string?) -> vibezHooks,
 	setWebhook: (self: vibezHooks, newWebhook: string) -> vibezHooks,
 	setTTS: (self: vibezHooks, override: boolean?) -> vibezHooks,
+	Destroy: (self: vibezHooks) -> nil,
+}
+
+export type ActivityTracker = {
+	changeAfkState: (self: ActivityTracker, override: boolean?) -> ActivityTracker,
+	Left: (self: ActivityTracker) -> nil,
+	Increment: (self: ActivityTracker) -> nil,
+	Destroy: (self: ActivityTracker) -> nil,
 }
 
 export type Embed = {

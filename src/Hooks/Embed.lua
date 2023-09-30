@@ -24,13 +24,13 @@ end
 
 --// Class Functions \\--
 --[=[
-    @function new
-    Creates the embed class
-    @return EmbedBuilder
+	@function new
+	Creates the embed class
+	@return EmbedBuilder
 
-    @tag Constructor
-    @within EmbedBuilder
-    @since 0.2.0
+	@ignore
+	@within EmbedBuilder
+	@since 1.1.0
 ]=]
 ---
 function Embed.new()
@@ -80,7 +80,7 @@ end
 	@tag Required
 	@tag Chainable
 	@within EmbedBuilder
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:setDescription(description: string): embedTypes.Embed
@@ -101,7 +101,7 @@ end
 	@tag Required
 	@tag Chainable
 	@within EmbedBuilder
-	@since 0.2.0
+	@since 1.1.0
 ]=]
 ---
 function Class:setTitle(title: string): embedTypes.Embed
@@ -123,7 +123,7 @@ end
 
     @tag Chainable
     @within EmbedBuilder
-    @since 0.2.0
+    @since 1.1.0
 ]=]
 ---
 function Class:addField(name: string, value: string, isInline: boolean?): embedTypes.Embed
@@ -151,7 +151,7 @@ end
 
     @tag Chainable
     @within EmbedBuilder
-    @since 0.2.0
+    @since 1.1.0
 ]=]
 ---
 function Class:clearFields(): embedTypes.Embed
@@ -167,7 +167,7 @@ end
 
     @tag Chainable
     @within EmbedBuilder
-    @since 0.2.0
+    @since 1.1.0
 ]=]
 ---
 function Class:setFooter(text: string, iconUrl: string?): embedTypes.Embed
@@ -192,7 +192,7 @@ end
 
     @tag Chainable
     @within EmbedBuilder
-    @since 0.2.0
+    @since 1.1.0
 ]=]
 ---
 function Class:setThumbnail(url: string, height: number?, width: number?): embedTypes.Embed
@@ -211,7 +211,7 @@ end
 
     @tag Chainable
     @within EmbedBuilder
-    @since 0.2.0
+    @since 1.1.0
 ]=]
 ---
 function Class:setColor(color: Color3 | string | number): embedTypes.Embed
@@ -232,7 +232,7 @@ end
 
     @tag Chainable
     @within EmbedBuilder
-    @since 0.2.0
+    @since 1.1.0
 ]=]
 ---
 function Class:setAuthor(name: string, url: string?, iconUrl: string): embedTypes.Embed
@@ -256,7 +256,7 @@ end
 
     @tag Chainable
     @within EmbedBuilder
-    @since 0.2.0
+    @since 1.1.0
 ]=]
 ---
 function Class:setTimestamp(timeStamp: number | "Auto"): embedTypes.Embed
@@ -265,12 +265,12 @@ function Class:setTimestamp(timeStamp: number | "Auto"): embedTypes.Embed
 end
 
 --[=[
-    Resolves the data within the embed to be used for webhooks.
-    @return {any}
+	Resolves the data within the embed to be used for webhooks.
+	@return {any}
 
-    @tag Internal
-    @within EmbedBuilder
-    @since 0.2.0
+	@private
+	@within EmbedBuilder
+	@since 1.1.0
 ]=]
 ---
 function Class:_resolve(): { any }

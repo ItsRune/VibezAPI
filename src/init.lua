@@ -20,14 +20,14 @@
 --// Documentation \\--
 --[=[
 	@interface extraOptionsType
-	.isChatCommandsEnabled boolean
-	.isUIEnabled boolean
-	.commandPrefix string
-	.minRank number
-	.maxRank number
-	.overrideGroupCheckForStudio boolean
-	.loggingOriginName string
-	.ignoreWarnings boolean
+	.isChatCommandsEnabled boolean -- If enabled, it'll automatically load commands for users.
+	.isUIEnabled boolean -- If enabled, it'll allow for player's to click on another for ranking options.
+	.commandPrefix string -- Change the prefix of commands.
+	.minRankToUseCommands number -- Minimum rank to use commands.
+	.maxRankToUseCommands number -- Maximum rank to use commands.
+	.overrideGroupCheckForStudio boolean -- When in studio, it'll force any rank checks to be the 'maxRankForCommands' value.
+	.loggingOriginName string -- Name of logger's 'Origin' embed field.
+	.ignoreWarnings boolean -- Ignores any VibezAPI warnings (Excluding Webhooks & Activity Tracking)
 	@within VibezAPI
 ]=]
 
@@ -36,6 +36,7 @@
 	.success boolean
 	.groupId number?
 	@within VibezAPI
+	@private
 ]=]
 
 --[=[
@@ -43,6 +44,7 @@
 	.success boolean
 	.errorMessage string
 	@within VibezAPI
+	@private
 ]=]
 
 --[=[
@@ -51,6 +53,7 @@
 	.message string
 	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
 	@within VibezAPI
+	@private
 ]=]
 
 --[=[
@@ -59,6 +62,7 @@
 	.getGroupFromUser (self: VibezAPI, groupId: number, userId: number) -> { any }?
 	.Http (self: VibezAPI, Route: string, Method: string?, Headers: { [string]: any }, Body: { any }) -> httpResponse
 	@within VibezAPI
+	@private
 ]=]
 
 --[=[
@@ -66,6 +70,7 @@
 	.success boolean
 	.message string
 	@within VibezAPI
+	@private
 ]=]
 
 --[=[
@@ -74,11 +79,13 @@
 	.message string?
 	.[number] ({ secondsUserHasSpent: number, messagesUserHasSent: number, detailedLogs: [ { timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number } ] } })?
 	@within VibezAPI
+	@private
 ]=]
 
 --[=[
 	@type responseBody groupIdResponse | errorResponse | rankResponse
 	@within VibezAPI
+	@private
 ]=]
 
 --[=[
@@ -90,6 +97,7 @@
 	.Success boolean
 	.rawBody string
 	@within VibezAPI
+	@private
 ]=]
 
 --// Services \\--
@@ -103,17 +111,21 @@ local Workspace = game:GetService("Workspace")
 --// Constants \\--
 local Types = require(script.Types)
 local Hooks = require(script.Hooks)
+local ActivityTracker = require(script.Activity)
 local RateLimit = require(script.RateLimit)
 local api = {}
 local baseSettings = {
 	commandPrefix = "!",
 	isChatCommandsEnabled = false,
-	minRank = 255,
-	maxRank = 255,
+	minRankToUseCommandsAndUI = 255,
+	maxRankToUseCommandsAndUI = 255,
 	isUIEnabled = false,
 	overrideGroupCheckForStudio = false,
 	loggingOriginName = game.Name,
 	ignoreWarnings = false,
+	activityTrackingEnabled = false,
+	toggleTrackingOfAFKActivity = false,
+	rankToStartTrackingActivityFor = 255,
 }
 
 --// Private Functions \\--
@@ -127,9 +139,9 @@ local baseSettings = {
 	@return boolean, httpResponse?
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:Http(
@@ -198,8 +210,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:getGroupId()
@@ -221,16 +232,16 @@ end
 	Allows for partial naming, example:
 	```lua
 	-- Using Frivo's group ID
-	local rankNumber = VibezAPI:getGroupRankFromName("facili") --> Expected: 250 (Facility Developer)
+	local rankNumber = VibezAPI:_getGroupRankFromName("facili") --> Expected: 250 (Facility Developer)
 	```
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
-function api:getGroupRankFromName(groupRoleName: string): number?
+function api:_getGroupRankFromName(groupRoleName: string): number?
 	if not groupRoleName or typeof(groupRoleName) ~= "string" then
 		return nil
 	end
@@ -257,15 +268,15 @@ end
 	@return number
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
-function api:getGroupFromUser(groupId: number, userId: number): { any }?
-	if self.Settings.overrideGroupCheckForStudio and RunService:IsStudio() then
+function api:_getGroupFromUser(groupId: number, userId: number): { any }?
+	if self.Settings.overrideGroupCheckForStudio == true and RunService:IsStudio() then
 		return {
-			Rank = self.Settings.maxRank,
+			Rank = self.Settings.maxRankToUseCommandsAndUI,
 		}
 	end
 
@@ -288,12 +299,12 @@ end
 	Handles players joining the game and checks for if commands/ui are enabled.
 	@param Player Player
 
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
-function api:onPlayerAdded(Player: Player)
+function api:_onPlayerAdded(Player: Player)
 	-- This is only here in case they toggle commands in the middle of a game.
 	if not self.Settings.isChatCommandsEnabled then
 		return
@@ -303,22 +314,35 @@ function api:onPlayerAdded(Player: Player)
 		return
 	end
 
-	if self.Settings.isUIEnabled then
-		local client = script.Client:Clone()
-
-		client.Name = self._private.clientScriptName
-		client.Enabled = true
-		client.Parent = Player:WaitForChild("PlayerGui", math.huge)
-	end
+	-- Clone client script and parent to player
+	local client = script.Client:Clone()
+	client.Name = self._private.clientScriptName
+	client.Enabled = true
+	client.Parent = Player:WaitForChild("PlayerGui", math.huge)
 
 	self:_warn(`Settings up commands for user {Player.Name}.`)
+	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 
-	local theirGroupData = self:getGroupFromUser(self.GroupId, Player.UserId)
-	if not theirGroupData or not self:isPlayerRankOkToProceed(theirGroupData.Rank) then
+	if
+		not theirGroupData
+		or not self:_isPlayerRankOkToProceed(
+			theirGroupData.Rank,
+			self.Settings.minRankToUseCommandsAndUI,
+			self.Settings.maxRankToUseCommandsAndUI
+		)
+	then
 		return
 	end
 
 	self._private.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
+
+	if
+		self.Settings.activityTrackingEnabled == true
+		and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
+	then
+		local tracker = ActivityTracker.new(self, Player)
+		table.insert(self._private.validStaff[Player.UserId], tracker)
+	end
 
 	-- We want to hold all connections from users in order to
 	-- disconnect them later on, this will stop any memory
@@ -337,14 +361,21 @@ end
 	Handles players leaving the game and disconnects any events.
 	@param Player Player
 
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
-function api:onPlayerRemoved(Player: Player)
+function api:_onPlayerRemoved(Player: Player)
 	-- Remove player from validated staff table.
 	self._private.validStaff[Player.UserId] = nil
+
+	-- Check for and submit activity data.
+	local existingTracker = ActivityTracker.Users[Player.UserId]
+	if existingTracker then
+		existingTracker:Left()
+		existingTracker:Destroy()
+	end
 
 	-- Check for and delete any existing connections with the player.
 	if self._private.Maid[Player.UserId] == nil then
@@ -363,13 +394,14 @@ end
 	@param playerRank number
 	@return boolean
 
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
-function api:isPlayerRankOkToProceed(playerRank: number): boolean
-	return (playerRank >= self.Settings.minRank and playerRank <= self.Settings.maxRank)
+function api:_isPlayerRankOkToProceed(playerRank: number, minRank: number, maxRank: number): boolean
+	warn(minRank, maxRank)
+	return (playerRank >= minRank and playerRank <= maxRank)
 end
 
 --[=[
@@ -378,12 +410,12 @@ end
 	@return number?
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
-function api:getUserIdByName(username: string): number
+function api:_getUserIdByName(username: string): number
 	local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, username)
 	return isOk and userId or -1
 end
@@ -394,12 +426,12 @@ end
 	@return string?
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
-function api:getNameById(userId: number): string?
+function api:_getNameById(userId: number): string?
 	local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, userId)
 	return isOk and userName or "Unknown"
 end
@@ -408,9 +440,9 @@ end
 	Creates / Fetches a remote function in replicated storage for client communication.
 	@return Remote RemoteFunction
 
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_createRemote()
@@ -431,9 +463,9 @@ end
 	@return number?
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_getRoleIdFromRank(rank: number | string): number?
@@ -474,9 +506,9 @@ end
 	@return {Player?}
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_getPlayers(usernames: { string }): { Player? }
@@ -498,8 +530,8 @@ function api:_getPlayers(usernames: { string }): { Player? }
 					player,
 					string.sub(username, string.len(tostring(operationCode)) + 1, string.len(username)),
 					{
-						getGroupRankFromName = self.getGroupRankFromName,
-						getGroupFromUser = self.getGroupFromUser,
+						getGroupRankFromName = self._getGroupRankFromName,
+						getGroupFromUser = self._getGroupFromUser,
 						Http = self.Http,
 					}
 				)
@@ -520,15 +552,20 @@ end
 	@param message string
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
 	local theirCache = self._private.validStaff[Player.UserId]
 	if not theirCache then
 		return
+	end
+
+	local existingTracker = ActivityTracker.Users[Player.UserId]
+	if existingTracker then
+		existingTracker:Chatted()
 	end
 
 	local args = string.split(message, " ")
@@ -569,9 +606,9 @@ end
 	@return boolean
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_checkHttp()
@@ -586,9 +623,9 @@ end
 	@return rankResponse
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_setRank(
@@ -596,7 +633,7 @@ function api:_setRank(
 	rankId: string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse
-	local userName = self:getNameById(userId)
+	local userName = self:_getNameById(userId)
 	local roleId = self:_getRoleIdFromRank(rankId)
 
 	if not whoCalled then
@@ -633,13 +670,13 @@ end
 	@return rankResponse
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
-	local userName = self:getNameById(userId)
+	local userName = self:_getNameById(userId)
 
 	if not whoCalled then
 		whoCalled = {
@@ -674,13 +711,13 @@ end
 	@return rankResponse
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
-	local userName = self:getNameById(userId)
+	local userName = self:_getNameById(userId)
 
 	if not whoCalled then
 		whoCalled = {
@@ -715,13 +752,13 @@ end
 	@return rankResponse
 
 	@yields
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
-	local userName = self:getNameById(userId)
+	local userName = self:_getNameById(userId)
 
 	if not whoCalled then
 		whoCalled = {
@@ -752,9 +789,9 @@ end
 --[=[
 	Destroys the class.
 
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_destroy()
@@ -766,9 +803,9 @@ end
 	Displays a warning with the prefix of "[Vibez]"
 	@param ... ...string
 
+	@private
 	@within VibezAPI
-	@tag Internal
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:_warn(...: string)
@@ -784,6 +821,7 @@ end
 	Changes the rank of a player.
 	@param userId string | number
 	@param rankId string | number
+	@return rankResponse
 
 	```lua
 	local userId, rankId = 1, 200
@@ -792,8 +830,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
@@ -803,6 +840,7 @@ end
 --[=[
 	Promotes a player.
 	@param userId string | number
+	@return rankResponse
 
 	```lua
 	local userId = 1
@@ -811,8 +849,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:Promote(userId: string | number): Types.rankResponse
@@ -822,6 +859,7 @@ end
 --[=[
 	Demotes a player.
 	@param userId string | number
+	@return rankResponse
 
 	```lua
 	local userId = 1
@@ -830,8 +868,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:Demote(userId: string | number): Types.rankResponse
@@ -841,11 +878,11 @@ end
 --[=[
 	Fires a player from the group.
 	@param userId string | number
+	@return rankResponse
 
 	@yields
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:Fire(userId: string | number): Types.rankResponse
@@ -854,10 +891,11 @@ end
 
 --[=[
 	Toggles the usage of commands within the experience.
+	@return VibezAPI
 
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@tag Chainable
+	@since 1.0.0
 ]=]
 ---
 function api:ToggleCommands(override: boolean?): nil
@@ -873,6 +911,8 @@ function api:ToggleCommands(override: boolean?): nil
 	for _, player in pairs(Players:GetPlayers()) do
 		coroutine.wrap(self[functionToUse])(self, player)
 	end
+
+	return self
 end
 
 --[=[
@@ -906,7 +946,7 @@ end
 		"shr", -- Prefix before the operation argument.
 		function(playerToCheck: Player, incomingArgument: string, internalFunctions)
 			local playerGroupInfo = internalFunctions
-				.getGroupFromUser(Vibez.GroupId, playerToCheck.UserId)
+				._getGroupFromUser(Vibez.GroupId, playerToCheck.UserId)
 
 			return playerGroupInfo.Rank >= 250
 		end
@@ -915,8 +955,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 function api:addCommandOperation(
 	operationName: string,
@@ -953,8 +992,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:removeCommandOperation(operationName: string): Types.vibezApi
@@ -966,8 +1004,7 @@ end
 	Updates the logger's origin name.
 
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:UpdateLoggerTitle(newTitle: string): nil
@@ -981,8 +1018,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:UpdateKey(newApiKey: string): boolean
@@ -1013,8 +1049,7 @@ end
 	Destroys the VibezAPI class.
 
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:Destroy()
@@ -1026,8 +1061,7 @@ end
 	@param override boolean?
 
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:ToggleUI(override: boolean?): nil
@@ -1043,18 +1077,10 @@ function api:ToggleUI(override: boolean?): nil
 		if player.PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
 			continue
 		end
-
-		coroutine.wrap(function()
-			local client = script.Client:Clone()
-
-			client.Name = self._private.clientScriptName
-			client.Enabled = true
-			client.Parent = player:WaitForChild("PlayerGui", math.huge)
-		end)()
 	end
 
-	local status = self.Settings.isUIEnabled
-	Workspace:SetAttribute(self._private.clientScriptName, status)
+	local uiStatus = self.Settings.isUIEnabled
+	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
 end
 
 --[=[
@@ -1063,8 +1089,7 @@ end
 	@return VibezHooks
 
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:getWebhookBuilder(webhook: string): Types.vibezHooks
@@ -1078,8 +1103,7 @@ end
 	@return activityResponse
 
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:getActivity(userId: (string | number)?): Types.activityResponse
@@ -1098,8 +1122,7 @@ end
 	@return httpResponse
 
 	@within VibezAPI
-	@tag Public
-	@since 0.1.0
+	@since 1.0.0
 ]=]
 ---
 function api:saveActivity(
@@ -1107,7 +1130,7 @@ function api:saveActivity(
 	secondsSpent: number,
 	messagesSent: (number | { string })?
 ): Types.infoResponse
-	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:getUserIdByName(userId) or userId
+	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent or (messagesSent == nil) and 0 or messagesSent
 
 	if not tonumber(messagesSent) then
@@ -1253,72 +1276,115 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
-	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, Target: Player)
-		self:_warn(`{Player.Name} is attempting to {Action} {Target.Name}!`)
+	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, ...: any)
+		local rankingActions = { "promote", "demote", "fire" }
+		local Data = { ... }
 
-		if Player == Target then
-			return
-		end
+		local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
+		if actionIndex ~= nil then
+			local Target = Data[1]
 
-		if not self.Settings.isUIEnabled then
-			return false
-		end
+			if Player == Target then
+				return
+			end
 
-		local userId = self:getUserIdByName(Target.Name)
-		local theirGroupData = self:getGroupFromUser(self.GroupId, Player.UserId)
+			if not self.Settings.isUIEnabled then
+				return false
+			end
 
-		if not theirGroupData or userId == -1 or not self:isPlayerRankOkToProceed(theirGroupData.Rank) then
-			return false
-		end
+			local userId = self:_getUserIdByName(Target.Name)
+			local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 
-		-- Maybe actually log it somewhere... I have no clue where though.
-		if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
-			Player:Kick(
-				"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
-			)
-			return false
-		end
+			if
+				not theirGroupData
+				or userId == -1
+				or not self:_isPlayerRankOkToProceed(
+					theirGroupData.Rank,
+					self.Settings.minRankToUseCommandsAndUI,
+					self.Settings.maxRankToUseCommandsAndUI
+				)
+			then
+				return false
+			end
 
-		local actionFunc
-		if Action == "promote" then
-			actionFunc = "_Promote"
-		elseif Action == "demote" then
-			actionFunc = "_Demote"
-		elseif Action == "fire" then
-			actionFunc = "_Fire"
+			-- Maybe actually log it somewhere... I have no clue where though.
+			if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
+				Player:Kick(
+					"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
+				)
+				return false
+			end
+
+			local actionFunc
+			if Action == "promote" then
+				actionFunc = "_Promote"
+			elseif Action == "demote" then
+				actionFunc = "_Demote"
+			elseif Action == "fire" then
+				actionFunc = "_Fire"
+			end
+
+			local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
+
+			if not result["success"] then
+				return false
+			end
+
+			return true
+		elseif Action == "Afk" then
+			local override = Data[1]
+			local existingTracker = ActivityTracker.Users[Player.UserId]
+
+			if not existingTracker then
+				return
+			end
+
+			if override == nil then
+				override = not existingTracker.isAfk
+			end
+
+			existingTracker:changeAfkState(override)
 		else
 			return false
 		end
-
-		local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
-
-		if not result["success"] then
-			return false
-		end
-
-		return true
 	end
 
 	-- Chat command connections
 	Players.PlayerAdded:Connect(function(Player)
-		self:onPlayerAdded(Player)
+		self:_onPlayerAdded(Player)
 	end)
 
 	for _, player in pairs(Players:GetPlayers()) do
-		coroutine.wrap(self.onPlayerAdded)(self, player)
+		coroutine.wrap(self._onPlayerAdded)(self, player)
 	end
 
 	-- Connect the player's maid cleanup function.
 	Players.PlayerRemoving:Connect(function(Player)
-		self:onPlayerRemoved(Player)
+		self:_onPlayerRemoved(Player)
 	end)
 
 	-- Update the api key using the public function, in case of errors it'll log them.
 	self:UpdateKey(apiKey)
 
 	-- Initialize the workspace attribute
-	local status = self.Settings.isUIEnabled
-	Workspace:SetAttribute(self._private.clientScriptName, status)
+	local uiStatus = self.Settings.isUIEnabled
+	local afkStatus = self.Settings.toggleTrackingOfAFKActivity
+
+	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
+	Workspace:SetAttribute(self._private.clientScriptName .. "_AFK", afkStatus)
+
+	-- Track activity
+	if self.Settings.activityTrackingEnabled == true then
+		RunService.Heartbeat:Connect(function()
+			for _, data in pairs(self._private.validStaff) do
+				if data[3] == nil then
+					continue
+				end
+
+				data[3]:Increment()
+			end
+		end)
+	end
 
 	return self
 end
