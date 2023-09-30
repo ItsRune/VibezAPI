@@ -27,19 +27,15 @@ export type infoResponse = {
 }
 
 export type activityResponse = {
-	success: boolean?,
-	message: string?,
+	secondsUserHasSpent: number,
+	messagesUserHasSent: number,
 	detailedLogs: {
-		secondsUserHasSpent: number,
-		messagesUserHasSent: number,
-		detailedLogs: {
-			{
-				timestampLeftAt: number,
-				secondsUserHasSpent: number,
-				messagesUserHasSent: number,
-			}
-		},
-	}?,
+		{
+			timestampLeftAt: number,
+			secondsUserHasSpent: number,
+			messagesUserHasSent: number,
+		}
+	},
 }
 
 export type rankResponse = {

@@ -75,9 +75,9 @@
 
 --[=[
 	@interface activityResponse
-	.success boolean?
-	.message string?
-	.[number] ({ secondsUserHasSpent: number, messagesUserHasSent: number, detailedLogs: [ { timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number } ] } })?
+	.secondsUserHasSpent number
+	.messagesUserHasSent number
+	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
 	@within VibezAPI
 	@private
 ]=]
