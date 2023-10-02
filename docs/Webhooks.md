@@ -21,7 +21,7 @@ Webhooks are a way to send messages to Discord channels without using a bot. The
 Using Vibez's webhook api is very simple. You just need to create a webhook builder using the webhook link you got from the previous step.
 
 ```lua
-local VibezAPI = require(14946453963)
+local VibezAPI = require(14946453963)("My API Key")
 local myWebhook = VibezAPI:getWebhookBuilder("Discord Webhook Link")
 ```
 

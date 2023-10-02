@@ -6,7 +6,7 @@ sidebar-position: 9
 ```lua
 local Players = game:GetService("Players")
 
-local Vibez = require(14946453963).new("API Key", {
+local Vibez = require(14946453963)("API Key", {
     loggingOriginName = "Join Logger"
 })
 
@@ -53,7 +53,7 @@ Players.PlayerRemoving:Connect(onPlayerLeft)
 local Players = game:GetService("Players")
 
 local Connections = {}
-local Vibez = require(14946453963).new("API Key", {
+local Vibez = require(14946453963)("API Key", {
     loggingOriginName = "Chat Logger"
 })
 
