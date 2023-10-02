@@ -10,7 +10,7 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 9/25/2023 19:31 EST
+	Updated: 10/2/2023 00:08 EST
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -99,6 +99,16 @@
 	@within VibezAPI
 	@private
 ]=]
+
+--// Before Execution \\--
+local ServerScriptService = game:GetService("ServerScriptService")
+
+if ServerScriptService:FindFirstChild(script.Name) ~= nil then
+	script:Destroy()
+	return require(ServerScriptService[script.Name])
+elseif not script:IsDescendantOf(ServerScriptService) then
+	script.Parent = ServerScriptService
+end
 
 --// Services \\--
 local Players = game:GetService("Players")
