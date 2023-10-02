@@ -23,11 +23,14 @@
 	.isChatCommandsEnabled boolean -- If enabled, it'll automatically load commands for users.
 	.isUIEnabled boolean -- If enabled, it'll allow for player's to click on another for ranking options.
 	.commandPrefix string -- Change the prefix of commands.
-	.minRankToUseCommands number -- Minimum rank to use commands.
-	.maxRankToUseCommands number -- Maximum rank to use commands.
+	.minRankToUseCommandsAndUI number -- Minimum rank to use commands.
+	.maxRankToUseCommandsAndUI number -- Maximum rank to use commands.
 	.overrideGroupCheckForStudio boolean -- When in studio, it'll force any rank checks to be the 'maxRankForCommands' value.
 	.loggingOriginName string -- Name of logger's 'Origin' embed field.
 	.ignoreWarnings boolean -- Ignores any VibezAPI warnings (Excluding Webhooks & Activity Tracking)
+	.activityTrackingEnabled boolean -- if enabled, it'll track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
+	.trackAFKActivity boolean -- If enabled, it'll subtract time of users who are detected as 'AFK'.
+	.rankToStartTrackingActivityFor boolean -- Minimum rank required to start tracking activity. (Default: 255)
 	@within VibezAPI
 ]=]
 
@@ -134,7 +137,7 @@ local baseSettings = {
 	loggingOriginName = game.Name,
 	ignoreWarnings = false,
 	activityTrackingEnabled = false,
-	toggleTrackingOfAFKActivity = false,
+	trackAFKActivity = false,
 	rankToStartTrackingActivityFor = 255,
 }
 
@@ -1177,7 +1180,7 @@ end
 	```lua
 	local myKey = "YOUR_API_KEY_HERE"
 	local VibezAPI = require(14946453963)
-	local Vibez = VibezAPI(myKey)
+	local Vibez = VibezAPI.new(myKey)
 	```
 
 	@tag Constructor
@@ -1378,7 +1381,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- Initialize the workspace attribute
 	local uiStatus = self.Settings.isUIEnabled
-	local afkStatus = self.Settings.toggleTrackingOfAFKActivity
+	local afkStatus = self.Settings.trackAFKActivity
 
 	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
 	Workspace:SetAttribute(self._private.clientScriptName .. "_AFK", afkStatus)
