@@ -9,7 +9,7 @@ sidebar_position: 1
 You can install by getting the package from the roblox website and requiring the module using the ID of the module. This is the recommended way to install the module as it will automatically update the module when a new version is released.
 
 ```lua
-local VibezAPI = require(6949396225)
+local VibezAPI = require(14946453963)
 ```
 
 **OR**
@@ -23,7 +23,7 @@ To install, just get the package from the roblox website and drag it into your s
 To begin, open a new `Script` in `ServerScriptService` and require the module:
 
 ```lua
-local VibezAPI = require(script.Parent.VibezAPI)
+local VibezAPI = require(14946453963)
 ```
 
 From there, you can use the API to create a new Vibez instance:

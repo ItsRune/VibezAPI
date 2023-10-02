@@ -18,7 +18,7 @@ Command operations work by first splitting the sent command, then checking if th
 To create a new operation code, you'll use the `:addCommandOperation` method. This method takes **three arguments**: the operation name, the operation code, and the operation function. The operation function must return a `boolean` value, if it does not the operation will not work.
 
 ```lua
-local VibezAPI = require(script.VibezAPI)("myApiKey")
+local VibezAPI = require(14946453963)("myApiKey")
 
 VibezAPI:addCommandOperation("Rank", "r:", function(playerToCheck: Player, incomingArgument: string)
     -- Operation code is automatically removed from the 'incomingArgument'.

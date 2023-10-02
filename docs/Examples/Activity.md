@@ -4,7 +4,7 @@ sidebar-position: 9
 
 ### Get Activity
 ```lua
-local Vibez = require(0).new("API Key")
+local Vibez = require(14946453963).new("API Key")
 
 local function getActivity(Player: Player)
     local activity = Vibez:getActivity(Player.UserId)
@@ -14,7 +14,7 @@ end
 
 ### Add Activity
 ```lua
-local Vibez = require(0).new("API Key")
+local Vibez = require(14946453963).new("API Key")
 
 local function addActivity(playerUserId: number, secondsSpent: number, messagesSent: number)
     Vibez:saveActivity(playerUserId, secondsSpent, messagesSent)

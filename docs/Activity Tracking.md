@@ -11,7 +11,7 @@ The activity tracker works by using object orientated programming that creates s
 The activity tracker is very simple to use. All you need to do is require the main module and change an option to `true`.
 
 ```lua
-local Vibez = require(0).new("API Key", {
+local Vibez = require(14946453963).new("API Key", {
     activityTrackingEnabled = true
 })
 ```
@@ -24,7 +24,7 @@ In addition to this setting is 2 other options: `rankToStartTrackingActivityFor`
 Getting the activity of a staff member is very simple. All you need to do is call the `getActivity` function on the Vibez object.
 
 ```lua
-local Vibez = require(0).new("API Key", {
+local Vibez = require(14946453963).new("API Key", {
     activityTrackingEnabled = true
 })
 
@@ -37,7 +37,7 @@ local activity = Vibez:getActivity(107392833) -- 107392833 is the user id of the
 Vibez allows for customization when necessary, if you're writing your own activity tracker you can achieve this with the `saveActivity` method that the wrapper provides.
 
 ```lua
-local Vibez = require(0).new("API Key", {
+local Vibez = require(14946453963).new("API Key", {
     activityTrackingEnabled = true
 })
 

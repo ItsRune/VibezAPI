@@ -1176,7 +1176,7 @@ end
 
 	```lua
 	local myKey = "YOUR_API_KEY_HERE"
-	local VibezAPI = require(script.VibezAPI)
+	local VibezAPI = require(14946453963)
 	local Vibez = VibezAPI(myKey)
 	```
 
