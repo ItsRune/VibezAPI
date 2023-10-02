@@ -5,7 +5,7 @@
 
     "ReplicatedStorage": {
       "$ignoreUnknownInstances": true,
-      "VibezAPI": {
+      "MainModule": {
         "$path": "./src"
       }
     },
