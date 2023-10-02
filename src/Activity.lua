@@ -134,7 +134,7 @@ end
 ---
 function Class:Left()
 	self.isLeaving = true
-	self._api:saveActivity(self._player, self._seconds, self._messages)
+	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
 end
 
 --[=[

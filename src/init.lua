@@ -23,14 +23,15 @@
 	.isChatCommandsEnabled boolean -- If enabled, it'll automatically load commands for users.
 	.isUIEnabled boolean -- If enabled, it'll allow for player's to click on another for ranking options.
 	.commandPrefix string -- Change the prefix of commands.
-	.minRankToUseCommandsAndUI number -- Minimum rank to use commands.
-	.maxRankToUseCommandsAndUI number -- Maximum rank to use commands.
+	.minRankToUseCommandsAndUI number -- Minimum rank to use commands. (Default: 255)
+	.maxRankToUseCommandsAndUI number -- Maximum rank to use commands. (Default: 255)
 	.overrideGroupCheckForStudio boolean -- When in studio, it'll force any rank checks to be the 'maxRankForCommands' value.
 	.loggingOriginName string -- Name of logger's 'Origin' embed field.
 	.ignoreWarnings boolean -- Ignores any VibezAPI warnings (Excluding Webhooks & Activity Tracking)
 	.activityTrackingEnabled boolean -- if enabled, it'll track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
-	.trackAFKActivity boolean -- If enabled, it'll subtract time of users who are detected as 'AFK'.
 	.rankToStartTrackingActivityFor boolean -- Minimum rank required to start tracking activity. (Default: 255)
+	.trackAFKActivity boolean -- If enabled, it'll subtract time of users who are detected as 'AFK'.
+	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
 	@within VibezAPI
 ]=]
 
@@ -139,6 +140,7 @@ local baseSettings = {
 	activityTrackingEnabled = false,
 	trackAFKActivity = false,
 	rankToStartTrackingActivityFor = 255,
+	delayBeforeMarkedAFK = 30,
 }
 
 --// Private Functions \\--
@@ -1382,9 +1384,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- Initialize the workspace attribute
 	local uiStatus = self.Settings.isUIEnabled
 	local afkStatus = self.Settings.trackAFKActivity
+	local afkDelay = self.Settings.delayBeforeMarkedAFK
 
 	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
 	Workspace:SetAttribute(self._private.clientScriptName .. "_AFK", afkStatus)
+	Workspace:SetAttribute(self._private.clientScriptName .. "_AFK_DELAY", afkDelay)
 
 	-- Track activity
 	if self.Settings.activityTrackingEnabled == true then

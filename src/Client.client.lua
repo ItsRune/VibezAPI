@@ -163,9 +163,14 @@ local function setupAFKCheck()
 	pcall(function()
 		RunService:BindToRenderStep("Vibez_AFK_Tracker", Enum.RenderPriority.Last.Value, function()
 			local now = DateTime.now().UnixTimestamp
+			local delayOffset = Workspace:GetAttribute(script.Name .. "_AFK_DELAY")
+
+			if tonumber(delayOffset) == nil then
+				delayOffset = 30
+			end
 
 			-- Prevent checks from force updating the AFK
-			if Counter == 30 then
+			if Counter == delayOffset then
 				return
 			end
 
@@ -176,8 +181,7 @@ local function setupAFKCheck()
 			lastCheck = now
 			Counter += 1
 
-			if Counter == 30 then
-				warn("Afk from counter")
+			if Counter == delayOffset then
 				game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", true)
 			end
 		end)
