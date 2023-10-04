@@ -5,9 +5,14 @@ local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local StarterPlayerScripts = game:GetService("StarterPlayer").StarterPlayerScripts
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
+local Remote = ReplicatedStorage:WaitForChild(
+	"4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255",
+	math.huge
+)
 local eventHolder = {}
 local Maid = {}
 local afkConnections = {}
@@ -24,15 +29,15 @@ local function onSetupUI()
 	eventHolder["Fire"] = Instance.new("BindableEvent")
 
 	local function promote(target)
-		game.ReplicatedStorage.__VibezEvent__:InvokeServer("promote", target)
+		Remote:InvokeServer("promote", target)
 	end
 
 	local function demote(target)
-		game.ReplicatedStorage.__VibezEvent__:InvokeServer("demote", target)
+		Remote:InvokeServer("demote", target)
 	end
 
 	local function fire(target)
-		game.ReplicatedStorage.__VibezEvent__:InvokeServer("fire", target)
+		Remote:InvokeServer("fire", target)
 	end
 
 	table.insert(Maid, eventHolder.Promote.Event:Connect(promote))
@@ -137,14 +142,14 @@ local function setupAFKCheck()
 	table.insert(
 		afkConnections,
 		UserInputService.WindowFocused:Connect(function()
-			game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", false)
+			Remote:InvokeServer("Afk", false)
 		end)
 	)
 
 	table.insert(
 		afkConnections,
 		UserInputService.WindowFocusReleased:Connect(function()
-			game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", true)
+			Remote:InvokeServer("Afk", true)
 		end)
 	)
 
@@ -153,7 +158,7 @@ local function setupAFKCheck()
 		UserInputService.InputBegan:Connect(function()
 			if Counter >= 30 then
 				warn("undid Afk from counter")
-				game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", false)
+				Remote:InvokeServer("Afk", false)
 			end
 
 			Counter = 0
@@ -182,7 +187,7 @@ local function setupAFKCheck()
 			Counter += 1
 
 			if Counter == delayOffset then
-				game.ReplicatedStorage.__VibezEvent__:InvokeServer("Afk", true)
+				Remote:InvokeServer("Afk", true)
 			end
 		end)
 	end)
@@ -219,13 +224,6 @@ local function onAttributeChanged()
 end
 
 local function onStart()
-	-- if StarterGui:FindFirstChild(script.Name) == nil then
-	-- 	coroutine.wrap(function()
-	-- 		task.wait(5)
-	-- 		script:Clone().Parent = StarterGui
-	-- 	end)()
-	-- end
-
 	onAfkAttributeChanged()
 	onAttributeChanged()
 

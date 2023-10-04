@@ -135,6 +135,7 @@ local baseSettings = {
 	maxRankToUseCommandsAndUI = 255,
 	isUIEnabled = false,
 	overrideGroupCheckForStudio = false,
+	disableActivityTrackingInStudio = false,
 	loggingOriginName = game.Name,
 	ignoreWarnings = false,
 	activityTrackingEnabled = false,
@@ -453,6 +454,7 @@ end
 
 --[=[
 	Creates / Fetches a remote function in replicated storage for client communication.
+	@param alreadyAttemptedLoopCheck boolean?
 	@return Remote RemoteFunction
 
 	@private
@@ -460,13 +462,37 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_createRemote()
-	local currentRemote = ReplicatedStorage:FindFirstChild("__VibezEvent__")
+function api:_createRemote(alreadyAttemptedLoopCheck: boolean?)
+	-- SHA1 Hash translation: VIBEZ-DEV
+	local remoteName = "4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255"
+	local currentRemote = ReplicatedStorage:FindFirstChild(remoteName)
 
-	if not currentRemote then
+	local function createNewRemote()
 		currentRemote = Instance.new("RemoteFunction")
-		currentRemote.Name = "__VibezEvent__"
+		currentRemote.Name = remoteName
 		currentRemote.Parent = ReplicatedStorage
+	end
+
+	if currentRemote ~= nil and not currentRemote:IsA("RemoteFunction") then
+		if not alreadyAttemptedLoopCheck then
+			local found = nil
+
+			-- In case people wanna name their Instances the same name
+			for _, inst in pairs(ReplicatedStorage:GetChildren()) do
+				if inst:IsA("RemoteFunction") and inst.Name == remoteName then
+					found = inst
+					break
+				end
+			end
+
+			if not found then
+				return self:_createRemote(true)
+			end
+		elseif alreadyAttemptedLoopCheck then
+			currentRemote = createNewRemote()
+		end
+	elseif currentRemote == nil then
+		currentRemote = createNewRemote()
 	end
 
 	return currentRemote
@@ -828,7 +854,7 @@ function api:_warn(...: string)
 		return
 	end
 
-	warn("[Vibez]:", debug.traceback(table.concat({ ... }, " "), 2))
+	warn("[Vibez]:", table.concat({ ... }, " "))
 end
 
 --// Public Functions \\--

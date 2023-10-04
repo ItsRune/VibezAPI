@@ -134,6 +134,20 @@ end
 ---
 function Class:Left()
 	self.isLeaving = true
+
+	if self._api.Settings.disableActivityTrackingInStudio == true then
+		self._api:_warn(
+			string.format(
+				"Saving activity has been disabled when playing in studio. Here's what we tracked\nUser: %s (%s)\nSeconds spent: %s\nMessages sent: %s",
+				self._player.Name,
+				self._player.UserId,
+				self._seconds,
+				self._messages
+			)
+		)
+		return
+	end
+
 	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
 end
 
