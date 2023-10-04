@@ -28,10 +28,11 @@
 	.overrideGroupCheckForStudio boolean -- When in studio, it'll force any rank checks to be the 'maxRankForCommands' value.
 	.loggingOriginName string -- Name of logger's 'Origin' embed field.
 	.ignoreWarnings boolean -- Ignores any VibezAPI warnings (Excluding Webhooks & Activity Tracking)
-	.activityTrackingEnabled boolean -- if enabled, it'll track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
+	.activityTrackingEnabled boolean -- If enabled, it'll track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
 	.rankToStartTrackingActivityFor boolean -- Minimum rank required to start tracking activity. (Default: 255)
 	.trackAFKActivity boolean -- If enabled, it'll subtract time of users who are detected as 'AFK'.
 	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
+	.disableActivityTrackingInStudio boolean -- If enabled, it'll stop saving any activity tracked when play testing in studio.
 	@within VibezAPI
 ]=]
 
