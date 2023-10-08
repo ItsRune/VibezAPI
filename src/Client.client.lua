@@ -9,8 +9,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
+local incrementedNumber = string.split(script.Name, "-")[3]
 local Remote = ReplicatedStorage:WaitForChild(
-	"4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255",
+	"4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255-" .. incrementedNumber,
 	math.huge
 )
 local eventHolder = {}

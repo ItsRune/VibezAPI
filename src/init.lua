@@ -20,19 +20,19 @@
 --// Documentation \\--
 --[=[
 	@interface extraOptionsType
-	.isChatCommandsEnabled boolean -- If enabled, it'll automatically load commands for users.
-	.isUIEnabled boolean -- If enabled, it'll allow for player's to click on another for ranking options.
+	.isChatCommandsEnabled boolean -- Automatically load commands for users.
+	.isUIEnabled boolean -- Allow for player's to click on another for ranking options.
 	.commandPrefix string -- Change the prefix of commands.
 	.minRankToUseCommandsAndUI number -- Minimum rank to use commands. (Default: 255)
 	.maxRankToUseCommandsAndUI number -- Maximum rank to use commands. (Default: 255)
 	.overrideGroupCheckForStudio boolean -- When in studio, it'll force any rank checks to be the 'maxRankForCommands' value.
 	.loggingOriginName string -- Name of logger's 'Origin' embed field.
 	.ignoreWarnings boolean -- Ignores any VibezAPI warnings (Excluding Webhooks & Activity Tracking)
-	.activityTrackingEnabled boolean -- If enabled, it'll track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
+	.activityTrackingEnabled boolean -- Track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
 	.rankToStartTrackingActivityFor boolean -- Minimum rank required to start tracking activity. (Default: 255)
-	.trackAFKActivity boolean -- If enabled, it'll subtract time of users who are detected as 'AFK'.
+	.trackAFKActivity boolean -- Subtracts time of users who are detected as 'AFK'.
 	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
-	.disableActivityTrackingInStudio boolean -- If enabled, it'll stop saving any activity tracked when play testing in studio.
+	.disableActivityTrackingInStudio boolean -- Stops saving any activity tracked when play testing in studio.
 	@within VibezAPI
 ]=]
 
@@ -107,11 +107,12 @@
 
 --// Before Execution \\--
 local ServerScriptService = game:GetService("ServerScriptService")
+local scriptExistsInService = ServerScriptService:FindFirstChild(script.Name)
 
-if ServerScriptService:FindFirstChild(script.Name) ~= nil then
+if scriptExistsInService ~= nil and script.Parent ~= ServerScriptService then
 	script:Destroy()
 	return require(ServerScriptService[script.Name])
-elseif not script:IsDescendantOf(ServerScriptService) then
+else
 	script.Parent = ServerScriptService
 end
 
@@ -124,6 +125,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 --// Constants \\--
+local scriptNameIncrement = 0
 local Types = require(script.Types)
 local Hooks = require(script.Hooks)
 local ActivityTracker = require(script.Activity)
@@ -333,7 +335,7 @@ function api:_onPlayerAdded(Player: Player)
 
 	-- Clone client script and parent to player
 	local client = script.Client:Clone()
-	client.Name = self._private.clientScriptName
+	client.Name = self._private.clientScriptName .. "-" .. scriptNameIncrement
 	client.Enabled = true
 	client.Parent = Player:WaitForChild("PlayerGui", math.huge)
 
@@ -417,7 +419,6 @@ end
 ]=]
 ---
 function api:_isPlayerRankOkToProceed(playerRank: number, minRank: number, maxRank: number): boolean
-	warn(minRank, maxRank)
 	return (playerRank >= minRank and playerRank <= maxRank)
 end
 
@@ -465,10 +466,13 @@ end
 ---
 function api:_createRemote(alreadyAttemptedLoopCheck: boolean?)
 	-- SHA1 Hash translation: VIBEZ-DEV
-	local remoteName = "4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255"
+	local remoteName = "4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255-"
+		.. scriptNameIncrement
 	local currentRemote = ReplicatedStorage:FindFirstChild(remoteName)
 
 	local function createNewRemote()
+		scriptNameIncrement += 1
+
 		currentRemote = Instance.new("RemoteFunction")
 		currentRemote.Name = remoteName
 		currentRemote.Parent = ReplicatedStorage
@@ -487,13 +491,13 @@ function api:_createRemote(alreadyAttemptedLoopCheck: boolean?)
 			end
 
 			if not found then
-				return self:_createRemote(true)
+				createNewRemote()
 			end
 		elseif alreadyAttemptedLoopCheck then
-			currentRemote = createNewRemote()
+			createNewRemote()
 		end
 	elseif currentRemote == nil then
-		currentRemote = createNewRemote()
+		createNewRemote()
 	end
 
 	return currentRemote
@@ -692,16 +696,24 @@ function api:_setRank(
 		} :: Types.errorResponse
 	end
 
-	local _, response = self:Http("/ranking/changerank", "post", nil, {
+	if not tonumber(roleId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'rankId' is an invalid rank.",
+		} :: Types.errorResponse
+	end
+
+	local body = {
 		userToRank = {
-			userId = tostring(userId),
+			userId = tonumber(userId),
 			userName = userName,
 		},
 		userWhoRanked = whoCalled,
-		userId = tostring(userId),
-		rankId = tostring(roleId),
-	})
+		userId = tonumber(userId),
+		rankId = tonumber(roleId),
+	}
 
+	local _, response = self:Http("/ranking/changerank", "post", nil, body)
 	return response.Body
 end
 
@@ -1204,6 +1216,11 @@ end
 	@param extraOptions extraOptionsType -- Extra settings to configure the api to work for you.
 	@return VibezAPI
 
+	:::danger Important
+	When using this function please do not include the `.new` just call the wrapper as if it's a function.  
+	`require(14946453963)("API Key")`
+	:::
+
 	Constructs the main Vibez API class.
 
 	```lua
@@ -1316,6 +1333,19 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self.Settings[key] = value
 	end
 
+	-- Update the api key using the public function, in case of errors it'll log them.
+	local isKeyOK = self:UpdateKey(apiKey)
+
+	if not isKeyOK then
+		self:Destroy()
+		return setmetatable({}, {
+			__index = function()
+				warn("API Key was not accepted, please make sure there are no special character or spaces.")
+				return function() end
+			end,
+		})
+	end
+
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
 	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, ...: any)
@@ -1404,9 +1434,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	Players.PlayerRemoving:Connect(function(Player)
 		self:_onPlayerRemoved(Player)
 	end)
-
-	-- Update the api key using the public function, in case of errors it'll log them.
-	self:UpdateKey(apiKey)
 
 	-- Initialize the workspace attribute
 	local uiStatus = self.Settings.isUIEnabled
