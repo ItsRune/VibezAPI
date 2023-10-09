@@ -3,6 +3,8 @@ sidebar-position: 9
 ---
 
 ### Join Logger
+Logs to discord everytime a player joins the game.
+
 ```lua
 local Players = game:GetService("Players")
 
@@ -28,9 +30,15 @@ Players.PlayerAdded:Connect(onPlayerAdded)
 ```
 
 ### Leave Logger
-This is a continuation from above:
+Logs to discord everytime a player leaves the game.
 
 ```lua
+local Players = game:GetService("Players")
+
+local Vibez = require(14946453963)("API Key", {
+    loggingOriginName = "Join Logger"
+})
+
 local function onPlayerLeft(Player: Player)
     local webhook = Vibez:getWebhookBuilder("https://discord.com/api/webhooks/")
 
@@ -49,6 +57,8 @@ Players.PlayerRemoving:Connect(onPlayerLeft)
 ```
 
 ### Chat Logger
+Logs to discord everytime a player chats in game.
+
 ```lua
 local Players = game:GetService("Players")
 

@@ -37,7 +37,7 @@ local Wrapper = VibezRankingAPI(myKey, {
 
 ### SetRank
 ```lua
-local Vibez = require(14946453963).new("API Key")
+local Vibez = require(14946453963)("API Key")
 
 local function gradePlayerApplication(Player: Player, application: {any})
     local score = 0
@@ -52,7 +52,7 @@ end
 
 ### Promotions/Demotions/Firing Staff
 ```lua
-local Vibez = require(14946453963).new("API Key")
+local Vibez = require(14946453963)("API Key")
 
 local function promotePlayer(Player: Player)
     Vibez:Promote(Player.UserId)
