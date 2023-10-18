@@ -944,6 +944,124 @@ function api:Fire(userId: string | number): Types.rankResponse
 end
 
 --[=[
+	Changes the rank of a player & logs with the Username/UserId who used the function.
+	@param userId string | number
+	@param rankId string | number
+	@param idOfUser number
+	@param nameOfUser string
+	@return rankResponse
+
+	```lua
+	local userId, rankId = 1, 200
+	local idOfCaller, nameOfCaller = 1, "ROBLOX"
+	Vibez:SetRankWithCaller(userId, rankId, 1, nameOfCaller)
+	```
+
+	@yields
+	@within VibezAPI
+	@since 1.0.0
+]=]
+---
+function api:SetRankWithCaller(
+	userId: string | number,
+	rankId: string | number,
+	idOfUser: number,
+	nameOfUser: string
+): Types.rankResponse
+	if not idOfUser or not nameOfUser then
+		self:_warn(
+			"'SetRankWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':SetRank'"
+		)
+		return self:_setRank(userId, rankId)
+	end
+
+	return self:_setRank(userId, rankId, { userName = nameOfUser, userId = idOfUser })
+end
+
+--[=[
+	Promotes a player & logs with the Username/UserId who used the function.
+	@param userId string | number
+	@param idOfUser number
+	@param nameOfUser string
+	@return rankResponse
+
+	```lua
+	local userId = 1
+	local idOfCaller, nameOfCaller = 1, "ROBLOX"
+	Vibez:PromoteWithCaller(userId, 1, nameOfCaller)
+	```
+
+	@yields
+	@within VibezAPI
+	@since 1.0.0
+]=]
+---
+function api:PromoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
+	if not idOfUser or not nameOfUser then
+		self:_warn(
+			"'PromoteWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Promote'"
+		)
+		return self:_Promote(userId)
+	end
+
+	return self:_Promote(userId, { userName = nameOfUser, userId = idOfUser })
+end
+
+--[=[
+	Demotes a player & logs with the Username/UserId who used the function.
+	@param userId string | number
+	@param idOfUser number
+	@param nameOfUser string
+	@return rankResponse
+
+	```lua
+	local userId = 1
+	local idOfCaller, nameOfCaller = 1, "ROBLOX"
+	Vibez:DemoteWithCaller(userId, 1, nameOfCaller)
+	```
+
+	@yields
+	@within VibezAPI
+	@since 1.0.0
+]=]
+---
+function api:DemoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
+	if not idOfUser or not nameOfUser then
+		self:_warn("'DemoteWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Demote'")
+		return self:_Demote(userId)
+	end
+
+	return self:_Demote(userId, { userName = nameOfUser, userId = idOfUser })
+end
+
+--[=[
+	Fires a player & logs with the Username/UserId who used the function.
+	@param userId string | number
+	@param idOfUser number
+	@param nameOfUser string
+	@return rankResponse
+
+	```lua
+	local userId = 1
+	local idOfCaller, nameOfCaller = 1, "ROBLOX"
+	Vibez:FireWithCaller(userId, 1, nameOfCaller)
+	```
+
+	@yields
+	@within VibezAPI
+	@since 1.0.0
+]=]
+---
+function api:FireWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
+	if not idOfUser or not nameOfUser then
+		self:_warn("'FireWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Fire'")
+		return self:_Fire(userId)
+	end
+
+	return self:_Fire(userId, { userName = nameOfUser, userId = idOfUser })
+end
+
+--[=[
 	Toggles the usage of commands within the experience.
 	@return VibezAPI
 
@@ -1197,9 +1315,17 @@ function api:saveActivity(
 		return
 	end
 
+	local groupData = self:_getGroupFromUser(self.GroupId, userId)
+	local rankId = 0
+
+	if groupData ~= nil then
+		rankId = groupData.Rank
+	end
+
 	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
 	local _, response = self:Http("/activity/save2", "post", nil, {
 		userId = userId,
+		userRank = rankId,
 		secondsUserHasSpent = secondsSpent,
 		messagesUserHasSent = messagesSent,
 	})
