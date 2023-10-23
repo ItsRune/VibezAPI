@@ -1118,7 +1118,7 @@ end
 		"shr", -- Prefix before the operation argument.
 		function(playerToCheck: Player, incomingArgument: string, internalFunctions)
 			local playerGroupInfo = internalFunctions
-				._getGroupFromUser(Vibez.GroupId, playerToCheck.UserId)
+				._getGroupFromUser(Vibez, Vibez.GroupId, playerToCheck.UserId)
 
 			return playerGroupInfo.Rank >= 250
 		end
@@ -1315,8 +1315,8 @@ function api:saveActivity(
 		return
 	end
 
-	local groupData = self:_getGroupFromUser(self.GroupId, userId)
 	local rankId = 0
+	local groupData = self:_getGroupFromUser(self.GroupId, userId)
 
 	if groupData ~= nil then
 		rankId = groupData.Rank
