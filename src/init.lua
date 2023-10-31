@@ -10,7 +10,8 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 10/2/2023 00:08 EST
+	Updated: 10/31/2023 03:08 EST
+	Version: 1.0.23
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -33,6 +34,7 @@
 	.trackAFKActivity boolean -- Subtracts time of users who are detected as 'AFK'.
 	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
 	.disableActivityTrackingInStudio boolean -- Stops saving any activity tracked when play testing in studio.
+	.usePromises boolean -- Determines whether the module should return promises or not.
 	@within VibezAPI
 ]=]
 
@@ -126,10 +128,6 @@ local Workspace = game:GetService("Workspace")
 
 --// Constants \\--
 local scriptNameIncrement = 0
-local Types = require(script.Types)
-local Hooks = require(script.Hooks)
-local ActivityTracker = require(script.Activity)
-local RateLimit = require(script.RateLimit)
 local api = {}
 local baseSettings = {
 	commandPrefix = "!",
@@ -138,16 +136,44 @@ local baseSettings = {
 	maxRankToUseCommandsAndUI = 255,
 	isUIEnabled = false,
 	overrideGroupCheckForStudio = false,
-	disableActivityTrackingInStudio = false,
+	disableActivityTrackingInStudio = true,
 	loggingOriginName = game.Name,
 	ignoreWarnings = false,
 	activityTrackingEnabled = false,
 	trackAFKActivity = false,
 	rankToStartTrackingActivityFor = 255,
 	delayBeforeMarkedAFK = 30,
+	usePromises = false,
 }
 
+--// Modules \\--
+local Types = require(script.Types)
+local Hooks = require(script.Hooks)
+local ActivityTracker = require(script.Activity)
+local RateLimit = require(script.RateLimit)
+local Promise = require(script.Promise)
+
 --// Private Functions \\--
+--[=[
+	Uses `Promise.lua` to attempt to promisify a method. (Only applies when `usePromises` is set to true).
+	@param functionToBind (...any) -> ...any
+	@param ... any
+	@return Promise | any
+
+	@yields
+	@tag Unavailable
+	@private
+	@within VibezAPI
+	@since 1.0.12
+]=]
+function api:_promisify(functionToBind: (...any) -> ...any, ...: any): any
+	if self.Settings.usePromises then
+		return Promise.promisify(functionToBind)(...)
+	end
+
+	return functionToBind(...)
+end
+
 --[=[
 	Uses `RequestAsync` to fetch required assets to make this API wrapper work properly. Automatically handles the API key and necessary headers associated with different routes.
 	@param Route string
@@ -201,7 +227,6 @@ function api:Http(
 	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
-
 	Headers["x-api-key"] = self.Settings.apiKey
 
 	local apiToUse = (useOldApi == true) and self._private.oldApiUrl or self._private.newApiUrl
@@ -284,7 +309,7 @@ end
 	Uses roblox's group service to get a player's rank.
 	@param groupId number
 	@param userId number
-	@return number
+	@return Promise
 
 	@yields
 	@private
@@ -292,26 +317,30 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_getGroupFromUser(groupId: number, userId: number): { any }?
-	if self.Settings.overrideGroupCheckForStudio == true and RunService:IsStudio() then
-		return {
-			Rank = self.Settings.maxRankToUseCommandsAndUI,
-		}
-	end
-
-	local isOk, playerGroups = pcall(GroupService.GetGroupsAsync, GroupService, userId)
-
-	if not isOk then
-		return nil
-	end
-
-	for _, groupData in pairs(playerGroups) do
-		if groupData.Id == groupId then
-			return groupData
+function api:_getGroupFromUser(groupId: number, userId: number): any?
+	return Promise.new(function(resolve, reject)
+		if self.Settings.overrideGroupCheckForStudio == true and RunService:IsStudio() then
+			return resolve({
+				Rank = self.Settings.maxRankToUseCommandsAndUI,
+			})
 		end
-	end
 
-	return nil
+		local isOk, data = pcall(GroupService.GetGroupsAsync, GroupService, userId)
+		local found = nil
+
+		if not isOk then
+			return reject("Error: " .. data)
+		end
+
+		for _, groupData in pairs(data) do
+			if groupData.Id == groupId then
+				found = groupData
+				break
+			end
+		end
+
+		return (found ~= nil) and resolve(found) or reject("Error: Not found.")
+	end)
 end
 
 --[=[
@@ -339,41 +368,35 @@ function api:_onPlayerAdded(Player: Player)
 	client.Enabled = true
 	client.Parent = Player:WaitForChild("PlayerGui", math.huge)
 
-	self:_warn(`Settings up commands for user {Player.Name}.`)
-	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+	self:_warn(`Setting up commands for user {Player.Name}.`)
+	self:_getGroupFromUser(self.GroupId, Player.UserId)
+		:andThen(function(theirGroupData)
+			self._private.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
 
-	if
-		not theirGroupData
-		or not self:_isPlayerRankOkToProceed(
-			theirGroupData.Rank,
-			self.Settings.minRankToUseCommandsAndUI,
-			self.Settings.maxRankToUseCommandsAndUI
-		)
-	then
-		return
-	end
+			if
+				self.Settings.activityTrackingEnabled == true
+				and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
+			then
+				local tracker = ActivityTracker.new(self, Player)
+				table.insert(self._private.validStaff[Player.UserId], tracker)
+			end
 
-	self._private.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
+			-- We want to hold all connections from users in order to
+			-- disconnect them later on, this will stop any memory
+			-- leaks from occurring by vibez's api wrapper.
 
-	if
-		self.Settings.activityTrackingEnabled == true
-		and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
-	then
-		local tracker = ActivityTracker.new(self, Player)
-		table.insert(self._private.validStaff[Player.UserId], tracker)
-	end
-
-	-- We want to hold all connections from users in order to
-	-- disconnect them later on, this will stop any memory
-	-- leaks from occurring by vibez's api wrapper.
-
-	self._private.Maid[Player.UserId] = {}
-	table.insert(
-		self._private.Maid[Player.UserId],
-		Player.Chatted:Connect(function(message: string)
-			return self:_onPlayerChatted(Player, message)
+			self._private.Maid[Player.UserId] = {}
+			table.insert(
+				self._private.Maid[Player.UserId],
+				Player.Chatted:Connect(function(message: string)
+					return self:_onPlayerChatted(Player, message)
+				end)
+			)
 		end)
-	)
+		:catch(function(err)
+			self:_warn(`Error occurred: {err}`)
+			return
+		end)
 end
 
 --[=[
@@ -1118,7 +1141,7 @@ end
 		"shr", -- Prefix before the operation argument.
 		function(playerToCheck: Player, incomingArgument: string, internalFunctions)
 			local playerGroupInfo = internalFunctions
-				._getGroupFromUser(Vibez, Vibez.GroupId, playerToCheck.UserId)
+				._getGroupFromUser(Vibez, Vibez.GroupId, playerToCheck.UserId):await()
 
 			return playerGroupInfo.Rank >= 250
 		end
@@ -1140,6 +1163,9 @@ function api:addCommandOperation(
 ): Types.vibezApi
 	if self._private.commandOperationCodes[operationName] then
 		self:_warn(`Command operation code '{operationCode}' already exists!`)
+		return
+	elseif typeof(operationFunction) ~= "function" then
+		self:_warn(`Command operation callback is not a type "function", it's a "{typeof(operationFunction)}"`)
 		return
 	end
 
@@ -1316,7 +1342,13 @@ function api:saveActivity(
 	end
 
 	local rankId = 0
-	local groupData = self:_getGroupFromUser(self.GroupId, userId)
+	local groupData
+	_, groupData = self:_getGroupFromUser(self.GroupId, userId)
+		:catch(function(err)
+			self:_warn(err)
+			groupData = nil
+		end)
+		:await()
 
 	if groupData ~= nil then
 		rankId = groupData.Rank
@@ -1342,9 +1374,10 @@ end
 	@param extraOptions extraOptionsType -- Extra settings to configure the api to work for you.
 	@return VibezAPI
 
-	:::danger Important
-	When using this function please do not include the `.new` just call the wrapper as if it's a function.  
-	`require(14946453963)("API Key")`
+	:::caution Notice
+	This method can be used as a normal function or invoke the ".new" as a function:    
+	`require(14946453963)("API Key")`  
+	`require(14946453963).new("API Key")`
 	:::
 
 	Constructs the main Vibez API class.
@@ -1491,44 +1524,37 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			end
 
 			local userId = self:_getUserIdByName(Target.Name)
-			local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+			self:_getGroupFromUser(self.GroupId, Player.UserId)
+				:andThen(function()
+					-- Maybe actually log it somewhere... I have no clue where though.
+					if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
+						Player:Kick(
+							"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
+						)
+						return false
+					end
 
-			if
-				not theirGroupData
-				or userId == -1
-				or not self:_isPlayerRankOkToProceed(
-					theirGroupData.Rank,
-					self.Settings.minRankToUseCommandsAndUI,
-					self.Settings.maxRankToUseCommandsAndUI
-				)
-			then
-				return false
-			end
+					local actionFunc
+					if Action == "promote" then
+						actionFunc = "_Promote"
+					elseif Action == "demote" then
+						actionFunc = "_Demote"
+					elseif Action == "fire" then
+						actionFunc = "_Fire"
+					end
 
-			-- Maybe actually log it somewhere... I have no clue where though.
-			if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
-				Player:Kick(
-					"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
-				)
-				return false
-			end
+					local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
 
-			local actionFunc
-			if Action == "promote" then
-				actionFunc = "_Promote"
-			elseif Action == "demote" then
-				actionFunc = "_Demote"
-			elseif Action == "fire" then
-				actionFunc = "_Fire"
-			end
+					if not result["success"] then
+						return false
+					end
 
-			local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
-
-			if not result["success"] then
-				return false
-			end
-
-			return true
+					return true
+				end)
+				:catch(function(err)
+					self:_warn(err)
+					return false
+				end)
 		elseif Action == "Afk" then
 			local override = Data[1]
 			local existingTracker = ActivityTracker.Users[Player.UserId]
@@ -1586,4 +1612,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	return self
 end
 
-return Constructor :: Types.vibezConstructor
+return setmetatable({
+	new = Constructor,
+}, {
+	__call = function(t, ...)
+		return rawget(t, "new")(...)
+	end,
+}) :: Types.vibezConstructor

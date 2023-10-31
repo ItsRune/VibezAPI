@@ -81,6 +81,7 @@ export type vibezSettings = {
 	activityTrackingEnabled: boolean,
 	toggleTrackingOfAFKActivity: boolean,
 	rankToStartTrackingActivityFor: boolean,
+	usePromises: boolean,
 }
 
 export type httpFunction = (
