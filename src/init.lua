@@ -166,6 +166,7 @@ local Promise = require(script.Promise)
 	@within VibezAPI
 	@since 1.0.12
 ]=]
+---
 function api:_promisify(functionToBind: (...any) -> ...any, ...: any): any
 	if self.Settings.usePromises then
 		return Promise.promisify(functionToBind)(...)
@@ -1494,7 +1495,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	end
 
 	-- Update the api key using the public function, in case of errors it'll log them.
-	local isKeyOK = self:UpdateKey(apiKey)
+	local isKeyOK = self:updateKey(apiKey)
 
 	if not isKeyOK then
 		self:Destroy()
