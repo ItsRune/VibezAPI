@@ -872,6 +872,7 @@ end
 ]=]
 ---
 function api:_destroy()
+	table.clear(self)
 	setmetatable(self, nil)
 	self = nil
 end
@@ -902,7 +903,7 @@ end
 
 	```lua
 	local userId, rankId = 1, 200
-	Vibez:SetRank(userId, rankId)
+	Vibez:setRank(userId, rankId)
 	```
 
 	@yields
@@ -910,7 +911,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:SetRank(userId: string | number, rankId: string | number): Types.rankResponse
+function api:setRank(userId: string | number, rankId: string | number): Types.rankResponse
 	return self:_setRank(userId, rankId)
 end
 
@@ -977,7 +978,7 @@ end
 	```lua
 	local userId, rankId = 1, 200
 	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:SetRankWithCaller(userId, rankId, 1, nameOfCaller)
+	Vibez:setRankWithCaller(userId, rankId, 1, nameOfCaller)
 	```
 
 	@yields
@@ -985,7 +986,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:SetRankWithCaller(
+function api:setRankWithCaller(
 	userId: string | number,
 	rankId: string | number,
 	idOfUser: number,
@@ -1011,7 +1012,7 @@ end
 	```lua
 	local userId = 1
 	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:PromoteWithCaller(userId, 1, nameOfCaller)
+	Vibez:promoteWithCaller(userId, 1, nameOfCaller)
 	```
 
 	@yields
@@ -1019,7 +1020,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:PromoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
+function api:promoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
 	if not idOfUser or not nameOfUser then
 		self:_warn(
 			"'PromoteWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Promote'"
@@ -1040,7 +1041,7 @@ end
 	```lua
 	local userId = 1
 	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:DemoteWithCaller(userId, 1, nameOfCaller)
+	Vibez:demoteWithCaller(userId, 1, nameOfCaller)
 	```
 
 	@yields
@@ -1048,7 +1049,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:DemoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
+function api:demoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
 	if not idOfUser or not nameOfUser then
 		self:_warn("'DemoteWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Demote'")
 		return self:_Demote(userId)
@@ -1067,7 +1068,7 @@ end
 	```lua
 	local userId = 1
 	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:FireWithCaller(userId, 1, nameOfCaller)
+	Vibez:fireWithCaller(userId, 1, nameOfCaller)
 	```
 
 	@yields
@@ -1075,7 +1076,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:FireWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
+function api:fireWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
 	if not idOfUser or not nameOfUser then
 		self:_warn("'FireWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Fire'")
 		return self:_Fire(userId)
@@ -1093,7 +1094,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:ToggleCommands(override: boolean?): nil
+function api:toggleCommands(override: boolean?): nil
 	if override ~= nil then
 		self.Settings.isChatCommandsEnabled = override
 	else
@@ -1205,7 +1206,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:UpdateLoggerTitle(newTitle: string): nil
+function api:updateLoggerTitle(newTitle: string): nil
 	self.Settings.loggingOriginName = tostring(newTitle)
 end
 
@@ -1219,7 +1220,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:UpdateKey(newApiKey: string): boolean
+function api:updateKey(newApiKey: string): boolean
 	local savedKey = table.clone(self.Settings).apiKey
 
 	self.Settings.apiKey = newApiKey
@@ -1262,7 +1263,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:ToggleUI(override: boolean?): nil
+function api:toggleUI(override: boolean?): nil
 	if override ~= nil then
 		self.Settings.isUIEnabled = override
 	else
