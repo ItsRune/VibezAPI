@@ -1235,7 +1235,7 @@ end
 
 --[=[
 	Checks if the user is currently a nitro booster.
-	@param userId: number | string | Player
+	@param User number | string | Player
 	@return boolean
 
 	@yields
@@ -1418,7 +1418,7 @@ end
 	@return VibezAPI
 
 	:::caution Notice
-	This method can be used as a normal function or invoke the ".new" as a function:    
+	This method can be used as a normal function or invoke the ".new" function:    
 	`require(14946453963)("API Key")`  
 	`require(14946453963).new("API Key")`
 	:::
