@@ -359,7 +359,7 @@ function api:_onPlayerAdded(Player: Player)
 		return
 	end
 
-	if self._private.validStaff[Player.UserId] ~= nil then
+	if self._private.requestCaches.validStaff[Player.UserId] ~= nil then
 		return
 	end
 
@@ -372,14 +372,14 @@ function api:_onPlayerAdded(Player: Player)
 	self:_warn(`Setting up commands for user {Player.Name}.`)
 	self:_getGroupFromUser(self.GroupId, Player.UserId)
 		:andThen(function(theirGroupData)
-			self._private.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
+			self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
 
 			if
 				self.Settings.activityTrackingEnabled == true
 				and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
 			then
 				local tracker = ActivityTracker.new(self, Player)
-				table.insert(self._private.validStaff[Player.UserId], tracker)
+				table.insert(self._private.requestCaches.validStaff[Player.UserId], tracker)
 			end
 
 			-- We want to hold all connections from users in order to
@@ -410,8 +410,10 @@ end
 ]=]
 ---
 function api:_onPlayerRemoved(Player: Player)
-	-- Remove player from validated staff table.
-	self._private.validStaff[Player.UserId] = nil
+	-- Remove player from other cached tables.
+	for cacheName, _ in pairs(self._private.requestCaches) do
+		self._private.requestCaches[cacheName][Player.UserId] = nil
+	end
 
 	-- Check for and submit activity data.
 	local existingTracker = ActivityTracker.Users[Player.UserId]
@@ -628,7 +630,7 @@ end
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
-	local theirCache = self._private.validStaff[Player.UserId]
+	local theirCache = self._private.requestCaches.validStaff[Player.UserId]
 	if not theirCache then
 		return
 	end
@@ -862,20 +864,6 @@ function api:_Fire(userId: string | number, whoCalled: { userName: string, userI
 	})
 
 	return response
-end
-
---[=[
-	Destroys the class.
-
-	@private
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:_destroy()
-	table.clear(self)
-	setmetatable(self, nil)
-	self = nil
 end
 
 --[=[
@@ -1246,6 +1234,57 @@ function api:updateKey(newApiKey: string): boolean
 end
 
 --[=[
+	Checks if the user is currently a nitro booster.
+	@param userId: number | string | Player
+	@return boolean
+
+	@yields
+	@within VibezAPI
+	@since 1.0.0
+]=]
+---
+function api:isPlayerBoostingDiscord(User: number | string | Player): boolean
+	local userId
+
+	if typeof(User) == "Instance" and User:IsA("Player") then
+		userId = User.UserId
+	elseif typeof(User) == "Instance" then
+		self:_warn(`Class name, "{User.ClassName}", is not supported for ":isPlayerBoostingDiscord"`)
+		return nil
+	else
+		userId = (typeof(userId) == "number" or tonumber(userId) ~= nil) and tonumber(userId) or self:_get(userId)
+	end
+
+	if not userId then
+		self:_warn("UserId is not a valid player.")
+		return
+	end
+
+	local theirCache = self._private.requestCaches.nitro[userId]
+	if theirCache ~= nil then
+		local timestamp, value = theirCache.timestamp, theirCache.responseValue
+		local now = DateTime.now().UnixTimestamp
+
+		if timestamp - now > 0 then
+			return value
+		end
+	end
+
+	local isOk, response = self:Http(`/is-booster/{userId}`)
+	if not isOk or (response.StatusCode == 200 and response.Body ~= nil and response.Body.success == false) then
+		return false
+	end
+
+	local newCacheData = {
+		value = response.Body.isBooster,
+		timestamp = DateTime.now().UnixTimestamp + (60 * 10), -- 10 minute offset
+	}
+
+	self._private.requestCaches.nitro[userId] = newCacheData
+	return newCacheData.value
+end
+
+--[=[
 	Destroys the VibezAPI class.
 
 	@within VibezAPI
@@ -1253,7 +1292,9 @@ end
 ]=]
 ---
 function api:Destroy()
-	return self:_destroy()
+	table.clear(self)
+	setmetatable(self, nil)
+	self = nil
 end
 
 --[=[
@@ -1271,7 +1312,7 @@ function api:toggleUI(override: boolean?): nil
 		self.Settings.isUIEnabled = not self.Settings.isUIEnabled
 	end
 
-	for _, playerData in pairs(self._private.validStaff) do
+	for _, playerData in pairs(self._private.requestCaches.validStaff) do
 		local player = playerData[1]
 
 		if player.PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
@@ -1420,7 +1461,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		newApiUrl = "https://leina.vibez.dev",
 		oldApiUrl = "https://api.vibez.dev/api",
 		Maid = {},
-		validStaff = {},
+		requestCaches = {
+			validStaff = {},
+			nitro = {},
+		},
 		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
 		rateLimiter = RateLimit.new(60, 60),
 		commandOperationCodes = {
@@ -1601,7 +1645,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- Track activity
 	if self.Settings.activityTrackingEnabled == true then
 		RunService.Heartbeat:Connect(function()
-			for _, data in pairs(self._private.validStaff) do
+			for _, data in pairs(self._private.requestCaches.validStaff) do
 				if data[3] == nil then
 					continue
 				end

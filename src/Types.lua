@@ -58,7 +58,13 @@ export type rankResponse = {
 	},
 }
 
-export type responseBody = groupIdResponse | errorResponse | rankResponse | infoResponse
+export type nitroBoosterResponse = {
+	success: boolean,
+	isBooster: boolean?,
+	message: string?,
+}
+
+export type responseBody = groupIdResponse | errorResponse | rankResponse | infoResponse | nitroBoosterResponse
 
 export type httpResponse = {
 	Body: responseBody,
