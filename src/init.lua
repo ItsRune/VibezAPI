@@ -147,11 +147,12 @@ local baseSettings = {
 }
 
 --// Modules \\--
-local Types = require(script.Types)
-local Hooks = require(script.Hooks)
-local ActivityTracker = require(script.Activity)
-local RateLimit = require(script.RateLimit)
-local Promise = require(script.Promise)
+local Types = require(script.Modules.Types)
+local Hooks = require(script.Modules.Hooks)
+local ActivityTracker = require(script.Modules.Activity)
+local RateLimit = require(script.Modules.RateLimit)
+local Promise = require(script.Modules.Promise)
+local Table = require(script.Modules.Table)
 
 --// Private Functions \\--
 --[=[
@@ -240,6 +241,8 @@ function api:Http(
 
 	local success, data = pcall(HttpService.RequestAsync, HttpService, Options)
 	local successBody, decodedBody = pcall(HttpService.JSONDecode, HttpService, data.Body)
+
+	warn(HttpService:JSONEncode(Options))
 
 	if success and successBody then
 		data.rawBody = data.Body
@@ -1192,11 +1195,13 @@ end
 	Updates the logger's origin name.
 
 	@within VibezAPI
+	@tag Chainable
 	@since 1.0.0
 ]=]
 ---
 function api:updateLoggerTitle(newTitle: string): nil
 	self.Settings.loggingOriginName = tostring(newTitle)
+	return self
 end
 
 --[=[
@@ -1377,15 +1382,14 @@ function api:saveActivity(
 	if not tonumber(messagesSent) then
 		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'messagesSent'!`, 2))
 		return
-	end
-
-	if not tonumber(secondsSpent) then
+	elseif not tonumber(secondsSpent) then
 		self:_warn(debug.traceback(`'secondsSpent' parameter is required for this function!`, 2))
 		return
 	end
 
 	local rankId = 0
 	local groupData
+
 	_, groupData = self:_getGroupFromUser(self.GroupId, userId)
 		:catch(function(err)
 			self:_warn(err)
@@ -1456,17 +1460,17 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- @prop GroupId number
 	self.GroupId = -1
-	self.Settings = table.clone(baseSettings)
+	self.Settings = Table.Copy(baseSettings)
 	self._private = {
 		newApiUrl = "https://leina.vibez.dev",
 		oldApiUrl = "https://api.vibez.dev/api",
+		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
+		rateLimiter = RateLimit.new(60, 60),
 		Maid = {},
 		requestCaches = {
 			validStaff = {},
 			nitro = {},
 		},
-		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
-		rateLimiter = RateLimit.new(60, 60),
 		commandOperationCodes = {
 			["Team"] = {
 				"%", -- Operation Code
@@ -1624,8 +1628,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_onPlayerAdded(Player)
 	end)
 
-	for _, player in pairs(Players:GetPlayers()) do
-		coroutine.wrap(self._onPlayerAdded)(self, player)
+	for _, Player in pairs(Players:GetPlayers()) do
+		coroutine.wrap(self._onPlayerAdded)(self, Player)
 	end
 
 	-- Connect the player's maid cleanup function.

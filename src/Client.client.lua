@@ -1,3 +1,4 @@
+-- Not as clean as the main module. But it works...
 --// Services \\--
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,6 +21,11 @@ local afkConnections = {}
 local State = false
 
 --// Functions \\--
+--selene: allow(unused_variable)
+local function onSetupWidgets()
+	--
+end
+
 local function onSetupUI()
 	if State == false then
 		State = StarterGui:GetCore("AvatarContextMenuEnabled")

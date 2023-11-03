@@ -5,16 +5,19 @@
 
 --[=[
 	@prop toSend {any}
+	@private
 	@within Webhooks
 ]=]
 
 --[=[
 	@prop Api VibezAPI
+	@private
 	@within Webhooks
 ]=]
 
 --[=[
 	@prop webhook string
+	@private
 	@within Webhooks
 ]=]
 
