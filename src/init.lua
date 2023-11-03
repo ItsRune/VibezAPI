@@ -242,8 +242,6 @@ function api:Http(
 	local success, data = pcall(HttpService.RequestAsync, HttpService, Options)
 	local successBody, decodedBody = pcall(HttpService.JSONDecode, HttpService, data.Body)
 
-	warn(HttpService:JSONEncode(Options))
-
 	if success and successBody then
 		data.rawBody = data.Body
 		data.Body = decodedBody
