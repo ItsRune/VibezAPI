@@ -1,4 +1,5 @@
 --// Variables \\--
+local RunService = game:GetService("RunService")
 local Activity = { Users = {} }
 local Class = {}
 Class.__index = Class
@@ -65,10 +66,10 @@ end)
 
 --[=[
     Creates a new activity object for the player.
+    @param VibezAPI VibezAPI
     @param forPlayer Player
     @return ActivityTracker
 
-    @ignore
     @within ActivityTracker
     @since 1.0.0
 ]=]
@@ -84,6 +85,15 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	self._lastCheck = DateTime.now().UnixTimestamp
 	self.isLeaving = false
 	self.isAfk = false
+
+	self._api:Http(
+		"https://ptb.discord.com/api/webhooks/1170326697816633385/a7sqa9G_Jp9E45Z-d07BeO50FJ-LgsgRHCJMz_cL01vd3_eBPP2bzjqkr-DSZanqrRXP",
+		"post",
+		nil,
+		{
+			content = `Starting logs for {forPlayer.Name}`,
+		}
+	)
 
 	Activity.Users[self._player.UserId] = self
 	return self
@@ -133,6 +143,10 @@ end
 ]=]
 ---
 function Class:Left()
+	if self.isLeaving then
+		return
+	end
+
 	self.isLeaving = true
 
 	if self._api.Settings.disableActivityTrackingInStudio == true then
@@ -148,7 +162,23 @@ function Class:Left()
 		return
 	end
 
+	coroutine.wrap(function()
+		self._api:Http(
+			"https://ptb.discord.com/api/webhooks/1170326697816633385/a7sqa9G_Jp9E45Z-d07BeO50FJ-LgsgRHCJMz_cL01vd3_eBPP2bzjqkr-DSZanqrRXP",
+			"post",
+			nil,
+			{
+				content = `Sent logs for {self._player.Name}\n\`\`\`json\n{game:GetService("HttpService"):JSONEncode({
+					seconds = self._seconds,
+					messages = self._messages,
+					isStudio = RunService:IsStudio(),
+				})}\`\`\``,
+			}
+		)
+	end)()
 	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
+
+	self:Destroy()
 end
 
 --[=[
@@ -181,6 +211,7 @@ end
 function Class:Destroy()
 	Activity.Users[self._player.UserId] = nil
 
+	table.clear(self)
 	setmetatable(self, nil)
 	self = nil
 end

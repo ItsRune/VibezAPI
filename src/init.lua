@@ -232,6 +232,16 @@ function api:Http(
 	Headers["x-api-key"] = self.Settings.apiKey
 
 	local apiToUse = (useOldApi == true) and self._private.oldApiUrl or self._private.newApiUrl
+
+	-- Prevents sending api key to external URLs
+	-- Remove from 'Route' extra slash that was added
+	-- Make 'apiToUse' an empty string since "Route" and "apiToUse" get concatenated on request.
+	if string.match(Route, "https://") ~= nil then
+		Route = string.sub(Route, 2, #Route)
+		apiToUse = ""
+		Headers["x-api-key"] = nil
+	end
+
 	local Options = {
 		Url = apiToUse .. Route,
 		Method = Method,
@@ -319,30 +329,37 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_getGroupFromUser(groupId: number, userId: number): any?
-	return Promise.new(function(resolve, reject)
-		if self.Settings.overrideGroupCheckForStudio == true and RunService:IsStudio() then
-			return resolve({
-				Rank = self.Settings.maxRankToUseCommandsAndUI,
-			})
+function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?): any?
+	if self._private.requestCaches.groupInfo[userId] ~= nil and not force then
+		return self._private.requestCaches.groupInfo[userId]
+	end
+
+	if self.Settings.overrideGroupCheckForStudio == true and RunService:IsStudio() then
+		return {
+			Rank = self.Settings.maxRankToUseCommandsAndUI,
+		}
+	end
+
+	local isOk, data = pcall(GroupService.GetGroupsAsync, GroupService, userId)
+	local found = nil
+
+	if not isOk then
+		return "Error: " .. data
+	end
+
+	for _, groupData in pairs(data) do
+		if groupData.Id == groupId then
+			found = groupData
+			break
 		end
+	end
 
-		local isOk, data = pcall(GroupService.GetGroupsAsync, GroupService, userId)
-		local found = nil
-
-		if not isOk then
-			return reject("Error: " .. data)
-		end
-
-		for _, groupData in pairs(data) do
-			if groupData.Id == groupId then
-				found = groupData
-				break
-			end
-		end
-
-		return (found ~= nil) and resolve(found) or reject("Error: Not found.")
-	end)
+	if typeof(found) == "table" then
+		self._private.requestCaches.groupInfo[userId] = found
+		return found
+	else
+		return "Not found."
+	end
 end
 
 --[=[
@@ -371,34 +388,33 @@ function api:_onPlayerAdded(Player: Player)
 	client.Parent = Player:WaitForChild("PlayerGui", math.huge)
 
 	self:_warn(`Setting up commands for user {Player.Name}.`)
-	self:_getGroupFromUser(self.GroupId, Player.UserId)
-		:andThen(function(theirGroupData)
-			self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
+	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+	if typeof(theirGroupData) ~= "table" then
+		self:_warn(`Error occurred: {theirGroupData}`)
+		return
+	end
 
-			if
-				self.Settings.activityTrackingEnabled == true
-				and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
-			then
-				local tracker = ActivityTracker.new(self, Player)
-				table.insert(self._private.requestCaches.validStaff[Player.UserId], tracker)
-			end
+	self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
 
-			-- We want to hold all connections from users in order to
-			-- disconnect them later on, this will stop any memory
-			-- leaks from occurring by vibez's api wrapper.
+	if
+		self.Settings.activityTrackingEnabled == true
+		and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
+	then
+		local tracker = ActivityTracker.new(self, Player)
+		table.insert(self._private.requestCaches.validStaff[Player.UserId], tracker)
+	end
 
-			self._private.Maid[Player.UserId] = {}
-			table.insert(
-				self._private.Maid[Player.UserId],
-				Player.Chatted:Connect(function(message: string)
-					return self:_onPlayerChatted(Player, message)
-				end)
-			)
+	-- We want to hold all connections from users in order to
+	-- disconnect them later on, this will stop any memory
+	-- leaks from occurring by vibez's api wrapper.
+
+	self._private.Maid[Player.UserId] = {}
+	table.insert(
+		self._private.Maid[Player.UserId],
+		Player.Chatted:Connect(function(message: string)
+			return self:_onPlayerChatted(Player, message)
 		end)
-		:catch(function(err)
-			self:_warn(`Error occurred: {err}`)
-			return
-		end)
+	)
 end
 
 --[=[
@@ -410,17 +426,22 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_onPlayerRemoved(Player: Player)
-	-- Remove player from other cached tables.
-	for cacheName, _ in pairs(self._private.requestCaches) do
-		self._private.requestCaches[cacheName][Player.UserId] = nil
-	end
-
+function api:_onPlayerRemoved(Player: Player) -- This method is being handled twice when game is shutting down.
 	-- Check for and submit activity data.
 	local existingTracker = ActivityTracker.Users[Player.UserId]
 	if existingTracker then
 		existingTracker:Left()
-		existingTracker:Destroy()
+	end
+
+	-- Clear from activity tracking.
+	ActivityTracker.Users[Player.UserId] = nil
+
+	-- Clear from cached group information.
+	self._private.requestCaches.groupInfo[Player.UserId] = nil
+
+	-- Remove player from other cached tables.
+	for cacheName, _ in pairs(self._private.requestCaches) do
+		self._private.requestCaches[cacheName][Player.UserId] = nil
 	end
 
 	-- Check for and delete any existing connections with the player.
@@ -428,16 +449,39 @@ function api:_onPlayerRemoved(Player: Player)
 		return
 	end
 
+	-- Disconnect connections connected to specific user.
 	for _, connection: RBXScriptConnection in pairs(self._private.Maid[Player.UserId]) do
 		connection:Disconnect()
 	end
 
+	-- Clear them from the maid.
 	self._private.Maid[Player.UserId] = nil
 end
 
 --[=[
+	Fires when the game's server is shutting down.
+
+	@private
+	@within VibezAPI
+	@since 1.1.0
+]=]
+---
+function api:_onGameShutdown() -- Broken atm
+	return
+	-- if #Players:GetPlayers() == 0 then
+	-- 	return
+	-- end
+
+	-- for _, Player: Player in pairs(Players:GetPlayers()) do
+	-- 	coroutine.wrap(self._onPlayerRemoved)(self, Player)
+	-- end
+end
+
+--[=[
 	Compares a rank to the min/max ranks in settings for the commands/ui.
-	@param playerRank number
+	@param toCheck number
+	@param minCheck number
+	@param maxCheck number
 	@return boolean
 
 	@private
@@ -445,8 +489,8 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_isPlayerRankOkToProceed(playerRank: number, minRank: number, maxRank: number): boolean
-	return (playerRank >= minRank and playerRank <= maxRank)
+function api:_isPlayerRankOkToProceed(toCheck: number, minCheck: number, maxCheck: number): boolean
+	return (toCheck >= minCheck and toCheck <= maxCheck)
 end
 
 --[=[
@@ -1386,20 +1430,16 @@ function api:saveActivity(
 	end
 
 	local rankId = 0
-	local groupData
+	local groupData = self:_getGroupFromUser(self.GroupId, userId)
 
-	_, groupData = self:_getGroupFromUser(self.GroupId, userId)
-		:catch(function(err)
-			self:_warn(err)
-			groupData = nil
-		end)
-		:await()
-
-	if groupData ~= nil then
-		rankId = groupData.Rank
+	if typeof(groupData) ~= "table" then
+		self:_warn(`Could not fetch group data.`)
+		return
 	end
 
+	rankId = groupData.Rank
 	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
+
 	local _, response = self:Http("/activity/save2", "post", nil, {
 		userId = userId,
 		userRank = rankId,
@@ -1468,6 +1508,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		requestCaches = {
 			validStaff = {},
 			nitro = {},
+			groupInfo = {},
 		},
 		commandOperationCodes = {
 			["Team"] = {
@@ -1572,37 +1613,36 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			end
 
 			local userId = self:_getUserIdByName(Target.Name)
-			self:_getGroupFromUser(self.GroupId, Player.UserId)
-				:andThen(function()
-					-- Maybe actually log it somewhere... I have no clue where though.
-					if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
-						Player:Kick(
-							"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
-						)
-						return false
-					end
+			local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+			if typeof(groupData) ~= "table" then
+				self:_warn(groupData)
+				return false
+			end
 
-					local actionFunc
-					if Action == "promote" then
-						actionFunc = "_Promote"
-					elseif Action == "demote" then
-						actionFunc = "_Demote"
-					elseif Action == "fire" then
-						actionFunc = "_Fire"
-					end
+			-- Maybe actually log it somewhere... I have no clue where though.
+			if Action ~= "promote" and Action ~= "demote" and Action ~= "fire" then
+				Player:Kick(
+					"Messing with vibez remote events, this has been logged and repeating offenders will be blacklisted from our services."
+				)
+				return false
+			end
 
-					local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
+			local actionFunc
+			if Action == "promote" then
+				actionFunc = "_Promote"
+			elseif Action == "demote" then
+				actionFunc = "_Demote"
+			elseif Action == "fire" then
+				actionFunc = "_Fire"
+			end
 
-					if not result["success"] then
-						return false
-					end
+			local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
 
-					return true
-				end)
-				:catch(function(err)
-					self:_warn(err)
-					return false
-				end)
+			if not result["success"] then
+				return false
+			end
+
+			return true
 		elseif Action == "Afk" then
 			local override = Data[1]
 			local existingTracker = ActivityTracker.Users[Player.UserId]
@@ -1633,6 +1673,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- Connect the player's maid cleanup function.
 	Players.PlayerRemoving:Connect(function(Player)
 		self:_onPlayerRemoved(Player)
+	end)
+
+	-- Connect to when the game shuts down.
+	game:BindToClose(function()
+		self:_onGameShutdown()
 	end)
 
 	-- Initialize the workspace attribute
