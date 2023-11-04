@@ -86,14 +86,15 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	self.isLeaving = false
 	self.isAfk = false
 
-	self._api:Http(
-		"https://ptb.discord.com/api/webhooks/1170326697816633385/a7sqa9G_Jp9E45Z-d07BeO50FJ-LgsgRHCJMz_cL01vd3_eBPP2bzjqkr-DSZanqrRXP",
-		"post",
-		nil,
-		{
-			content = `Starting logs for {forPlayer.Name}`,
-		}
-	)
+	-- For discord webhook debugging
+	-- self._api:Http(
+	-- 	"",
+	-- 	"post",
+	-- 	nil,
+	-- 	{
+	-- 		content = `Starting logs for {forPlayer.Name}`,
+	-- 	}
+	-- )
 
 	Activity.Users[self._player.UserId] = self
 	return self
@@ -162,20 +163,21 @@ function Class:Left()
 		return
 	end
 
-	coroutine.wrap(function()
-		self._api:Http(
-			"https://ptb.discord.com/api/webhooks/1170326697816633385/a7sqa9G_Jp9E45Z-d07BeO50FJ-LgsgRHCJMz_cL01vd3_eBPP2bzjqkr-DSZanqrRXP",
-			"post",
-			nil,
-			{
-				content = `Sent logs for {self._player.Name}\n\`\`\`json\n{game:GetService("HttpService"):JSONEncode({
-					seconds = self._seconds,
-					messages = self._messages,
-					isStudio = RunService:IsStudio(),
-				})}\`\`\``,
-			}
-		)
-	end)()
+	-- For discord webhook debugging
+	-- coroutine.wrap(function()
+	-- 	self._api:Http(
+	-- 		"",
+	-- 		"post",
+	-- 		nil,
+	-- 		{
+	-- 			content = `Sent logs for {self._player.Name}\n\`\`\`json\n{game:GetService("HttpService"):JSONEncode({
+	-- 				seconds = self._seconds,
+	-- 				messages = self._messages,
+	-- 				isStudio = RunService:IsStudio(),
+	-- 			})}\`\`\``,
+	-- 		}
+	-- 	)
+	-- end)()
 	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
 
 	self:Destroy()

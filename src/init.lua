@@ -321,7 +321,7 @@ end
 	Uses roblox's group service to get a player's rank.
 	@param groupId number
 	@param userId number
-	@return Promise
+	@return { any }
 
 	@yields
 	@private
