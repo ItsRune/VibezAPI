@@ -176,6 +176,11 @@ function Class:setFooter(text: string, iconUrl: string?): embedTypes.Embed
 		return self
 	end
 
+	if iconUrl ~= nil and string.match(string.lower(tostring(iconUrl)), "https://") == nil then
+		self._api:_warn("'setFooter' iconURL requires an external roblox image!")
+		iconUrl = nil
+	end
+
 	self.data.footer = {
 		text = text,
 		icon_url = iconUrl,
@@ -196,6 +201,11 @@ end
 ]=]
 ---
 function Class:setThumbnail(url: string, height: number?, width: number?): embedTypes.Embed
+	if string.match(string.lower(url), "https://") == nil then
+		self._api:_warn("'setThumbnail' requires an external roblox image!")
+		return self
+	end
+
 	self.data.thumbnail = {
 		url = url,
 		height = height,

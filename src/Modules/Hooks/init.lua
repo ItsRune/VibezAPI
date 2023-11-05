@@ -58,7 +58,7 @@ function Hooks.new(vibezApi: Types.vibezApi, webhook: string): Types.vibezHooks
 	self.toSend = {}
 
 	if not self.Api or typeof(self.Api) ~= "table" or self.Api[""] then
-		warn("[Vibez]: 'Hooks' module cannot be used without the API wrapper!")
+		self.Api:_warn("[Vibez]: 'Hooks' module cannot be used without the API wrapper!")
 		return nil
 	end
 
@@ -117,7 +117,7 @@ end
 ---
 function Class:setContent(content: string?): Types.vibezHooks
 	if string.len(tostring(content)) > 2000 then
-		warn("[Vibez]: Setting the webhook's content failed due to exceeded character limit of 2000!")
+		self.Api:_warn("[Vibez]: Setting the webhook's content failed due to exceeded character limit of 2000!")
 		return self
 	end
 
@@ -137,7 +137,7 @@ end
 ---
 function Class:setUsername(username: string?): Types.vibezHooks
 	if string.len(tostring(username)) > 80 then
-		warn("[Vibez]: Setting the webhook's username failed due to exceeded character limit of 80!")
+		self.Api:_warn("Setting the webhook's username failed due to exceeded character limit of 80!")
 		return self
 	end
 
@@ -155,20 +155,29 @@ end
 	@since 1.1.0
 ]=]
 ---
-function Class:addEmbedWithBuilder(handler: (embedCreator: Types.embedCreator) -> Types.Embed): Types.vibezHooks
-	assert(
-		typeof(handler) == "function",
-		"parameter 'handler' expected a 'function' but received a '" .. typeof(handler) .. "'"
-	)
+function Class:addEmbedWithBuilder(...: (embedCreator: Types.embedCreator) -> Types.Embed): Types.vibezHooks
+	local data = { ... }
 
-	local createdEmbed = handler(embedClass.new())
+	for _, handler in ipairs(data) do
+		if typeof(handler) ~= "function" then
+			self.Api:_warn("parameter 'handler' expected a 'function' but received a '" .. typeof(handler) .. "'")
+			continue
+		end
 
-	if not self.toSend["embeds"] then
-		self.toSend.embeds = Hooks._createEmbedTable()
-	end
+		local createdEmbed = handler(embedClass.new())
 
-	if createdEmbed["className"] ~= nil and createdEmbed["className"] == "Embed" then
-		self.toSend.embeds[#self.toSend.embeds + 1] = createdEmbed:_resolve()
+		if not createdEmbed then
+			self.Api:_warn("Embed handler does not return an embed!")
+			continue
+		end
+
+		if not self.toSend["embeds"] then
+			self.toSend.embeds = Hooks._createEmbedTable()
+		end
+
+		if createdEmbed["className"] ~= nil and createdEmbed["className"] == "Embed" then
+			self.toSend.embeds[#self.toSend.embeds + 1] = createdEmbed:_resolve()
+		end
 	end
 
 	return self
@@ -188,6 +197,8 @@ function Class:addEmbed(data: { [string]: any }): Types.vibezHooks
 	if not self.toSend["embeds"] then
 		self.toSend.embeds = Hooks._createEmbedTable()
 	end
+
+	assert(typeof(data) == "table", "parameter 'handler' expected a 'table' but received a '" .. typeof(table) .. "'")
 
 	self.toSend.embeds[#self.toSend.embeds + 1] = data
 	return self
@@ -252,6 +263,7 @@ end
 ]=]
 ---
 function Class:Destroy()
+	table.clear(self)
 	setmetatable(self, nil)
 	self = nil
 

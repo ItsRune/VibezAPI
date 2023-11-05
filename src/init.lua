@@ -130,20 +130,31 @@ local Workspace = game:GetService("Workspace")
 local scriptNameIncrement = 0
 local api = {}
 local baseSettings = {
+	-- Commands
 	commandPrefix = "!",
-	isChatCommandsEnabled = false,
+
+	-- Ranks for interactives
 	minRankToUseCommandsAndUI = 255,
 	maxRankToUseCommandsAndUI = 255,
+
+	-- Interactives
+	isChatCommandsEnabled = false,
 	isUIEnabled = false,
-	overrideGroupCheckForStudio = false,
+
+	-- Activity
 	disableActivityTrackingInStudio = true,
-	loggingOriginName = game.Name,
-	ignoreWarnings = false,
 	activityTrackingEnabled = false,
 	trackAFKActivity = false,
 	rankToStartTrackingActivityFor = 255,
 	delayBeforeMarkedAFK = 30,
-	usePromises = false,
+
+	-- Logging origin name
+	loggingOriginName = game.Name,
+
+	-- Misc
+	overrideGroupCheckForStudio = false,
+	ignoreWarnings = false,
+	usePromises = false, -- Broken
 }
 
 --// Modules \\--
@@ -372,13 +383,32 @@ end
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
+	-- Get group data for setup below.
+	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+
 	-- This is only here in case they toggle commands in the middle of a game.
-	if not self.Settings.isChatCommandsEnabled then
-		return
+	if self.Settings.isChatCommandsEnabled == true then
+		self:_warn(`Setting up commands for user {Player.Name}.`)
+		if typeof(theirGroupData) ~= "table" then
+			self:_warn(`Error occurred: {theirGroupData}`)
+			return
+		end
+
+		-- We want to hold all connections from users in order to
+		-- disconnect them later on, this will stop any memory
+		-- leaks from occurring by vibez's api wrapper.
+		self._private.Maid[Player.UserId] = {}
+		table.insert(
+			self._private.Maid[Player.UserId],
+			Player.Chatted:Connect(function(message: string)
+				return self:_onPlayerChatted(Player, message)
+			end)
+		)
 	end
 
-	if self._private.requestCaches.validStaff[Player.UserId] ~= nil then
-		return
+	-- Figure out a solution here to check for rank (Prevent rank 0 in validStaff table)
+	if self._private.requestCaches.validStaff[Player.UserId] == nil then
+		self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
 	end
 
 	-- Clone client script and parent to player
@@ -387,15 +417,6 @@ function api:_onPlayerAdded(Player: Player)
 	client.Enabled = true
 	client.Parent = Player:WaitForChild("PlayerGui", math.huge)
 
-	self:_warn(`Setting up commands for user {Player.Name}.`)
-	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
-	if typeof(theirGroupData) ~= "table" then
-		self:_warn(`Error occurred: {theirGroupData}`)
-		return
-	end
-
-	self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
-
 	if
 		self.Settings.activityTrackingEnabled == true
 		and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
@@ -403,18 +424,6 @@ function api:_onPlayerAdded(Player: Player)
 		local tracker = ActivityTracker.new(self, Player)
 		table.insert(self._private.requestCaches.validStaff[Player.UserId], tracker)
 	end
-
-	-- We want to hold all connections from users in order to
-	-- disconnect them later on, this will stop any memory
-	-- leaks from occurring by vibez's api wrapper.
-
-	self._private.Maid[Player.UserId] = {}
-	table.insert(
-		self._private.Maid[Player.UserId],
-		Player.Chatted:Connect(function(message: string)
-			return self:_onPlayerChatted(Player, message)
-		end)
-	)
 end
 
 --[=[
@@ -1702,7 +1711,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end)
 	end
 
-	return self
+	return self :: Types.vibezApi
 end
 
 return setmetatable({
@@ -1711,4 +1720,4 @@ return setmetatable({
 	__call = function(t, ...)
 		return rawget(t, "new")(...)
 	end,
-}) :: Types.vibezConstructor
+}) :: Types.vibezApi

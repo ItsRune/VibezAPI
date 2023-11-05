@@ -1,5 +1,4 @@
 --// Variables \\--
-local RunService = game:GetService("RunService")
 local Activity = { Users = {} }
 local Class = {}
 Class.__index = Class
@@ -96,6 +95,7 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	-- 	}
 	-- )
 
+	self._api:_warn(`Setting up activity tracking for {tostring(forPlayer)}`)
 	Activity.Users[self._player.UserId] = self
 	return self
 end
@@ -178,8 +178,9 @@ function Class:Left()
 	-- 		}
 	-- 	)
 	-- end)()
-	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
 
+	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
+	self._api:_warn(`User left and sent activity data for {tostring(self._player)}`)
 	self:Destroy()
 end
 
