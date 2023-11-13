@@ -13,25 +13,25 @@ sidebar-position: 8
 local myKey = "YOUR_API_KEY_HERE"
 local VibezRankingAPI = require(14946453963)
 local Wrapper = VibezRankingAPI(myKey, {
-  -- Activity
-  activityTrackingEnabled = true;
-  toggleTrackingOfAFKActivity = false;
-  rankToStartTrackingActivityFor = 220;
+    -- Activity
+    activityTrackingEnabled = true;
+    toggleTrackingOfAFKActivity = false;
+    rankToStartTrackingActivityFor = 220;
 
-  -- UI OR Commands
-  isChatCommandsEnabled = true;
-  isUIEnabled = true;
+    -- UI OR Commands
+    isChatCommandsEnabled = true;
+    isUIEnabled = true;
 
-  minRankToUseCommandsAndUI = 255;
-  maxRankToUseCommandsAndUI = 255;
+    minRankToUseCommandsAndUI = 255;
+    maxRankToUseCommandsAndUI = 255;
 
-  -- Commands Only
-  commandPrefix = "!";
+    -- Commands Only
+    commandPrefix = "!";
 
-  -- Utility
-  overrideGroupCheckForStudio = true;
-  ignoreWarnings = false;
-  loggingOriginName = "Main Game";
+    -- Utility
+    overrideGroupCheckForStudio = true;
+    ignoreWarnings = false;
+    nameOfGameForLogging = "Main Game";
 })
 ```
 

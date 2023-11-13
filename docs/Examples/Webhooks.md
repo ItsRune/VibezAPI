@@ -7,7 +7,7 @@ Typically you would use a hexidecimal color code for the color parameter, but yo
 
 ```lua
 local Vibez = require(14946453963)("API Key", {
-    loggingOriginName = "Colors Example"
+    nameOfGameForLogging = "Colors Example"
 })
 
 local webhook = Vibez:getWebhookBuilder("https://discord.com/api/webhooks/")
@@ -26,7 +26,7 @@ Logs to discord everytime a player joins the game.
 local Players = game:GetService("Players")
 
 local Vibez = require(14946453963)("API Key", {
-    loggingOriginName = "Join Logger"
+    nameOfGameForLogging = "Join Logger"
 })
 
 local function onPlayerAdded(Player: Player)
@@ -53,7 +53,7 @@ Logs to discord everytime a player leaves the game.
 local Players = game:GetService("Players")
 
 local Vibez = require(14946453963)("API Key", {
-    loggingOriginName = "Join Logger"
+    nameOfGameForLogging = "Join Logger"
 })
 
 local function onPlayerLeft(Player: Player)
@@ -81,7 +81,7 @@ local Players = game:GetService("Players")
 
 local Connections = {}
 local Vibez = require(14946453963)("API Key", {
-    loggingOriginName = "Chat Logger"
+    nameOfGameForLogging = "Chat Logger"
 })
 
 local function onPlayerChatted(Player: Player, Message: string)
