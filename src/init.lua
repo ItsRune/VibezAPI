@@ -1,3 +1,4 @@
+--!native
 --[[
 		 _   _ ___________ _____ ______
 		| | | |_   _| ___ \  ___|___  /
@@ -10,7 +11,7 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 10/31/2023 03:08 EST
+	Updated: 11/13/2023 16:24 EST
 	Version: 1.0.23
 	
 	Note: If you don't know what you're doing, I would
@@ -27,11 +28,11 @@
 	.minRankToUseCommandsAndUI number -- Minimum rank to use commands. (Default: 255)
 	.maxRankToUseCommandsAndUI number -- Maximum rank to use commands. (Default: 255)
 	.overrideGroupCheckForStudio boolean -- When in studio, it'll force any rank checks to be the 'maxRankForCommands' value.
-	.loggingOriginName string -- Name of logger's 'Origin' embed field.
+	.nameOfGameForLogging string -- Name of logger's 'Origin' embed field.
 	.ignoreWarnings boolean -- Ignores any VibezAPI warnings (Excluding Webhooks & Activity Tracking)
 	.activityTrackingEnabled boolean -- Track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
 	.rankToStartTrackingActivityFor boolean -- Minimum rank required to start tracking activity. (Default: 255)
-	.trackAFKActivity boolean -- Subtracts time of users who are detected as 'AFK'.
+	.disableActivityTrackingWhenAFK boolean -- Subtracts time of users who are detected as 'AFK'.
 	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
 	.disableActivityTrackingInStudio boolean -- Stops saving any activity tracked when play testing in studio.
 	.usePromises boolean -- Determines whether the module should return promises or not.
@@ -59,6 +60,22 @@
 	.success boolean
 	.message string
 	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
+	@within VibezAPI
+	@private
+]=]
+
+--[=[
+	@interface userBlacklistResponse
+	.success boolean
+	.data { blacklisted: boolean, reason: string }
+	@within VibezAPI
+	@private
+]=]
+
+--[=[
+	@interface fullBlacklists
+	.success boolean
+	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
 	@within VibezAPI
 	@private
 ]=]
@@ -107,17 +124,6 @@
 	@private
 ]=]
 
---// Before Execution \\--
-local ServerScriptService = game:GetService("ServerScriptService")
-local scriptExistsInService = ServerScriptService:FindFirstChild(script.Name)
-
-if scriptExistsInService ~= nil and script.Parent ~= ServerScriptService then
-	script:Destroy()
-	return require(ServerScriptService[script.Name])
-else
-	script.Parent = ServerScriptService
-end
-
 --// Services \\--
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
@@ -144,12 +150,12 @@ local baseSettings = {
 	-- Activity
 	disableActivityTrackingInStudio = true,
 	activityTrackingEnabled = false,
-	trackAFKActivity = false,
+	disableActivityTrackingWhenAFK = false,
 	rankToStartTrackingActivityFor = 255,
 	delayBeforeMarkedAFK = 30,
 
 	-- Logging origin name
-	loggingOriginName = game.Name,
+	nameOfGameForLogging = game.Name,
 
 	-- Misc
 	overrideGroupCheckForStudio = false,
@@ -236,7 +242,7 @@ function api:Http(
 	Body = (Method ~= "GET" and Method ~= "HEAD") and Body or nil
 
 	if Body then
-		Body["origin"] = self.Settings.loggingOriginName
+		Body["origin"] = self.Settings.nameOfGameForLogging
 	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
@@ -273,7 +279,7 @@ end
 
 --[=[
 	Fetches the group associated with the api key.
-	@return number?
+	@return number | -1
 
 	@yields
 	@within VibezAPI
@@ -281,10 +287,11 @@ end
 ]=]
 ---
 function api:getGroupId()
-	if self.GroupId ~= -1 then
+	if self.GroupId ~= -1 and not self._private.recentlyChangedKey then
 		return self.GroupId
 	end
 
+	self._private.recentlyChangedKey = false
 	local isOk, res = self:Http("/ranking/groupid", "post", nil, nil)
 	local Body: groupIdResponse = res.Body
 
@@ -352,6 +359,7 @@ function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?)
 	end
 
 	local isOk, data = pcall(GroupService.GetGroupsAsync, GroupService, userId)
+	local possiblePlayer = Players:GetPlayerByUserId(userId)
 	local found = nil
 
 	if not isOk then
@@ -368,9 +376,25 @@ function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?)
 	if typeof(found) == "table" then
 		self._private.requestCaches.groupInfo[userId] = found
 		return found
-	else
-		return "Not found."
 	end
+
+	if possiblePlayer ~= nil then
+		isOk, data = pcall(possiblePlayer.GetRankInGroup, possiblePlayer, groupId)
+
+		if isOk then
+			return {
+				Id = groupId,
+				Rank = data,
+			}
+		end
+
+		self:_warn(`An error occurred whilst fetching group information from {tostring(possiblePlayer)}.`)
+	end
+
+	return {
+		Id = self.GroupId,
+		Rank = 0,
+	}
 end
 
 --[=[
@@ -1250,8 +1274,8 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:updateLoggerTitle(newTitle: string): nil
-	self.Settings.loggingOriginName = tostring(newTitle)
+function api:updateLoggerName(newTitle: string): nil
+	self.Settings.nameOfGameForLogging = tostring(newTitle)
 	return self
 end
 
@@ -1269,6 +1293,8 @@ function api:updateKey(newApiKey: string): boolean
 	local savedKey = table.clone(self.Settings).apiKey
 
 	self.Settings.apiKey = newApiKey
+	self._private.recentlyChangedKey = true
+
 	local groupId = self:getGroupId()
 
 	if groupId == -1 and savedKey ~= nil then
@@ -1395,6 +1421,85 @@ function api:getWebhookBuilder(webhook: string): Types.vibezHooks
 end
 
 --[=[
+	Gets either a full list of blacklists or checks if a player is currently blacklisted.
+	@param userId (string | number)?
+	@return blacklistResponse
+
+	@within VibezAPI
+	@since 1.1.0
+]=]
+---
+-- function api:addBlacklist(
+-- 	userToBlacklist: Player | string | number,
+-- 	Reason: string?,
+-- 	blacklistExecutedBy: (Player | string | number)?
+-- )
+-- 	local userId, reason, blacklistedBy
+
+-- 	if not userToBlacklist then
+-- 		return nil
+-- 	end
+
+-- 	if typeof(userToBlacklist) == "Instance" then
+-- 	else
+-- 		userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
+-- 	end
+-- end
+
+--[=[
+	Gets either a full list of blacklists or checks if a player is currently blacklisted.
+	@param userId (string | number)?
+	@return blacklistResponse
+
+	@within VibezAPI
+	@since 1.1.0
+]=]
+---
+-- function api:getBlacklist(userId: (string | number)?): Types.blacklistResponse
+-- 	if typeof(userId) == nil then
+-- 		userId = ""
+-- 	else
+-- 		userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
+-- 	end
+
+-- 	local isOk, response = self:Http(`/blacklists/{userId}`)
+
+-- 	if not isOk or not response.Success then
+-- 		return { success = false, message = response.Body.message or "Internal server error." }
+-- 	end
+
+-- 	local res = {}
+
+-- 	if response.Body["isBlacklisted"] ~= nil then
+-- 		res = {
+-- 			success = true,
+-- 			data = {
+-- 				blacklisted = response.Body.isBlacklisted,
+-- 				reason = response.Body.details.reason,
+-- 				blacklistedBy = response.Body.details.blacklistedBy,
+-- 			},
+-- 		}
+-- 	else
+-- 		local newTable = {}
+-- 		for _, value: { userId: number | string, reason: string, blacklistedBy: number | string } in
+-- 			pairs(response.Body.blacklists)
+-- 		do
+-- 			local userIdIndex = value.userId
+-- 			value.userId = nil
+
+-- 			newTable[userIdIndex] = value
+-- 		end
+
+-- 		res = {
+-- 			success = true,
+-- 			blacklists = newTable,
+-- 		}
+-- 	end
+
+-- 	return res
+-- end
+
+--[=[
 	Gets a player's or everyone's current activity
 	@param userId (string | number)?
 	@return activityResponse
@@ -1404,6 +1509,8 @@ end
 ]=]
 ---
 function api:getActivity(userId: (string | number)?): Types.activityResponse
+	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
+
 	local _, result = self:Http("/activity/fetch2", "post", nil, {
 		userId = userId,
 	})
@@ -1509,6 +1616,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.GroupId = -1
 	self.Settings = Table.Copy(baseSettings)
 	self._private = {
+		recentlyChangedKey = false,
 		newApiUrl = "https://leina.vibez.dev",
 		oldApiUrl = "https://api.vibez.dev/api",
 		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
@@ -1623,8 +1731,14 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 			local userId = self:_getUserIdByName(Target.Name)
 			local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
-			if typeof(groupData) ~= "table" then
-				self:_warn(groupData)
+
+			if
+				not self:_isPlayerRankOkToProceed(
+					groupData.Rank,
+					self.Settings.minRankToUseCommandsAndUI,
+					self.Settings.maxRankToUseCommandsAndUI
+				)
+			then
 				return false
 			end
 
@@ -1684,10 +1798,9 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_onPlayerRemoved(Player)
 	end)
 
+	--selene: allow(incorrect_standard_library_use)
 	-- Connect to when the game shuts down.
-	game:BindToClose(function()
-		self:_onGameShutdown()
-	end)
+	game:BindToClose(self._onGameShutdown, self)
 
 	-- Initialize the workspace attribute
 	local uiStatus = self.Settings.isUIEnabled

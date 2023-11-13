@@ -147,7 +147,7 @@ end
 
 --[=[
 	Creates an embed with the embed creator.
-	@param handler (embedCreator: Embed) -> Embed
+	@param ... ...(embedCreator: Embed) -> Embed
 	@return Webhooks
 
 	@tag Chainable

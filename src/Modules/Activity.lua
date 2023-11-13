@@ -85,17 +85,8 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	self.isLeaving = false
 	self.isAfk = false
 
-	-- For discord webhook debugging
-	-- self._api:Http(
-	-- 	"",
-	-- 	"post",
-	-- 	nil,
-	-- 	{
-	-- 		content = `Starting logs for {forPlayer.Name}`,
-	-- 	}
-	-- )
-
 	self._api:_warn(`Setting up activity tracking for {tostring(forPlayer)}`)
+
 	Activity.Users[self._player.UserId] = self
 	return self
 end
@@ -162,22 +153,6 @@ function Class:Left()
 		)
 		return
 	end
-
-	-- For discord webhook debugging
-	-- coroutine.wrap(function()
-	-- 	self._api:Http(
-	-- 		"",
-	-- 		"post",
-	-- 		nil,
-	-- 		{
-	-- 			content = `Sent logs for {self._player.Name}\n\`\`\`json\n{game:GetService("HttpService"):JSONEncode({
-	-- 				seconds = self._seconds,
-	-- 				messages = self._messages,
-	-- 				isStudio = RunService:IsStudio(),
-	-- 			})}\`\`\``,
-	-- 		}
-	-- 	)
-	-- end)()
 
 	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
 	self._api:_warn(`User left and sent activity data for {tostring(self._player)}`)

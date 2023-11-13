@@ -37,6 +37,6 @@ end
 --// Return \--
 return setmetatable(Widgets, {
 	__call = function(self, ...)
-		return self.new(...)
+		return rawget(self, "new")(...)
 	end,
 })

@@ -10,7 +10,22 @@ type RateLimit = {
 	Check: (self: RateLimit) -> (boolean, string?),
 }
 
+type userBlacklistResponse = {
+	success: boolean,
+	data: {
+		blacklisted: boolean,
+		reason: string,
+	},
+}
+
+type fullBlacklists = {
+	success: boolean,
+	blacklists: { [number | string]: { reason: string, blacklistedBy: number } },
+}
+
 -- Exported Types
+export type blacklistResponse = userBlacklistResponse | fullBlacklists
+
 export type groupIdResponse = {
 	success: boolean,
 	groupId: number,
@@ -76,17 +91,19 @@ export type httpResponse = {
 }
 
 export type vibezSettings = {
-	isChatCommandsEnabled: boolean,
-	isUIEnabled: boolean,
 	commandPrefix: string,
 	minRankToUseCommandsAndUI: number,
 	maxRankToUseCommandsAndUI: number,
-	overrideGroupCheckForStudio: boolean,
-	loggingOriginName: string,
-	ignoreWarnings: boolean,
+	isChatCommandsEnabled: boolean,
+	isUIEnabled: boolean,
+	disableActivityTrackingInStudio: boolean,
 	activityTrackingEnabled: boolean,
-	toggleTrackingOfAFKActivity: boolean,
-	rankToStartTrackingActivityFor: boolean,
+	disableActivityTrackingWhenAFK: boolean,
+	rankToStartTrackingActivityFor: number,
+	delayBeforeMarkedAFK: number,
+	nameOfGameForLogging: string,
+	overrideGroupCheckForStudio: boolean,
+	ignoreWarnings: boolean,
 	usePromises: boolean,
 }
 
@@ -98,25 +115,6 @@ export type httpFunction = (
 	Body: { [string]: any },
 	useOldApi: boolean?
 ) -> (boolean, httpResponse)
-
-export type vibezInternalApi = {
-	Http: httpFunction,
-	onPlayerChatted: (Player: Player, message: string) -> nil,
-	onPlayerAdded: (Player: Player) -> nil,
-	onPlayerRemoved: (Player: Player) -> nil,
-	getGroupFromUser: (groupId: number, userId: number) -> { any }?,
-	getGroupId: () -> number?,
-	_Fire: (userId: string | number, whoCalled: { userName: string, userId: number }) -> rankResponse,
-	_Demote: (userId: string | number, whoCalled: { userName: string, userId: number }) -> rankResponse,
-	_Promote: (userId: string | number, whoCalled: { userName: string, userId: number }) -> rankResponse,
-	_setRank: (
-		userId: string | number,
-		rankId: string | number,
-		whoCalled: { userName: string, userId: number }
-	) -> rankResponse,
-	_destroy: () -> nil,
-	_warn: (...string) -> nil,
-}
 
 export type vibezCommandFunctions = {
 	getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
