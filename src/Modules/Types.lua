@@ -212,7 +212,7 @@ export type embedCreator = {
 	setAuthor: (self: embedCreator, name: string, url: string?, iconUrl: string) -> embedCreator,
 	setThumbnail: (self: embedCreator, url: string, height: number?, width: number?) -> embedCreator,
 	setFooter: (self: embedCreator, text: string, iconUrl: string?) -> embedCreator,
-	setTimestamp: (self: embedCreator, timeStamp: number | "Auto") -> embedCreator,
+	-- setTimestamp: (self: embedCreator, timeStamp: number | "Auto") -> embedCreator,
 }
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi

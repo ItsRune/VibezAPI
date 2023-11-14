@@ -47,9 +47,14 @@ local function onSetupUI()
 		Remote:InvokeServer("fire", target)
 	end
 
+	local function blacklist(target)
+		Remote:InvokeServer("blacklist", target)
+	end
+
 	table.insert(Maid, eventHolder.Promote.Event:Connect(promote))
 	table.insert(Maid, eventHolder.Demote.Event:Connect(demote))
 	table.insert(Maid, eventHolder.Fire.Event:Connect(fire))
+	table.insert(Maid, eventHolder.Blacklist.Event:Connect(blacklist))
 
 	StarterGui:SetCore("AvatarContextMenuEnabled", true)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
@@ -60,6 +65,7 @@ local function onSetupUI()
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Promote", eventHolder.Promote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Demote", eventHolder.Demote })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Fire", eventHolder.Fire })
+	StarterGui:SetCore("AddAvatarContextMenuOption", { "Blacklist", eventHolder.Blacklist })
 
 	local highLight = nil
 	pcall(function()

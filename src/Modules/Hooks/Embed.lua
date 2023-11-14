@@ -37,6 +37,7 @@ function Embed.new()
 	local self = setmetatable({}, Class)
 
 	self.className = "Embed"
+	self._used = false
 	self.data = {
 		title = nil,
 		description = nil,
@@ -73,6 +74,19 @@ function Embed.new()
 end
 
 --[=[
+	Updates the _used variable within the class. (Mainly for loggers)
+	@return EmbedBuilder
+
+	@within EmbedBuilder
+	@since 1.1.0
+	@private
+]=]
+---
+function Class:_updateUsed()
+	self._used = true
+end
+
+--[=[
 	Adds a description to the embed.
 	@param description string
 	@return EmbedBuilder
@@ -84,6 +98,7 @@ end
 ]=]
 ---
 function Class:setDescription(description: string): embedTypes.Embed
+	self:_updateUsed()
 	if not checkCharLimit(description, 4096) then
 		warn("[Vibez]: Setting the embed's description failed due to exceeded character limit of 4096!")
 		return self
@@ -105,6 +120,7 @@ end
 ]=]
 ---
 function Class:setTitle(title: string): embedTypes.Embed
+	self:_updateUsed()
 	if not checkCharLimit(title, 256) then
 		warn("[Vibez]: Setting the embed's title failed due to exceeded character limit of 256!")
 		return self
@@ -127,6 +143,7 @@ end
 ]=]
 ---
 function Class:addField(name: string, value: string, isInline: boolean?): embedTypes.Embed
+	self:_updateUsed()
 	if not checkCharLimit(name, 256) then
 		warn("[Vibez]: Insertion of field has stopped due to a higher character limit of 256!")
 		return self
@@ -171,6 +188,7 @@ end
 ]=]
 ---
 function Class:setFooter(text: string, iconUrl: string?): embedTypes.Embed
+	self:_updateUsed()
 	if not checkCharLimit(text, 2048) then
 		warn("[Vibez]: Insertion of footer has suspended due to exceeding the character limit of 2048!")
 		return self
@@ -201,6 +219,7 @@ end
 ]=]
 ---
 function Class:setThumbnail(url: string, height: number?, width: number?): embedTypes.Embed
+	self:_updateUsed()
 	if string.match(string.lower(url), "https://") == nil then
 		self._api:_warn("'setThumbnail' requires an external roblox image!")
 		return self
@@ -225,11 +244,12 @@ end
 ]=]
 ---
 function Class:setColor(color: Color3 | string | number): embedTypes.Embed
+	self:_updateUsed()
 	if typeof(color) == "Color3" then
 		color = tonumber("0x" .. color:ToHex())
 	end
 
-	self.data.color = color
+	self.data.color = tonumber(color)
 	return self
 end
 
@@ -246,6 +266,7 @@ end
 ]=]
 ---
 function Class:setAuthor(name: string, url: string?, iconUrl: string): embedTypes.Embed
+	self:_updateUsed()
 	if not checkCharLimit(name, 256) then
 		warn("[Vibez]: Insertion of author name has stopped due to exceeding the character limit of 256!")
 		return self
@@ -260,17 +281,20 @@ function Class:setAuthor(name: string, url: string?, iconUrl: string): embedType
 end
 
 --[=[
-    Sets the timestamp of the embed.
-    @param timeStamp number | "Auto"
-    @return EmbedBuilder
+	Sets the timestamp of the embed. (DEPRECATED)
+	-- @param timeStamp number | "Auto"
+	@return EmbedBuilder
 
-    @tag Chainable
-    @within EmbedBuilder
-    @since 1.1.0
+	@tag Chainable
+	@within EmbedBuilder
+	@since 1.1.0
+	@private
 ]=]
 ---
-function Class:setTimestamp(timeStamp: number | "Auto"): embedTypes.Embed
-	self.data.timestamp = (string.lower(tostring(timeStamp)) == "auto") and DateTime.now().UnixTimestamp or timeStamp
+function Class:setTimestamp(): embedTypes.Embed
+	-- self.data.timestamp = (string.lower(tostring(timeStamp)) == "auto" or timeStamp == nil)
+	-- 		and DateTime.now().UnixTimestamp
+	-- 	or timeStamp
 	return self
 end
 
@@ -284,7 +308,7 @@ end
 ]=]
 ---
 function Class:_resolve(): { any }
-	return self.data
+	return self._used and self.data or nil
 end
 
 return Embed

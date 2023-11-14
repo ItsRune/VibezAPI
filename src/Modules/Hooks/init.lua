@@ -230,6 +230,21 @@ function Class:setTTS(override: boolean?): Types.vibezHooks
 end
 
 --[=[
+	Sets the data of the webhook. (Overwriting anything specified before)
+	@param data { any }
+	@return Webhooks
+
+	@tag Chainable
+	@within Webhooks
+	@since 1.1.0
+]=]
+---
+function Class:setData(data: { any }): Types.vibezHooks
+	self.toSend = data
+	return self
+end
+
+--[=[
 	Parses the webhook into the ID and Token.
 	@param webhookToUse string?
 	@return { ID: string, Token: string }

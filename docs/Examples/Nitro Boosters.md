@@ -1,5 +1,5 @@
 ---
-sidebar-position: 10
+sidebar-position: 12
 ---
 
 ### Check if a player is a nitro booster

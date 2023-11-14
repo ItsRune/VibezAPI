@@ -132,6 +132,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+--// Modules \\--
+local Types = require(script.Modules.Types)
+local Hooks = require(script.Modules.Hooks)
+local Embed = require(script.Modules.Hooks.Embed)
+local ActivityTracker = require(script.Modules.Activity)
+local RateLimit = require(script.Modules.RateLimit)
+local Promise = require(script.Modules.Promise)
+local Table = require(script.Modules.Table)
+
 --// Constants \\--
 local scriptNameIncrement = 0
 local api = {}
@@ -157,19 +166,27 @@ local baseSettings = {
 	-- Logging origin name
 	nameOfGameForLogging = game.Name,
 
+	-- Join/Leave/Message Logs
+	shouldLogInStudio = false,
+	joinLoggerWebhook = "",
+	leaveLoggerWebhook = "",
+	messageLoggerWebhook = "",
+
+	joinLogFormat = function(Player: Player, embed: Types.embedBuilder)
+		return `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has joined the game!`, embed
+	end,
+	leaveLogFormat = function(Player: Player, embed: Types.embedBuilder)
+		return `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has left the game!`, embed
+	end,
+	messageLogFormat = function(Player: Player, Message: string, embed: Types.embedBuilder)
+		return `\[[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>)\]: {Message}`, embed
+	end,
+
 	-- Misc
 	overrideGroupCheckForStudio = false,
 	ignoreWarnings = false,
 	usePromises = false, -- Broken
 }
-
---// Modules \\--
-local Types = require(script.Modules.Types)
-local Hooks = require(script.Modules.Hooks)
-local ActivityTracker = require(script.Modules.Activity)
-local RateLimit = require(script.Modules.RateLimit)
-local Promise = require(script.Modules.Promise)
-local Table = require(script.Modules.Table)
 
 --// Private Functions \\--
 --[=[
@@ -407,28 +424,33 @@ end
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
-	-- Get group data for setup below.
-	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
-
-	-- This is only here in case they toggle commands in the middle of a game.
-	if self.Settings.isChatCommandsEnabled == true then
-		self:_warn(`Setting up commands for user {Player.Name}.`)
-		if typeof(theirGroupData) ~= "table" then
-			self:_warn(`Error occurred: {theirGroupData}`)
+	coroutine.wrap(function()
+		if self.Settings.joinLoggerWebhook == "" then
 			return
 		end
 
-		-- We want to hold all connections from users in order to
-		-- disconnect them later on, this will stop any memory
-		-- leaks from occurring by vibez's api wrapper.
-		self._private.Maid[Player.UserId] = {}
-		table.insert(
-			self._private.Maid[Player.UserId],
-			Player.Chatted:Connect(function(message: string)
-				return self:_onPlayerChatted(Player, message)
-			end)
-		)
-	end
+		local content, embed = self.Settings.joinLogFormat(Player, Embed.new())
+		local data = {
+			content = content,
+			embeds = { embed:_resolve() },
+		}
+
+		warn(Hooks.new(self, self.Settings.joinLoggerWebhook):setData(data):Send())
+	end)()
+
+	-- Get group data for setup below.
+	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+
+	-- We want to hold all connections from users in order to
+	-- disconnect them later on, this will stop any memory
+	-- leaks from occurring by vibez's api wrapper.
+	self._private.Maid[Player.UserId] = {}
+	table.insert(
+		self._private.Maid[Player.UserId],
+		Player.Chatted:Connect(function(message: string)
+			return self:_onPlayerChatted(Player, message)
+		end)
+	)
 
 	-- Figure out a solution here to check for rank (Prevent rank 0 in validStaff table)
 	if self._private.requestCaches.validStaff[Player.UserId] == nil then
@@ -460,6 +482,20 @@ end
 ]=]
 ---
 function api:_onPlayerRemoved(Player: Player) -- This method is being handled twice when game is shutting down.
+	coroutine.wrap(function()
+		if self.Settings.leaveLoggerWebhook == "" then
+			return
+		end
+
+		local content, embed = self.Settings.leaveLogFormat(Player, Embed.new())
+		local data = {
+			content = content,
+			embeds = { embed:_resolve() },
+		}
+
+		Hooks.new(self, self.Settings.leaveLoggerWebhook):setData(data):Send()
+	end)()
+
 	-- Check for and submit activity data.
 	local existingTracker = ActivityTracker.Users[Player.UserId]
 	if existingTracker then
@@ -661,10 +697,17 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_getPlayers(usernames: { string }): { Player? }
+function api:_getPlayers(usernames: { string | number }): { Player? }
 	local found = {}
 
 	for _, username in pairs(usernames) do
+		if tonumber(username) ~= nil then
+			table.insert(found, {
+				UserId = tonumber(username),
+			})
+			continue
+		end
+
 		for _, player in pairs(Players:GetPlayers()) do
 			for _, operationData in pairs(self._private.commandOperationCodes) do
 				local operationCode, operationFunction = operationData[1], operationData[2]
@@ -708,6 +751,24 @@ end
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
+	coroutine.wrap(function()
+		if self.Settings.messageLoggerWebhook == "" then
+			return
+		end
+
+		local content, embed = self.Settings.messageLogFormat(Player, message, Embed.new())
+		local data = {
+			content = content,
+			embeds = { embed:_resolve() },
+		}
+
+		Hooks.new(self, self.Settings.messageLoggerWebhook):setData(data):Send()
+	end)()
+
+	if self.Settings.isChatCommandsEnabled == false then
+		return
+	end
+
 	local theirCache = self._private.requestCaches.validStaff[Player.UserId]
 	if not theirCache then
 		return
@@ -729,6 +790,8 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	table.remove(args, 1)
 
 	local users = self:_getPlayers(string.split(args[1], ","))
+	table.remove(args, 1)
+
 	for _, player in pairs(users) do
 		if player == Player then
 			continue
@@ -747,6 +810,25 @@ function api:_onPlayerChatted(Player: Player, message: string)
 			self:_Demote(table.unpack(commandCallParameters))
 		elseif command == "fire" then
 			self:_Fire(table.unpack(commandCallParameters))
+		elseif command == "blacklist" then
+			local res = self:addBlacklist(player.UserId, table.concat(args, " "), Player.UserId)
+			warn(res)
+
+			--selene: allow(empty_if)
+			if not res.success then
+				-- warn user
+			end
+
+			self:_warn(res.message)
+		elseif command == "unblacklist" then
+			local res = self:deleteBlacklist(player.UserId)
+
+			--selene: allow(empty_if)
+			if not res.success then
+				-- warn user
+			end
+
+			self:_warn(res.message)
 		end
 	end
 end
@@ -1421,30 +1503,95 @@ function api:getWebhookBuilder(webhook: string): Types.vibezHooks
 end
 
 --[=[
-	Gets either a full list of blacklists or checks if a player is currently blacklisted.
-	@param userId (string | number)?
+	Adds a blacklist to your api key.
+	@param userToBlacklist (Player string | number)
+	@param Reason string?
+	@param blacklistExecutedBy (Player string | number)?
 	@return blacklistResponse
 
 	@within VibezAPI
 	@since 1.1.0
 ]=]
 ---
--- function api:addBlacklist(
--- 	userToBlacklist: Player | string | number,
--- 	Reason: string?,
--- 	blacklistExecutedBy: (Player | string | number)?
--- )
--- 	local userId, reason, blacklistedBy
+function api:addBlacklist(
+	userToBlacklist: Player | string | number,
+	Reason: string?,
+	blacklistExecutedBy: (Player | string | number)?
+)
+	local userId, reason, blacklistedBy = nil, (Reason or "Unknown."), nil
 
--- 	if not userToBlacklist then
--- 		return nil
--- 	end
+	if not userToBlacklist then
+		return nil
+	elseif not blacklistExecutedBy then
+		blacklistExecutedBy = -1
+	end
 
--- 	if typeof(userToBlacklist) == "Instance" then
--- 	else
--- 		userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
--- 	end
--- end
+	if typeof(userToBlacklist) == "Instance" then
+		userId = userToBlacklist.UserId
+	else
+		userId = (typeof(userToBlacklist) == "string" and not tonumber(userToBlacklist))
+				and self:_getUserIdByName(userToBlacklist)
+			or userToBlacklist
+	end
+
+	if typeof(blacklistExecutedBy) == "Instance" then
+		blacklistedBy = blacklistExecutedBy.UserId
+	else
+		blacklistedBy = (typeof(blacklistExecutedBy) == "string" and not tonumber(blacklistExecutedBy))
+				and self:_getUserIdByName(blacklistExecutedBy)
+			or blacklistExecutedBy
+	end
+
+	local isOk, response = self:Http(`/blacklists/{userId}`, "put", nil, {
+		reason = reason,
+		blacklistedBy = blacklistedBy,
+	})
+
+	if not isOk then
+		return {
+			success = false,
+			message = "Internal server error.",
+		}
+	end
+
+	return response.Body
+end
+
+--[=[
+	Deletes a blacklist from your api key.
+	@param userToDelete (Player string | number)
+	@return blacklistResponse
+
+	@within VibezAPI
+	@since 1.1.0
+]=]
+---
+function api:deleteBlacklist(userToDelete: Player | string | number)
+	local userId
+
+	if not userToDelete then
+		return nil
+	end
+
+	if typeof(userToDelete) == "Instance" then
+		userId = userToDelete.UserId
+	else
+		userId = (typeof(userToDelete) == "string" and not tonumber(userToDelete))
+				and self:_getUserIdByName(userToDelete)
+			or userToDelete
+	end
+
+	local isOk, response = self:Http(`/blacklists/{userId}`, "delete")
+
+	if not isOk then
+		return {
+			success = false,
+			message = "Internal server error.",
+		}
+	end
+
+	return response.Body
+end
 
 --[=[
 	Gets either a full list of blacklists or checks if a player is currently blacklisted.
@@ -1455,49 +1602,74 @@ end
 	@since 1.1.0
 ]=]
 ---
--- function api:getBlacklist(userId: (string | number)?): Types.blacklistResponse
--- 	if typeof(userId) == nil then
--- 		userId = ""
--- 	else
--- 		userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
--- 	end
+function api:getBlacklists(userId: (string | number)?): Types.blacklistResponse
+	if typeof(userId) == nil then
+		userId = ""
+	else
+		userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
+	end
 
--- 	local isOk, response = self:Http(`/blacklists/{userId}`)
+	local isOk, response = self:Http(`/blacklists/{userId}`)
 
--- 	if not isOk or not response.Success then
--- 		return { success = false, message = response.Body.message or "Internal server error." }
--- 	end
+	if not isOk or not response.Success then
+		return { success = false, message = response.Body.message or "Internal server error." }
+	end
 
--- 	local res = {}
+	local res = {}
 
--- 	if response.Body["isBlacklisted"] ~= nil then
--- 		res = {
--- 			success = true,
--- 			data = {
--- 				blacklisted = response.Body.isBlacklisted,
--- 				reason = response.Body.details.reason,
--- 				blacklistedBy = response.Body.details.blacklistedBy,
--- 			},
--- 		}
--- 	else
--- 		local newTable = {}
--- 		for _, value: { userId: number | string, reason: string, blacklistedBy: number | string } in
--- 			pairs(response.Body.blacklists)
--- 		do
--- 			local userIdIndex = value.userId
--- 			value.userId = nil
+	if response.Body["isBlacklisted"] ~= nil then
+		res = {
+			success = true,
+			data = {
+				blacklisted = response.Body.isBlacklisted,
+				reason = response.Body.details.reason,
+				blacklistedBy = response.Body.details.blacklistedBy,
+			},
+		}
+	else
+		local newTable = {}
+		for _, value: { userId: number | string, reason: string, blacklistedBy: number | string } in
+			pairs(response.Body.blacklists)
+		do
+			local userIdIndex = value.userId
+			value.userId = nil
 
--- 			newTable[userIdIndex] = value
--- 		end
+			newTable[userIdIndex] = value
+		end
 
--- 		res = {
--- 			success = true,
--- 			blacklists = newTable,
--- 		}
--- 	end
+		res = {
+			success = true,
+			blacklists = newTable,
+		}
+	end
 
--- 	return res
--- end
+	return res
+end
+
+--[=[
+	Gets either a full list of blacklists or checks if a player is currently blacklisted.
+	@param userId (string | number)?
+	@return blacklistResponse
+
+	@within VibezAPI
+	@since 1.1.0
+]=]
+---
+function api:isUserBlacklisted(userId: (string | number)?): (boolean, string?, number?)
+	local blacklistData = self:getBlacklists(userId)
+
+	if blacklistData.success then
+		local data = {
+			blacklistData.data.blacklisted,
+			blacklistData.data.reason or nil,
+			blacklistData.data.blacklistedBy or nil,
+		}
+
+		return table.unpack(data)
+	end
+
+	return false
+end
 
 --[=[
 	Gets a player's or everyone's current activity
@@ -1798,7 +1970,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_onPlayerRemoved(Player)
 	end)
 
-	--selene: allow(incorrect_standard_library_use)
+	-- selene: allow(incorrect_standard_library_use)
 	-- Connect to when the game shuts down.
 	game:BindToClose(self._onGameShutdown, self)
 
