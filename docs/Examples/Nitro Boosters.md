@@ -6,7 +6,7 @@ sidebar-position: 11
 Where is this useful? You can use this to give nitro boosters special perks in your game.
 
 ```lua
-local Vibez = require(14946453963)("API Key")
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
 local function onPlayerAdded(Player: Player)
     local isBooster = Vibez:isBooster(Player.UserId)

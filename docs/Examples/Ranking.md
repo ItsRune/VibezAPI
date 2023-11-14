@@ -32,12 +32,12 @@ local Wrapper = VibezRankingAPI(myKey, {
     overrideGroupCheckForStudio = true;
     ignoreWarnings = false;
     nameOfGameForLogging = "Main Game";
-})
+}):waitUntilLoaded()
 ```
 
 ### SetRank
 ```lua
-local Vibez = require(14946453963)("API Key")
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
 local function gradePlayerApplication(Player: Player, application: {any})
     local score = 0
@@ -52,7 +52,7 @@ end
 
 ### Promotions/Demotions/Firing Staff
 ```lua
-local Vibez = require(14946453963)("API Key")
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
 local function promotePlayer(Player: Player)
     Vibez:Promote(Player.UserId)
@@ -74,7 +74,7 @@ local Players = game:GetService("Players")
 
 --// Variables \\--
 local Prefix = "!"
-local Vibez = require(14946453963)("API Key")
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
 --// Functions \\--
 local function findPlayers(Player: Player, Argument: string)
