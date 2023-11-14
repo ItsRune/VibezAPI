@@ -1,6 +1,4 @@
 gitRepoUrl = "https://github.com/ItsRune/VibezAPI"
-onBrokenLinks = "ignore"
-
 classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
 
 # Home page settings

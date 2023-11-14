@@ -1,5 +1,5 @@
 ---
-sidebar-position: 9
+sidebar-position: 8
 ---
 
 ### Get Activity

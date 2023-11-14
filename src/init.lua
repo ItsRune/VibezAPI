@@ -166,22 +166,6 @@ local baseSettings = {
 	-- Logging origin name
 	nameOfGameForLogging = game.Name,
 
-	-- Join/Leave/Message Logs
-	shouldLogInStudio = false,
-	joinLoggerWebhook = "",
-	leaveLoggerWebhook = "",
-	messageLoggerWebhook = "",
-
-	joinLogFormat = function(Player: Player, embed: Types.embedBuilder)
-		return `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has joined the game!`, embed
-	end,
-	leaveLogFormat = function(Player: Player, embed: Types.embedBuilder)
-		return `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has left the game!`, embed
-	end,
-	messageLogFormat = function(Player: Player, Message: string, embed: Types.embedBuilder)
-		return `\[[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>)\]: {Message}`, embed
-	end,
-
 	-- Misc
 	overrideGroupCheckForStudio = false,
 	ignoreWarnings = false,
@@ -424,20 +408,6 @@ end
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
-	coroutine.wrap(function()
-		if self.Settings.joinLoggerWebhook == "" then
-			return
-		end
-
-		local content, embed = self.Settings.joinLogFormat(Player, Embed.new())
-		local data = {
-			content = content,
-			embeds = { embed:_resolve() },
-		}
-
-		warn(Hooks.new(self, self.Settings.joinLoggerWebhook):setData(data):Send())
-	end)()
-
 	-- Get group data for setup below.
 	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 
@@ -482,20 +452,6 @@ end
 ]=]
 ---
 function api:_onPlayerRemoved(Player: Player) -- This method is being handled twice when game is shutting down.
-	coroutine.wrap(function()
-		if self.Settings.leaveLoggerWebhook == "" then
-			return
-		end
-
-		local content, embed = self.Settings.leaveLogFormat(Player, Embed.new())
-		local data = {
-			content = content,
-			embeds = { embed:_resolve() },
-		}
-
-		Hooks.new(self, self.Settings.leaveLoggerWebhook):setData(data):Send()
-	end)()
-
 	-- Check for and submit activity data.
 	local existingTracker = ActivityTracker.Users[Player.UserId]
 	if existingTracker then
@@ -751,20 +707,6 @@ end
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
-	coroutine.wrap(function()
-		if self.Settings.messageLoggerWebhook == "" then
-			return
-		end
-
-		local content, embed = self.Settings.messageLogFormat(Player, message, Embed.new())
-		local data = {
-			content = content,
-			embeds = { embed:_resolve() },
-		}
-
-		Hooks.new(self, self.Settings.messageLoggerWebhook):setData(data):Send()
-	end)()
-
 	if self.Settings.isChatCommandsEnabled == false then
 		return
 	end
@@ -1673,6 +1615,28 @@ end
 
 --[=[
 	Gets a player's or everyone's current activity
+	@return VibezAPI?
+
+	@tag Chainable
+	@within VibezAPI
+	@since 1.0.0
+]=]
+---
+function api:waitUntilLoaded(): Types.vibezApi?
+	local counter = 0
+	local maxCount = 25
+
+	-- Remove 'repeat' and replace with something more performant and can cancel.
+	repeat
+		task.wait(1)
+		counter += 1
+	until self.Loaded == true or counter >= maxCount
+
+	return self.Loaded and self or nil
+end
+
+--[=[
+	Gets a player's or everyone's current activity
 	@param userId (string | number)?
 	@return activityResponse
 
@@ -1738,142 +1702,38 @@ function api:saveActivity(
 	return response.Body
 end
 
---// Constructor \\--
 --[=[
-	@function new
+	Initializes the entire module.
+	@param apiKey string
+	@return ()
+
+	@private
 	@within VibezAPI
-
-	@param apiKey string -- Your Vibez API key.
-	@param extraOptions extraOptionsType -- Extra settings to configure the api to work for you.
-	@return VibezAPI
-
-	:::caution Notice
-	This method can be used as a normal function or invoke the ".new" function:    
-	`require(14946453963)("API Key")`  
-	`require(14946453963).new("API Key")`
-	:::
-
-	Constructs the main Vibez API class.
-
-	```lua
-	local myKey = "YOUR_API_KEY_HERE"
-	local VibezAPI = require(14946453963)
-	local Vibez = VibezAPI(myKey)
-	```
-
-	@tag Constructor
+	@since 1.3.0
 ]=]
----
-function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
-	if RunService:IsClient() then
-		return nil
+function api:_initialize(apiKey: string): ()
+	if self._private._initialized then
+		return
 	end
-
-	--[=[
-		@class VibezAPI
-		**IMPORTANT**: When using this module, we recommend using the number-based format rather than importing the scripts into the game.
-	]=]
-
-	api.__index = api
-	local self = setmetatable({}, api)
-
-	if not self:_checkHttp() then
-		self:_warn("Http is not enabled! Please enable it before trying to interact with our API!")
-
-		-- Allow for GC to clean up the class.
-		return self:Destroy()
-	end
-
-	-- @prop GroupId number
-	self.GroupId = -1
-	self.Settings = Table.Copy(baseSettings)
-	self._private = {
-		recentlyChangedKey = false,
-		newApiUrl = "https://leina.vibez.dev",
-		oldApiUrl = "https://api.vibez.dev/api",
-		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
-		rateLimiter = RateLimit.new(60, 60),
-		Maid = {},
-		requestCaches = {
-			validStaff = {},
-			nitro = {},
-			groupInfo = {},
-		},
-		commandOperationCodes = {
-			["Team"] = {
-				"%", -- Operation Code
-				function(playerToCheck: Player, incomingArgument: string): boolean
-					return playerToCheck.Team ~= nil
-						and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
-							== string.lower(incomingArgument)
-				end,
-			},
-
-			["Rank"] = {
-				"r:",
-				function(playerToCheck: Player, incomingArgument: string): boolean
-					local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
-
-					if not tonumber(rank) then
-						return false
-					end
-
-					tolerance = tolerance or "<="
-
-					local isOk, currentPlayerRank = pcall(playerToCheck.GetRankInGroup, playerToCheck, tonumber(rank))
-					if not isOk or currentPlayerRank == 0 then
-						return false
-					end
-
-					if tolerance == "<=" then
-						return currentPlayerRank <= tonumber(rank)
-					elseif tolerance == ">=" then
-						return currentPlayerRank >= tonumber(rank)
-					elseif tolerance == "<" then
-						return currentPlayerRank < tonumber(rank)
-					elseif tolerance == ">" then
-						return currentPlayerRank > tonumber(rank)
-					elseif tolerance == "==" then
-						return currentPlayerRank == tonumber(rank)
-					end
-
-					return false
-				end,
-			},
-
-			["shortenedUsername"] = {
-				"", -- Operation Code (Empty on purpose)
-				function(playerToCheck: Player, incomingArgument: string): boolean
-					return string.sub(string.lower(playerToCheck.Name), 0, string.len(incomingArgument))
-						== string.lower(incomingArgument)
-				end,
-			},
-		},
-	}
-
-	extraOptions = extraOptions or {}
-	for key, value in pairs(extraOptions) do
-		if self.Settings[key] == nil then
-			self:_warn(`Optional key '{key}' is not a valid option.`)
-			continue
-		elseif typeof(self.Settings[key]) ~= typeof(value) then
-			self:_warn( -- This is only made like this to fix github syntax highlights.
-				"Optional key '"
-					.. key
-					.. "' is not the same as it's defined value of "
-					.. typeof(self.Settings[key])
-					.. "!"
-			)
-			continue
-		end
-
-		self.Settings[key] = value
-	end
+	self._private._initialized = true
 
 	-- Update the api key using the public function, in case of errors it'll log them.
-	local isKeyOK = self:updateKey(apiKey)
+	Promise.new(function(resolve)
+		if not self:_checkHttp() then
+			self:_warn("Http is not enabled! Please enable it before trying to interact with our API!")
 
-	if not isKeyOK then
+			-- Allow for GC to clean up the class.
+			self:Destroy()
+			resolve(true)
+		end
+
+		resolve(self:updateKey(apiKey))
+	end):andThen(function(isOk)
+		if isOk then
+			self.Loaded = true
+			return
+		end
+
 		self:Destroy()
 		return setmetatable({}, {
 			__index = function()
@@ -1881,7 +1741,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				return function() end
 			end,
 		})
-	end
+	end)
 
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
@@ -1995,7 +1855,138 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			end
 		end)
 	end
+end
 
+--// Constructor \\--
+--[=[
+	@function new
+	@within VibezAPI
+
+	@param apiKey string -- Your Vibez API key.
+	@param extraOptions extraOptionsType -- Extra settings to configure the api to work for you.
+	@return VibezAPI
+
+	:::caution Notice
+	This method can be used as a normal function or invoke the ".new" function:    
+	`require(14946453963)("API Key")`  
+	`require(14946453963).new("API Key")`
+	:::
+
+	Constructs the main Vibez API class.
+
+	```lua
+	local myKey = "YOUR_API_KEY_HERE"
+	local VibezAPI = require(14946453963)
+	local Vibez = VibezAPI(myKey)
+	```
+
+	@tag Constructor
+]=]
+---
+function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
+	if RunService:IsClient() then
+		return nil
+	end
+
+	--[=[
+		@class VibezAPI
+		**IMPORTANT**: When using this module, we recommend using the number-based format rather than importing the scripts into the game.
+	]=]
+
+	api.__index = api
+	local self = setmetatable({}, api)
+
+	self.Loaded = false
+	self.GroupId = -1
+	self.Settings = Table.Copy(baseSettings)
+	self._private = {
+		_initialized = false,
+		recentlyChangedKey = false,
+
+		newApiUrl = "https://leina.vibez.dev",
+		oldApiUrl = "https://api.vibez.dev/api",
+
+		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
+		rateLimiter = RateLimit.new(60, 60),
+
+		Maid = {},
+		requestCaches = {
+			validStaff = {},
+			nitro = {},
+			groupInfo = {},
+		},
+		commandOperationCodes = {
+			["Team"] = {
+				"%", -- Operation Code
+				function(playerToCheck: Player, incomingArgument: string): boolean
+					return playerToCheck.Team ~= nil
+						and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
+							== string.lower(incomingArgument)
+				end,
+			},
+
+			["Rank"] = {
+				"r:",
+				function(playerToCheck: Player, incomingArgument: string): boolean
+					local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
+
+					if not tonumber(rank) then
+						return false
+					end
+
+					tolerance = tolerance or "<="
+
+					local isOk, currentPlayerRank = pcall(playerToCheck.GetRankInGroup, playerToCheck, tonumber(rank))
+					if not isOk or currentPlayerRank == 0 then
+						return false
+					end
+
+					if tolerance == "<=" then
+						return currentPlayerRank <= tonumber(rank)
+					elseif tolerance == ">=" then
+						return currentPlayerRank >= tonumber(rank)
+					elseif tolerance == "<" then
+						return currentPlayerRank < tonumber(rank)
+					elseif tolerance == ">" then
+						return currentPlayerRank > tonumber(rank)
+					elseif tolerance == "==" then
+						return currentPlayerRank == tonumber(rank)
+					end
+
+					return false
+				end,
+			},
+
+			["shortenedUsername"] = {
+				"", -- Operation Code (Empty on purpose)
+				function(playerToCheck: Player, incomingArgument: string): boolean
+					return string.sub(string.lower(playerToCheck.Name), 0, string.len(incomingArgument))
+						== string.lower(incomingArgument)
+				end,
+			},
+		},
+	}
+
+	extraOptions = extraOptions or {}
+	for key, value in pairs(extraOptions) do
+		if self.Settings[key] == nil then
+			self:_warn(`Optional key '{key}' is not a valid option.`)
+			continue
+		elseif typeof(self.Settings[key]) ~= typeof(value) then
+			self:_warn( -- This is only made like this to fix github syntax highlights.
+				"Optional key '"
+					.. key
+					.. "' is not the same as it's defined value of "
+					.. typeof(self.Settings[key])
+					.. "!"
+			)
+			continue
+		end
+
+		self.Settings[key] = value
+	end
+
+	coroutine.wrap(self._initialize)(self, apiKey)
 	return self :: Types.vibezApi
 end
 

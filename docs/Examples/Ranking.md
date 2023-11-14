@@ -1,5 +1,5 @@
 ---
-sidebar-position: 10
+sidebar-position: 9
 ---
 
 ## Implementing in-game services

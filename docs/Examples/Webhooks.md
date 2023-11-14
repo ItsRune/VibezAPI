@@ -1,9 +1,12 @@
 ---
-sidebar-position: 11
+sidebar-position: 10
 ---
 
 ### Colors
 Typically you would use a hexidecimal color code for the color parameter, but you can also use a `Color3` value. **Only works for `addEmbedWithBuilder`**
+
+<h4>Preview:</h4>
+<img src="/VibezAPI/color3WebhookExample.png"></img>
 
 ```lua
 local Vibez = require(14946453963)("API Key", {
@@ -19,5 +22,70 @@ webhook:addEmbedWithBuilder(function(embed)
 end):Send()
 ```
 
-### Loggers
-Loggers have been moved to their own page. You can find them [here](/VibezAPI/docs/Logging).
+### Join Logs
+
+<h4>Preview:</h4>
+<img src="/VibezAPI/joinLogExample.png"></img>
+
+```lua
+local Players = game:GetService("Players")
+local Vibez = require(14946453963)("API Key")
+
+Players.PlayerAdded:Connect(function(Player)
+    local api = Vibez:waitUntilLoaded()
+    if api == nil then
+        error("API Failed to load!")
+    end
+
+    local webhook = api:getWebhookBuilder("https://discord.com/api/webhooks/")
+    webhook:setContent(
+        `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has joined the game!`
+    ):Send()
+end)
+```
+
+### Leave Logs
+
+<h4>Preview:</h4>
+<img src="/VibezAPI/leaveLogExample.png"></img>
+
+```lua
+local Players = game:GetService("Players")
+local Vibez = require(14946453963)("API Key")
+
+Players.PlayerRemoving:Connect(function(Player)
+    local api = Vibez:waitUntilLoaded()
+    if api == nil then
+        error("API Failed to load!")
+    end
+
+    local webhook = api:getWebhookBuilder("https://discord.com/api/webhooks/")
+    webhook:setContent(
+        `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has left the game!`
+    ):Send()
+end)
+```
+
+### Message Logs
+
+<h4>Preview:</h4>
+<img src="/VibezAPI/messageLogExample.png"></img>
+
+```lua
+local Players = game:GetService("Players")
+local Vibez = require(14946453963)("API Key")
+
+Players.PlayerAdded:Connect(function(Player)
+    local api = Vibez:waitUntilLoaded()
+    if api == nil then
+        error("API Failed to load!")
+    end
+
+    Player.Chatted:Connect(function(Message: string)
+        local webhook = api:getWebhookBuilder("https://discord.com/api/webhooks/")
+        webhook:setContent(
+            `\[[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>)\]: {Message}`
+        ):Send()
+    end)
+end)
+```
