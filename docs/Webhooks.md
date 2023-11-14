@@ -8,13 +8,13 @@ Webhooks are a way to send messages to Discord channels without using a bot. The
 ### How do I create a webhook?
 
 <h4>You can get a webhook link by going to your Discord server settings.</h4>
-
+<img src="/VibezAPI/firstStepWebhook.png"></img>
 
 <h4>Navigate to the "Integrations" page.</h4>
-
+<img src="/VibezAPI/secondStepWebhook.png"></img>
 
 <h4>Click on "Webhooks" and "New Webhook", customize it however you'd like and copy the webhook link.</h4>
-
+<img src="/VibezAPI/thirdStepWebhook.png"></img>
 
 ### How do I send a message to a webhook?
 Using Vibez's webhook api is very simple. You just need to create a webhook builder using the webhook link you got from the previous step.

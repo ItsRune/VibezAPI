@@ -20,4 +20,4 @@ end):Send()
 ```
 
 ### Loggers
-[Loggers have been moved to their own page. You can find them here](/VibezAPI/docs/Loggers).
+Loggers have been moved to their own page. You can find them [here](/VibezAPI/docs/Loggers).
