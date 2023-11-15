@@ -1718,23 +1718,18 @@ function api:_initialize(apiKey: string): ()
 	end
 	self._private._initialized = true
 
+	if not self:_checkHttp() then
+		self:_warn("Http is not enabled! Please enable it before trying to interact with our API!")
+
+		-- Allow for GC to clean up the class.
+		self:Destroy()
+	end
+
 	-- Update the api key using the public function, in case of errors it'll log them.
-	Promise.new(function(resolve)
-		if not self:_checkHttp() then
-			self:_warn("Http is not enabled! Please enable it before trying to interact with our API!")
+	local isOk = self:updateKey(apiKey)
+	self.Loaded = true
 
-			-- Allow for GC to clean up the class.
-			self:Destroy()
-			resolve(true)
-		end
-
-		resolve(self:updateKey(apiKey))
-	end):andThen(function(isOk)
-		if isOk then
-			self.Loaded = true
-			return
-		end
-
+	if not isOk then
 		self:Destroy()
 		return setmetatable({}, {
 			__index = function()
@@ -1742,7 +1737,7 @@ function api:_initialize(apiKey: string): ()
 				return function() end
 			end,
 		})
-	end)
+	end
 
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
