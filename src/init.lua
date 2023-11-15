@@ -36,6 +36,7 @@
 	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
 	.disableActivityTrackingInStudio boolean -- Stops saving any activity tracked when play testing in studio.
 	.usePromises boolean -- Determines whether the module should return promises or not.
+	.isAsync boolean -- Determines whether initialization will yield your script or not.
 	@within VibezAPI
 ]=]
 
@@ -135,7 +136,6 @@ local Workspace = game:GetService("Workspace")
 --// Modules \\--
 local Types = require(script.Modules.Types)
 local Hooks = require(script.Modules.Hooks)
-local Embed = require(script.Modules.Hooks.Embed)
 local ActivityTracker = require(script.Modules.Activity)
 local RateLimit = require(script.Modules.RateLimit)
 local Promise = require(script.Modules.Promise)
@@ -169,6 +169,7 @@ local baseSettings = {
 	-- Misc
 	overrideGroupCheckForStudio = false,
 	ignoreWarnings = false,
+	isAsync = false,
 	usePromises = false, -- Broken
 }
 
@@ -1986,7 +1987,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self.Settings[key] = value
 	end
 
-	coroutine.wrap(self._initialize)(self, apiKey)
+	if self.Settings.isAsync then
+		coroutine.wrap(self._initialize)(self, apiKey)
+	else
+		self:_initialize(apiKey)
+	end
+
 	return self :: Types.vibezApi
 end
 
