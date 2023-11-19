@@ -5,7 +5,7 @@ classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
 [docusaurus]
 onBrokenLinks = "throw"
 onBrokenMarkdownLinks = "warn"
-favicon = ""
+favicon = "https://github.com/ItsRune/VibezAPI/blob/903c060edf6b7982f6c04bc68626f07c2a653255/.moonwave/static/favicon.png?raw=true"
 
 # Home page settings
 [home]
