@@ -1,11 +1,16 @@
 gitRepoUrl = "https://github.com/ItsRune/VibezAPI"
 classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
 
+# Docusaurus settings
+[docusaurus]
+onBrokenLinks = "throw"
+onBrokenMarkdownLinks = "warn"
+favicon = ""
+
 # Home page settings
 [home]
 enabled = true
 includeReadme = false
-bannerImage = "/static/typography.png"
 
 # Home page features
 [[home.features]]
@@ -21,6 +26,9 @@ title = "Open Source"
 description = "VibezAPI is open source, meaning you can contribute to it, and make it better for everyone."
 
 # Navigation bar items
+[navbar]
+title = ""
+
 [[navbar.items]]
 href = "https://discord.gg/vdev"
 label = "Discord"
@@ -28,9 +36,9 @@ position = "right"
 
 [navbar.logo]
 alt = "Vibez"
-src = "/static/typography.png"
-width = 32
-height = 32
+src = "https://github.com/ItsRune/VibezAPI/blob/10a41c5c42e209e883cab36f7f2c24d2489c4039/.moonwave/static/typography.png?raw=true"
+width = 64
+height = 64
 
 # Footer
 [footer]
