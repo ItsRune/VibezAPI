@@ -5,6 +5,7 @@ classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
 [home]
 enabled = true
 includeReadme = false
+bannerImage = "/static/typography.png"
 
 # Home page features
 [[home.features]]
@@ -24,6 +25,12 @@ description = "VibezAPI is open source, meaning you can contribute to it, and ma
 href = "https://discord.gg/vdev"
 label = "Discord"
 position = "right"
+
+[navbar.logo]
+alt = "Vibez"
+src = "/static/typography.png"
+width = 32
+height = 32
 
 # Footer
 [footer]
