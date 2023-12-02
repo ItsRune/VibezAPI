@@ -13,10 +13,17 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+
     - name: Install Aftman
       uses: ok-nick/setup-aftman@v0
+
+    - name: Install Selene
+      run: |
+        curl -LO https://github.com/Kampfkarren/selene/archive/refs/tags/0.26.1.tar.gz
+        tar xzf 0.26.1.tar.gz
+        sudo mv selene-0.26.1 /usr/local/bin/
+
     - name: Lint
       run: |
         selene ./src
