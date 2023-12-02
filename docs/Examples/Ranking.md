@@ -115,32 +115,22 @@ local function onPlayerAdded(Player: Player)
         end
 
         local command = string.split(string.lower(Message), " ")[1]
+        local funcs = {
+            ["promote"] = "PromoteWithCaller";
+            ["demote"] = "DemoteWithCaller";
+            ["fire"] = "FireWithCaller";
+            ["setrank"] = "SetRankWithCaller";
+        }
 
-        -- Inefficient, but it works
-        if command == "promote" then
-            local users = findPlayers(Player, string.split(Message, " ")[2])
+        local methodToUse = funcs[command]
+        if not methodToUse then
+            return
+        end
 
-            for _, user in pairs(users) do
-                Vibez:PromoteWithCaller(user.UserId, tonumber(string.split(Message, " ")[2]), Player.UserId, Player.Name)
-            end
-        elseif command == "demote" then
-            local users = findPlayers(Player, string.split(Message, " ")[2])
-
-            for _, user in pairs(users) do
-                Vibez:DemoteWithCaller(user.UserId, tonumber(string.split(Message, " ")[2]), Player.UserId, Player.Name)
-            end
-        elseif command == "fire" then
-            local users = findPlayers(Player, string.split(Message, " ")[2])
-
-            for _, user in pairs(users) do
-                Vibez:FireWithCaller(user.UserId, tonumber(string.split(Message, " ")[2]), Player.UserId, Player.Name)
-            end
-        elseif command == "setrank" then
-            local users = findPlayers(Player, string.split(Message, " ")[2])
-
-            for _, user in pairs(users) do
-                Vibez:SetRankWithCaller(user.UserId, tonumber(string.split(Message, " ")[2]), Player.UserId, Player.Name)
-            end
+        local users = findPlayers(Player, string.split(Message, " ")[2])
+        for _, user in pairs(users) do
+            -- Since we're using '[]' aka '.' notation, we need to pass the table as the first argument
+            Vibez[methodToUse](Vibez, user.UserId, tonumber(string.split(Message, " ")[2]), Player.UserId, Player.Name)
         end
     end)
 end

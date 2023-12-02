@@ -697,6 +697,124 @@ function api:_getPlayers(usernames: { string | number }): { Player? }
 end
 
 --[=[
+	Gives a Player the ranking sticks.
+	@param Player Player
+
+	@yields
+	@private
+	@within VibezAPI
+	@since 1.3.0
+]=]
+---
+function api:_giveSticks(Player: Player)
+	local cloned = self._rankingSticks:Clone()
+	cloned.Parent = Player.Backpack
+end
+
+--[=[
+	Gives a Player the ranking sticks.
+	@param Player Player
+
+	@yields
+	@private
+	@within VibezAPI
+	@since 1.3.0
+]=]
+---
+function api:_sticksDetected(hit: BasePart)
+	-- Might move this to the client if it performs poorly.
+	local playerCharacter = hit.Parent
+	local Player = Players:GetPlayerFromCharacter(playerCharacter)
+
+	if not Player then
+		return
+	end
+end
+
+--[=[
+	Removes ranking sticks from a player.
+	@param Player Player
+
+	@yields
+	@private
+	@within VibezAPI
+	@since 1.3.0
+]=]
+---
+function api:_removeSticks(Player: Player)
+	local character = Player.Character
+	local backpack = Player.Backpack
+
+	local conjoinedLocations = Table.Assign(character:GetChildren(), backpack:GetChildren())
+	local result = Table.Filter(conjoinedLocations, function(tool: Instance)
+		return tool:IsA("Tool") and tool.Name == "RankingSticks"
+	end)
+
+	if result ~= nil and result[1] ~= nil then
+		for _, v in pairs(result) do
+			v:Destroy()
+		end
+	end
+end
+
+--[=[
+	Sets the ranking stick's tool.
+	@param tool Tool | Model
+
+	@yields
+	@within VibezAPI
+	@since 1.3.0
+]=]
+---
+function api:setRankStickModel(tool: Tool | Model): ()
+	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
+		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
+		return
+	end
+
+	if tool:IsA("Model") then
+		if not tool:FindFirstChild("Handle") then
+			self:_warn("Ranking Stick's model requires a 'Handle'!")
+			return
+		end
+
+		local children = tool:GetChildren()
+		local modelReference = tool
+
+		tool = Instance.new("Tool")
+		tool.Parent = script
+
+		for _, v in pairs(children) do
+			v.Parent = tool
+		end
+
+		modelReference:Destroy()
+	end
+
+	local handle = tool:FindFirstChild("Handle")
+	handle.Anchored = false
+	handle.CanCollide = false
+
+	for _, v in pairs(tool:GetDescendants()) do
+		if v == handle or not v:IsA("BasePart") then
+			continue
+		end
+
+		local newWeld = Instance.new("WeldConstraint")
+		newWeld.Name = `{v.Name}_{handle.Name}`
+		newWeld.Part0 = handle
+		newWeld.Part1 = v
+		newWeld.Parent = handle
+
+		v.Anchored = false
+	end
+
+	tool.CanBeDropped = false
+	tool.Name = "RankingSticks"
+	self._rankingSticks = tool
+end
+
+--[=[
 	Handles the main chatting event for commands.
 	@param Player Player
 	@param message string

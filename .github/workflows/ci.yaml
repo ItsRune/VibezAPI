@@ -9,25 +9,14 @@ on:
     - master
 
 jobs:
-  # lint:
-  #   name: Lint
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v3
-  #   - name: Install Aftman
-  #     uses: ok-nick/setup-aftman@v0.3.0
-  #   - name: Lint
-  #     run: |
-  #       selene ./src
-
-  style:
-    name: Styling
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: JohnnyMorganz/stylua-action@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        version: v0.18.1
-        args: --check ./src
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Install Aftman
+      uses: ok-nick/setup-aftman@v0.4.2
+    - name: Lint
+      run: |
+        selene ./src
