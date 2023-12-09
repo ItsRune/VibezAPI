@@ -66,7 +66,7 @@ function Class:Check(): (boolean, string?)
 
 	if self._counter >= self._maxCount and durationSinceStart < self._retryAfter then
 		return false,
-			`You may not make anymore requests for another {self._retryAfter - durationSinceStart + 1} seconds`
+			`You may not make anymore requests for another {self._retryAfter - durationSinceStart + 1} second(s)`
 	end
 
 	self._counter += 1

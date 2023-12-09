@@ -713,7 +713,7 @@ end
 
 --[=[
 	Gives a Player the ranking sticks.
-	@param Player Player
+	@param hit BasePart
 
 	@yields
 	@private

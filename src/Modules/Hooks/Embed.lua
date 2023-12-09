@@ -6,6 +6,7 @@ local Class = {}
 Class.__index = Class
 
 local embedTypes = require(script.Parent.Parent.Types)
+local RoTime = require(script.Parent.Parent.RoTime)
 
 --// Local Functions \\--
 --[=[
@@ -285,16 +286,31 @@ end
 	-- @param timeStamp number | "Auto"
 	@return EmbedBuilder
 
+	```lua
+	Embed:setTimestamp()
+	```
+
 	@tag Chainable
 	@within EmbedBuilder
 	@since 1.1.0
 	@private
 ]=]
 ---
-function Class:setTimestamp(): embedTypes.Embed
-	-- self.data.timestamp = (string.lower(tostring(timeStamp)) == "auto" or timeStamp == nil)
-	-- 		and DateTime.now().UnixTimestamp
-	-- 	or timeStamp
+function Class:setTimestamp(unixTimeStamp: (number | string | "auto")?): embedTypes.Embed
+	unixTimeStamp = unixTimeStamp or "auto"
+
+	if typeof(unixTimeStamp) == "string" then
+		unixTimeStamp = string.lower(unixTimeStamp)
+	end
+
+	local newTime = RoTime.new()
+	if unixTimeStamp ~= "auto" and tonumber(unixTimeStamp) ~= nil then
+		newTime:fromUnix(unixTimeStamp)
+	end
+
+	self.data.timestamp = newTime:getTimestamp()
+	newTime:Destroy()
+
 	return self
 end
 
