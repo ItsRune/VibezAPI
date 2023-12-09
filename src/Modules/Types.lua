@@ -150,8 +150,10 @@ export type vibezApi = {
 	saveActivity: (
 		self: vibezApi,
 		userId: string | number,
-		secondsSpent: number,
-		messagesSent: number | { string }
+		userRank: number,
+		secondsSpent: number?,
+		messagesSent: (number | { string })?,
+		shouldFetchGroupRank: boolean?
 	) -> httpResponse,
 	getActivity: (self: vibezApi, userId: (string | number)?) -> activityResponse,
 	UpdateLoggerTitle: (self: vibezApi, newTitle: string) -> nil,

@@ -41,8 +41,12 @@ local Vibez = require(14946453963)("API Key", {
     activityTrackingEnabled = true
 })
 
-local function addSecondsToPlayer(UserId: number, secondsSpent: number, messagesSent: number)
-    Vibez:saveActivity(UserId, secondsSpent, messagesSent)
+local function addSecondsToPlayer(UserId: number, userRank: number, secondsSpent: number, messagesSent: number)
+    Vibez:saveActivity(UserId, userRank, secondsSpent, messagesSent)
+end
+
+local function addSecondsToPlayerWithoutRank(UserId: number, secondsSpent: number, messagesSent: number)
+    Vibez:saveActivity(UserId, nil, secondsSpent, messagesSent, true)
 end
 
 addSecondsToPlayer(107392833, 10, 5) -- 107392833 is the user id of the staff member

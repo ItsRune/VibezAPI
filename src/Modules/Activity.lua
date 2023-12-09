@@ -79,14 +79,27 @@ end)
 function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.ActivityTracker
 	local self = setmetatable({}, Class)
 
+	self.isLeaving = false
+	self.isAfk = false
+
 	self._api = VibezAPI
 	self._player = forPlayer
 	self._seconds = 0
 	self._messages = 0
 	self._increment = 1
 	self._lastCheck = DateTime.now().UnixTimestamp
-	self.isLeaving = false
-	self.isAfk = false
+	self._groupData = self._api:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
+
+	if not self._groupData then
+		self._api:_warn(`Activity tracker failed to load group rank for {tostring(forPlayer)}!`)
+
+		if self._api.Settings.shouldKickPlayerIfActivityTrackerFails == true then
+			forPlayer:Kick("[Activity Tracker]: " .. self._api.Settings.activityTrackerFailedMessage)
+		end
+
+		self:Destroy()
+		return nil
+	end
 
 	self._api:_warn(`Setting up activity tracking for {tostring(forPlayer)}`)
 
@@ -144,7 +157,7 @@ function Class:Left()
 
 	self.isLeaving = true
 
-	if self._api.Settings.disableActivityTrackingInStudio == true and RunService:IsStudio() then
+	if RunService:IsStudio() and self._api.Settings.disableActivityTrackingInStudio == true then
 		self._api:_warn(
 			string.format(
 				"Saving activity has been disabled when playing in studio. Here's what we tracked\nUser: %s (%s)\nSeconds spent: %s\nMessages sent: %s",
@@ -157,7 +170,7 @@ function Class:Left()
 		return
 	end
 
-	self._api:saveActivity(self._player.UserId, self._seconds, self._messages)
+	self._api:saveActivity(self._player.UserId, self._groupData.Rank, self._seconds, self._messages)
 	self._api:_warn(`User left and sent activity data for {tostring(self._player)}`)
 	self:Destroy()
 end

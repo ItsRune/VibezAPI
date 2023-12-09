@@ -33,6 +33,8 @@
 	.activityTrackingEnabled boolean -- Track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
 	.rankToStartTrackingActivityFor boolean -- Minimum rank required to start tracking activity. (Default: 255)
 	.disableActivityTrackingWhenAFK boolean -- Subtracts time of users who are detected as 'AFK'.
+	.shouldKickPlayerIfActivityTrackerFails boolean -- When enabled, it'll kick the player if the activity tracker can't initialize a player.
+	.activityTrackerFailedMessage string -- The kick message for a player if their activity tracker fails to load.
 	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
 	.disableActivityTrackingInStudio boolean -- Stops saving any activity tracked when play testing in studio.
 	.usePromises boolean -- Determines whether the module should return promises or not.
@@ -162,6 +164,8 @@ local baseSettings = {
 	disableActivityTrackingWhenAFK = false,
 	rankToStartTrackingActivityFor = 255,
 	delayBeforeMarkedAFK = 30,
+	shouldKickPlayerIfActivityTrackerFails = false,
+	activityTrackerFailedMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
 
 	-- Logging origin name
 	nameOfGameForLogging = game.Name,
@@ -354,7 +358,7 @@ function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?)
 		return self._private.requestCaches.groupInfo[userId]
 	end
 
-	if self.Settings.overrideGroupCheckForStudio == true and RunService:IsStudio() then
+	if RunService:IsStudio() and self.Settings.overrideGroupCheckForStudio == true then
 		return {
 			Rank = self.Settings.maxRankToUseCommandsAndUI,
 		}
@@ -1776,8 +1780,10 @@ end
 --[=[
 	Saves the player's current activity
 	@param userId string | number
+	@param userRank number
 	@param secondsSpent number
 	@param messagesSent (number | { string })?
+	@param shouldFetchGroupRank boolean?
 	@return httpResponse
 
 	@within VibezAPI
@@ -1786,34 +1792,41 @@ end
 ---
 function api:saveActivity(
 	userId: string | number,
+	userRank: number,
 	secondsSpent: number,
-	messagesSent: (number | { string })?
+	messagesSent: (number | { string })?,
+	shouldFetchGroupRank: boolean?
 ): Types.infoResponse
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
-	messagesSent = (typeof(messagesSent) == "table") and #messagesSent or (messagesSent == nil) and 0 or messagesSent
+	messagesSent = (typeof(messagesSent) == "table") and #messagesSent
+		or (tonumber(messagesSent) ~= nil) and messagesSent
+		or nil
+	userRank = (typeof(userRank) == "number" or tonumber(userRank) ~= nil) and userRank or nil
 
 	if not tonumber(messagesSent) then
-		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'messagesSent'!`, 2))
+		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'messagesSent' parameter!`, 2))
 		return
 	elseif not tonumber(secondsSpent) then
-		self:_warn(debug.traceback(`'secondsSpent' parameter is required for this function!`, 2))
+		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'secondsSpent' parameter!`, 2))
 		return
 	end
 
-	local rankId = 0
-	local groupData = self:_getGroupFromUser(self.GroupId, userId)
+	if shouldFetchGroupRank == true then
+		local groupData = self:_getGroupFromUser(self.GroupId, userId)
 
-	if typeof(groupData) ~= "table" then
-		self:_warn(`Could not fetch group data.`)
-		return
+		if typeof(groupData) ~= "table" then
+			self:_warn(`Could not fetch group data.`)
+			return
+		end
+
+		userRank = groupData.Rank
 	end
 
-	rankId = groupData.Rank
 	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
 
 	local _, response = self:Http("/activity/save2", "post", nil, {
 		userId = userId,
-		userRank = rankId,
+		userRank = userRank,
 		secondsUserHasSpent = secondsSpent,
 		messagesUserHasSent = messagesSent,
 	})
@@ -1950,7 +1963,7 @@ function api:_initialize(apiKey: string): ()
 
 	-- Initialize the workspace attribute
 	local uiStatus = self.Settings.isUIEnabled
-	local afkStatus = self.Settings.trackAFKActivity
+	local afkStatus = not self.Settings.disableActivityTrackingWhenAFK
 	local afkDelay = self.Settings.delayBeforeMarkedAFK
 
 	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
