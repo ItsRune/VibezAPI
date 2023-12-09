@@ -7,3 +7,6 @@
 
 # Moonwave files
 /build
+
+# Private files
+/private

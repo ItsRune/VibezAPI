@@ -1468,6 +1468,7 @@ end
 	@return boolean
 
 	@yields
+	@private
 	@within VibezAPI
 	@since 1.0.0
 ]=]
