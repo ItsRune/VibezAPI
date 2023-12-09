@@ -91,7 +91,9 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	self._groupData = self._api:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
 
 	if not self._groupData then
-		self._api:_warn(`Activity tracker failed to load group rank for {tostring(forPlayer)}!`)
+		self._api:_warn(
+			`Activity tracker failed to load group rank for {tostring(forPlayer)}! This has resulted in activity not tracking this user!`
+		)
 
 		if self._api.Settings.shouldKickPlayerIfActivityTrackerFails == true then
 			forPlayer:Kick("[Activity Tracker]: " .. self._api.Settings.activityTrackerFailedMessage)

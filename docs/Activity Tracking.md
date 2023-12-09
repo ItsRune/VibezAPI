@@ -49,5 +49,8 @@ local function addSecondsToPlayerWithoutRank(UserId: number, secondsSpent: numbe
     Vibez:saveActivity(UserId, nil, secondsSpent, messagesSent, true)
 end
 
-addSecondsToPlayer(107392833, 10, 5) -- 107392833 is the user id of the staff member
+-- Example usage
+-- adding 10 seconds and 5 messages
+addSecondsToPlayer(107392833, 250, 10, 5)
+addSecondsToPlayerWithoutRank(107392833, 10, 5)
 ```
