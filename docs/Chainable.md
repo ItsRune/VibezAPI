@@ -44,7 +44,7 @@ Chainability works by returning the class instance after every method call. This
 local VibezAPI = require(14946453963)("myApiKey")
 local playerToRank = game.Players:GetPlayers()[1]
 
-VibezAPI:removeCommandOperation("Team"):SetRank(playerToRank, 1)
+VibezAPI:removeCommandOperation("Team"):setRank(playerToRank, 1)
 ```
 
 ---

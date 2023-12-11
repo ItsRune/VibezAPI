@@ -1,6 +1,8 @@
 ---
-sidebar-position: 8
+sidebar-position: 1
 ---
+
+<h3>Note: You do NOT need every example in your game, just pick and choose what you'd like.</h3>
 
 ### Get Activity
 ```lua

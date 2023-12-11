@@ -129,6 +129,7 @@ export type vibezCommandFunctions = {
 }
 
 export type vibezApi = {
+	-- Misc
 	GroupId: number,
 	Settings: vibezSettings,
 	_private: {
@@ -141,12 +142,60 @@ export type vibezApi = {
 		commandOperationCodes: { { any }? },
 	},
 
+	-- Misc methods
+	updateLoggerName: (self: vibezApi, newTitle: string) -> nil,
+	getWebhookBuilder: (self: vibezApi, webhook: string) -> vibezHooks,
+	waitUntilLoaded: (self: vibezApi) -> vibezApi?,
+	updateKey: (self: vibezApi, newApiKey: string) -> boolean,
+	Destroy: (self: vibezApi) -> nil,
+
+	-- Blacklists
+	addBlacklist: (
+		self: vibezApi,
+		userToBlacklist: Player | string | number,
+		Reason: string?,
+		blacklistExecutedBy: (Player | string | number)?
+	) -> blacklistResponse,
+	deleteBlacklist: (self: vibezApi, userToDelete: Player | string | number) -> blacklistResponse,
+	getBlacklists: (self: vibezApi, userId: string | number) -> blacklistResponse,
+	isUserBlacklisted: (self: vibezApi, userId: number | string) -> blacklistResponse,
+
+	-- Ranking
 	Promote: (self: vibezApi, userId: string | number) -> responseBody,
 	Demote: (self: vibezApi, userId: string | number) -> responseBody,
 	Fire: (self: vibezApi, userId: string | number) -> responseBody,
 	SetRank: (self: vibezApi, userId: string | number, rankId: string | number) -> responseBody,
-	ToggleCommands: (self: vibezApi, override: boolean?) -> nil,
-	ToggleUI: (self: vibezApi, override: boolean?) -> nil,
+
+	--- Ranking Sticks
+	giveRankSticks: (self: vibezApi, user: Player | string | number) -> boolean,
+	setRankStickModel: (self: vibezApi, tool: Tool | Model) -> (),
+
+	--- Ranking with callers
+	promoteWithCaller: (
+		self: vibezApi,
+		userId: string | number,
+		idOfCaller: number,
+		nameOfCaller: string
+	) -> rankResponse,
+	demoteWithCaller: (
+		self: vibezApi,
+		userId: string | number,
+		idOfCaller: number,
+		nameOfCaller: string
+	) -> rankResponse,
+	setRankWithCaller: (
+		self: vibezApi,
+		userId: string | number,
+		idOfCaller: number,
+		nameOfCaller: string
+	) -> rankResponse,
+	fireWithCaller: (self: vibezApi, userId: string | number, idOfCaller: number, nameOfCaller: string) -> rankResponse,
+
+	-- Features
+	toggleCommands: (self: vibezApi, override: boolean?) -> nil,
+	toggleUI: (self: vibezApi, override: boolean?) -> nil,
+
+	-- Activity
 	saveActivity: (
 		self: vibezApi,
 		userId: string | number,
@@ -156,7 +205,8 @@ export type vibezApi = {
 		shouldFetchGroupRank: boolean?
 	) -> httpResponse,
 	getActivity: (self: vibezApi, userId: (string | number)?) -> activityResponse,
-	UpdateLoggerTitle: (self: vibezApi, newTitle: string) -> nil,
+
+	-- Commands
 	addCommandOperation: (
 		self: vibezApi,
 		operationName: string,
@@ -164,8 +214,6 @@ export type vibezApi = {
 		operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
 	) -> vibezApi,
 	removeCommandOperation: (self: vibezApi, operationName: string) -> vibezApi,
-	Destroy: (self: vibezApi) -> nil,
-	getWebhookBuilder: (self: vibezApi, webhook: string) -> vibezHooks,
 }
 
 export type vibezHooks = {

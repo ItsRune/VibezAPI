@@ -1,6 +1,8 @@
 ---
-sidebar-position: 10
+sidebar-position: 3
 ---
+
+<h3>Note: You do NOT need every example in your game, just pick and choose what you'd like.</h3>
 
 ### Colors
 Typically you would use a hexidecimal color code for the color parameter, but you can also use a `Color3` value. **Only works for `addEmbedWithBuilder`**
@@ -22,79 +24,39 @@ webhook:addEmbedWithBuilder(function(embed)
 end):Send()
 ```
 
-## Logs
-For any kind of logs that require an on server start-up event, you should use `:waitUntilLoaded()` to ensure that the API is loaded before you try to use it. You also have to set `isAsync` to `true` in the API settings.
-
-### Join Logs
-
-<h4>Preview:</h4>
-<img src="/VibezAPI/joinLogExample.png"></img>
+### Embeds
+Embeds are a way to format your messages in a more organized way. You can add multiple embeds to a webhook message.
 
 ```lua
-local Players = game:GetService("Players")
-local Vibez = require(14946453963)("API Key", {
-    isAsync = true
-})
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
-Players.PlayerAdded:Connect(function(Player)
-    local api = Vibez:waitUntilLoaded()
-    if api == nil then
-        error("API Failed to load!")
-    end
-
-    local webhook = api:getWebhookBuilder("https://discord.com/api/webhooks/")
-    webhook:setContent(
-        `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has joined the game!`
-    ):Send()
-end)
-```
-
-### Leave Logs
-
-<h4>Preview:</h4>
-<img src="/VibezAPI/leaveLogExample.png"></img>
-
-```lua
-local Players = game:GetService("Players")
-local Vibez = require(14946453963)("API Key", {
-    isAsync = true
-})
-
-Players.PlayerRemoving:Connect(function(Player)
-    local api = Vibez:waitUntilLoaded()
-    if api == nil then
-        error("API Failed to load!")
-    end
-
-    local webhook = api:getWebhookBuilder("https://discord.com/api/webhooks/")
-    webhook:setContent(
-        `[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>) has left the game!`
-    ):Send()
-end)
-```
-
-### Message Logs
-
-<h4>Preview:</h4>
-<img src="/VibezAPI/messageLogExample.png"></img>
-
-```lua
-local Players = game:GetService("Players")
-local Vibez = require(14946453963)("API Key", {
-    isAsync = true
-})
-
-Players.PlayerAdded:Connect(function(Player)
-    local api = Vibez:waitUntilLoaded()
-    if api == nil then
-        error("API Failed to load!")
-    end
-
-    Player.Chatted:Connect(function(Message: string)
-        local webhook = api:getWebhookBuilder("https://discord.com/api/webhooks/")
-        webhook:setContent(
-            `\[[**{Player.Name}**](<https://roblox.com/users/{Player.UserId}/profile>)\]: {Message}`
-        ):Send()
+Vibez:getWebhookBuilder("https://discord.com/api/webhooks/")
+    :addEmbedWithBuilder(function(embed)
+        return embed
+            :setColor(Color3.new(1, 1, 1)) -- White | Default color is always light pink.
+            :setTitle("Embed Example")
+            :setDescription("This is an example of using an embed.")
     end)
-end)
+    :Send()
+```
+
+#### Multiple Embeds
+
+```lua
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
+
+Vibez:getWebhookBuilder("https://discord.com/api/webhooks/")
+    :addEmbedWithBuilder(function(embed)
+        return embed
+            :setColor(Color3.new(1, 1, 1)) -- White | Default color is always light pink.
+            :setTitle("Embed Example")
+            :setDescription("This is an example of using an embed.")
+    end)
+    :addEmbedWithBuilder(function(embed)
+        return embed
+            :setColor(Color3.fromRGB(155, 155, 255)) -- Light blue
+            :setTitle("Embed Example 2")
+            :setDescription("This is the second example of using an embed.")
+    end)
+    :Send()
 ```

@@ -830,6 +830,13 @@ end
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
+	-- Check for activity tracker to increment messages sent.
+	local existingTracker = ActivityTracker.Users[Player.UserId]
+	if existingTracker then
+		existingTracker:Chatted()
+	end
+
+	-- Commands handler
 	if self.Settings.isChatCommandsEnabled == false then
 		return
 	end
@@ -837,11 +844,6 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	local theirCache = self._private.requestCaches.validStaff[Player.UserId]
 	if not theirCache then
 		return
-	end
-
-	local existingTracker = ActivityTracker.Users[Player.UserId]
-	if existingTracker then
-		existingTracker:Chatted()
 	end
 
 	local args = string.split(message, " ")
@@ -1208,7 +1210,7 @@ function api:setRankWithCaller(
 ): Types.rankResponse
 	if not idOfUser or not nameOfUser then
 		self:_warn(
-			"'SetRankWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':SetRank'"
+			"'setRankWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':SetRank'"
 		)
 		return self:_setRank(userId, rankId)
 	end
@@ -1463,7 +1465,7 @@ function api:updateKey(newApiKey: string): boolean
 end
 
 --[=[
-	Checks if the user is currently a nitro booster.
+	Checks if the user is currently a nitro booster. (Only specific guilds have this feature)
 	@param User number | string | Player
 	@return boolean
 

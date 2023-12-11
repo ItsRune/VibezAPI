@@ -1,41 +1,10 @@
 ---
-sidebar-position: 9
+sidebar-position: 2
 ---
 
-## Implementing in-game services
-> In game services include ranking commands, ranking UI and the activity tracker.
-1. Create a new script in "ServerScriptServices" called "VibezServices"
-2. Insert the below code into the script
-3. Adjust the settings based on your needs
+<h3>Note: You do NOT need every example in your game, just pick and choose what you'd like.</h3>
 
-# The script
-```lua
-local myKey = "YOUR_API_KEY_HERE"
-local VibezRankingAPI = require(14946453963)
-local Wrapper = VibezRankingAPI(myKey, {
-    -- Activity
-    activityTrackingEnabled = true;
-    toggleTrackingOfAFKActivity = false;
-    rankToStartTrackingActivityFor = 220;
-
-    -- UI OR Commands
-    isChatCommandsEnabled = true;
-    isUIEnabled = true;
-
-    minRankToUseCommandsAndUI = 255;
-    maxRankToUseCommandsAndUI = 255;
-
-    -- Commands Only
-    commandPrefix = "!";
-
-    -- Utility
-    overrideGroupCheckForStudio = true;
-    ignoreWarnings = false;
-    nameOfGameForLogging = "Main Game";
-}):waitUntilLoaded()
-```
-
-### SetRank
+### SetRank for application center
 ```lua
 local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
@@ -45,7 +14,7 @@ local function gradePlayerApplication(Player: Player, application: {any})
     -- Computation for score
 
     if score >= application.minScore then
-        Vibez:SetRank(Player.UserId, application.Rank)
+        Vibez:setRank(Player.UserId, application.Rank)
     end
 end
 ```
@@ -65,73 +34,8 @@ end
 local function firePlayer(Player: Player)
     Vibez:Fire(Player.UserId)
 end
-```
 
-### Setting a rank using a custom admin
-```lua
---// Services \\--
-local Players = game:GetService("Players")
-
---// Variables \\--
-local Prefix = "!"
-local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
-
---// Functions \\--
-local function findPlayers(Player: Player, Argument: string)
-    local args = string.split(string.lower(tostring(Argument)), ",")
-    local found = {}
-
-    for _, info in pairs(args) do
-        local result = nil
-        if info == "me" then
-            result = Player
-        elseif info == "all" then
-            result = Players:GetPlayers()
-        elseif info == "others" then
-            result = Players:GetPlayers()
-            table.remove(result, table.find(result, Player))
-        else
-            result = Players:FindFirstChild(info)
-        end
-
-        if typeof(result) == "Instance" then
-            table.insert(found, result)
-        elseif typeof(result) == "table" then
-            table.insert(found, table.unpack(result))
-        end
-    end
-
-    return found
-end
-
-local function onPlayerAdded(Player: Player)
-    Player.Chatted:Connect(function(Message: string)
-        -- Permission check
-        -- Make your own permission system
-
-        -- Prefix check
-        if string.sub(string.lower(Message), 1, #Prefix) ~= Prefix then
-            return
-        end
-
-        local command = string.split(string.lower(Message), " ")[1]
-        local funcs = {
-            ["promote"] = "PromoteWithCaller";
-            ["demote"] = "DemoteWithCaller";
-            ["fire"] = "FireWithCaller";
-            ["setrank"] = "SetRankWithCaller";
-        }
-
-        local methodToUse = funcs[command]
-        if not methodToUse then
-            return
-        end
-
-        local users = findPlayers(Player, string.split(Message, " ")[2])
-        for _, user in pairs(users) do
-            -- Since we're using '[]' aka '.' notation, we need to pass the table as the first argument
-            Vibez[methodToUse](Vibez, user.UserId, tonumber(string.split(Message, " ")[2]), Player.UserId, Player.Name)
-        end
-    end)
+local function setPlayerRank(Player: Player, Rank: number | string)
+    Vibes:setRank(Player.UserId, Rank)
 end
 ```
