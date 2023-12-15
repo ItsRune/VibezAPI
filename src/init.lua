@@ -936,10 +936,9 @@ function api:_checkHttp()
 end
 
 --[=[
-	Sets the rank of a player and uses "whoCalled" to send a message with origin logging name.
-	@param userId string | number
-	@param whoCalled { userName: string, userId: number }
-	@return rankResponse
+	Disconnects and reconnects player events to fix permissions within servers.
+	@param userId number
+	@return ()
 
 	@yields
 	@private
