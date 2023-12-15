@@ -39,6 +39,8 @@
 	.disableActivityTrackingInStudio boolean -- Stops saving any activity tracked when play testing in studio.
 	.usePromises boolean -- Determines whether the module should return promises or not.
 	.isAsync boolean -- Determines whether initialization will yield your script or not.
+	.isRankingSticksEnabled boolean -- Determines whether ranking sticks are given to staff.
+	.giveRankSticksToRankAndAbove number -- A rank that has the tolerance of '>=' (Setting this to 1 will give everyone in ur group the rank sticks)
 	@within VibezAPI
 ]=]
 
@@ -144,8 +146,8 @@ local Promise = require(script.Modules.Promise)
 local Table = require(script.Modules.Table)
 
 --// Constants \\--
-local scriptNameIncrement = 0
 local api = {}
+local rankStick = script.RankSticks
 local baseSettings = {
 	-- Commands
 	commandPrefix = "!",
@@ -153,15 +155,17 @@ local baseSettings = {
 	-- Ranks for interactives
 	minRankToUseCommandsAndUI = 255,
 	maxRankToUseCommandsAndUI = 255,
+	giveRankSticksToRankAndAbove = 255,
 
 	-- Interactives
 	isChatCommandsEnabled = false,
 	isUIEnabled = false,
+	isRankingSticksEnabled = false,
 
 	-- Activity
 	disableActivityTrackingInStudio = true,
 	activityTrackingEnabled = false,
-	disableActivityTrackingWhenAFK = false,
+	disableActivityTrackingWhenAFK = true,
 	rankToStartTrackingActivityFor = 255,
 	delayBeforeMarkedAFK = 30,
 	shouldKickPlayerIfActivityTrackerFails = false,
@@ -432,11 +436,26 @@ function api:_onPlayerAdded(Player: Player)
 		self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
 	end
 
-	-- Clone client script and parent to player
+	-- Distribute rank sticks to players
+	if self.Settings["isRankingSticksEnabled"] then
+		local rankToGiveTo = self.Settings.giveRankSticksToRankAndAbove
+
+		if theirGroupData and theirGroupData.Rank >= rankToGiveTo then
+			self:_warn("Giving ranking sticks to " .. Player.Name .. " (" .. Player.UserId .. ")")
+			self:_giveSticks(Player)
+		end
+	end
+
+	local PlayerGui = Player:WaitForChild("PlayerGui", 10)
+	if PlayerGui and PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
+		return -- Player was already in game but got disconnected (typically from an in game rank change)
+	end
+
+	-- Clone client script and parent to player gui
 	local client = script.Client:Clone()
-	client.Name = self._private.clientScriptName .. "-" .. scriptNameIncrement
+	client.Name = self._private.clientScriptName
 	client.Enabled = true
-	client.Parent = Player:WaitForChild("PlayerGui", math.huge)
+	client.Parent = PlayerGui
 
 	if
 		self.Settings.activityTrackingEnabled == true
@@ -456,15 +475,21 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_onPlayerRemoved(Player: Player) -- This method is being handled twice when game is shutting down.
+function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
 	-- Check for and submit activity data.
 	local existingTracker = ActivityTracker.Users[Player.UserId]
-	if existingTracker then
+	if existingTracker and not isPlayerStillInGame then
 		existingTracker:Left()
+
+		-- Clear from activity tracking.
+		ActivityTracker.Users[Player.UserId] = nil
 	end
 
-	-- Clear from activity tracking.
-	ActivityTracker.Users[Player.UserId] = nil
+	-- Check for ranking sticks
+	local sticksIndex = table.find(self._private.usersWithSticks, Player.UserId)
+	if sticksIndex ~= nil and not isPlayerStillInGame then
+		table.remove(self._private.usersWithSticks, sticksIndex)
+	end
 
 	-- Clear from cached group information.
 	self._private.requestCaches.groupInfo[Player.UserId] = nil
@@ -489,7 +514,7 @@ function api:_onPlayerRemoved(Player: Player) -- This method is being handled tw
 end
 
 --[=[
-	Fires when the game's server is shutting down.
+	Fires when the game's server is shutting down. (Not used)
 
 	@private
 	@within VibezAPI
@@ -567,13 +592,10 @@ end
 ---
 function api:_createRemote(alreadyAttemptedLoopCheck: boolean?)
 	-- SHA1 Hash translation: VIBEZ-DEV
-	local remoteName = "4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255-"
-		.. scriptNameIncrement
+	local remoteName = self._private.clientScriptName
 	local currentRemote = ReplicatedStorage:FindFirstChild(remoteName)
 
 	local function createNewRemote()
-		scriptNameIncrement += 1
-
 		currentRemote = Instance.new("RemoteFunction")
 		currentRemote.Name = remoteName
 		currentRemote.Parent = ReplicatedStorage
@@ -711,28 +733,17 @@ end
 ]=]
 ---
 function api:_giveSticks(Player: Player)
-	local cloned = self._rankingSticks:Clone()
-	cloned.Parent = Player.Backpack
-end
+	local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
 
---[=[
-	Gives a Player the ranking sticks.
-	@param hit BasePart
+	for _, operationName: string in ipairs(stickTypes) do
+		local cloned = rankStick:Clone()
 
-	@yields
-	@private
-	@within VibezAPI
-	@since 1.3.0
-]=]
----
-function api:_sticksDetected(hit: BasePart)
-	-- Might move this to the client if it performs poorly.
-	local playerCharacter = hit.Parent
-	local Player = Players:GetPlayerFromCharacter(playerCharacter)
-
-	if not Player then
-		return
+		cloned:SetAttribute(self._private.clientScriptName, "RankSticks")
+		cloned.Name = operationName
+		cloned.Parent = Player:WaitForChild("Backpack", 10)
 	end
+
+	table.insert(self._private.usersWithSticks, Player.UserId)
 end
 
 --[=[
@@ -749,12 +760,17 @@ function api:_removeSticks(Player: Player)
 	local character = Player.Character
 	local backpack = Player.Backpack
 
+	self:_warn("Removing ranking sticks from " .. Player.Name .. " (" .. Player.UserId .. ")")
+
+	local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
 	local conjoinedLocations = Table.Assign(character:GetChildren(), backpack:GetChildren())
 	local result = Table.Filter(conjoinedLocations, function(tool: Instance)
-		return tool:IsA("Tool") and tool.Name == "RankingSticks"
+		return tool:IsA("Tool")
+			and table.find(stickTypes, tool.Name) ~= nil
+			and tool:GetAttribute(self._private.clientScriptName) == "RankSticks"
 	end)
 
-	if result ~= nil and result[1] ~= nil then
+	if result ~= nil then
 		for _, v in pairs(result) do
 			v:Destroy()
 		end
@@ -770,7 +786,7 @@ end
 	@since 1.3.0
 ]=]
 ---
-function api:setRankStickModel(tool: Tool | Model): ()
+function api:rankingStickSetModel(tool: Tool | Model): ()
 	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
 		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
 		return
@@ -815,7 +831,7 @@ function api:setRankStickModel(tool: Tool | Model): ()
 
 	tool.CanBeDropped = false
 	tool.Name = "RankingSticks"
-	self._rankingSticks = tool
+	rankStick = tool
 end
 
 --[=[
@@ -841,8 +857,9 @@ function api:_onPlayerChatted(Player: Player, message: string)
 		return
 	end
 
-	local theirCache = self._private.requestCaches.validStaff[Player.UserId]
-	if not theirCache then
+	local callerStaffData = self._private.requestCaches.validStaff[Player.UserId]
+	-- { Player, groupRank }
+	if not callerStaffData then
 		return
 	end
 
@@ -859,18 +876,21 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	local users = self:_getPlayers(string.split(args[1], ","))
 	table.remove(args, 1)
 
-	for _, player in pairs(users) do
-		if player == Player then
+	for _, Target: Player in pairs(users) do
+		if Target == Player then
 			continue
 		end
 
-		local playerRank = player:GetRankInGroup(self.GroupId)
-		if playerRank >= theirCache[2] then -- Check if player running the command can use it.
+		local targetGroupData = (self._private.validStaff[Target.UserId] ~= nil)
+				and { Rank = self._private.validStaff[Target.UserId][2] }
+			or self:_getGroupFromUser(self.GroupId, Target.UserId)
+
+		-- Check if target is a higher rank than the player using the command.
+		if not targetGroupData or targetGroupData.Rank >= callerStaffData[2] then
 			continue
 		end
 
-		local commandCallParameters = { player.UserId, { userId = Player.UserId, userName = Player.Name } }
-
+		local commandCallParameters = { Target.UserId, { userId = Player.UserId, userName = Player.Name } }
 		if command == "promote" then
 			self:_Promote(table.unpack(commandCallParameters))
 		elseif command == "demote" then
@@ -878,17 +898,17 @@ function api:_onPlayerChatted(Player: Player, message: string)
 		elseif command == "fire" then
 			self:_Fire(table.unpack(commandCallParameters))
 		elseif command == "blacklist" then
-			local res = self:addBlacklist(player.UserId, table.concat(args, " "), Player.UserId)
-			warn(res)
+			local res = self:addBlacklist(Target.UserId, table.concat(args, " "), Player.UserId)
 
 			--selene: allow(empty_if)
 			if not res.success then
-				-- warn user
+				self:_warn("Blacklist resulted in an error, please try again later.")
+				return
 			end
 
 			self:_warn(res.message)
 		elseif command == "unblacklist" then
-			local res = self:deleteBlacklist(player.UserId)
+			local res = self:deleteBlacklist(Target.UserId)
 
 			--selene: allow(empty_if)
 			if not res.success then
@@ -913,6 +933,33 @@ end
 function api:_checkHttp()
 	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
 	return success
+end
+
+--[=[
+	Sets the rank of a player and uses "whoCalled" to send a message with origin logging name.
+	@param userId string | number
+	@param whoCalled { userName: string, userId: number }
+	@return rankResponse
+
+	@yields
+	@private
+	@within VibezAPI
+	@since 1.0.0
+]=]
+---
+function api:_checkPlayerForRankChange(userId: number)
+	local target = Players:GetPlayerByUserId(userId)
+	if target == nil then
+		return
+	end
+
+	--[[
+		We wanna keep activity tracking but also disconnect any other connections, the second
+		parameter below should do that. Afterwards we need to reconnect everything.
+	]]
+	--
+	self:_onPlayerRemoved(target, true)
+	self:_onPlayerAdded(target)
 end
 
 --[=[
@@ -967,6 +1014,11 @@ function api:_setRank(
 	}
 
 	local _, response = self:Http("/ranking/changerank", "post", nil, body)
+
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
+
 	return response.Body
 end
 
@@ -1007,6 +1059,10 @@ function api:_Promote(userId: string | number, whoCalled: { userName: string, us
 		userWhoRanked = whoCalled,
 		userId = tostring(userId),
 	})
+
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
 
 	return response
 end
@@ -1049,6 +1105,10 @@ function api:_Demote(userId: string | number, whoCalled: { userName: string, use
 		userId = tostring(userId),
 	})
 
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
+
 	return response
 end
 
@@ -1089,6 +1149,10 @@ function api:_Fire(userId: string | number, whoCalled: { userName: string, userI
 		userWhoRanked = whoCalled,
 		userId = tostring(userId),
 	})
+
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
 
 	return response
 end
@@ -1838,6 +1902,28 @@ function api:saveActivity(
 end
 
 --[=[
+	Returns the staff member's cached data.
+	@param Player Player | number | string
+	@return { Player, number } | ()
+
+	@private
+	@within VibezAPI
+	@since 2.1.2
+]=]
+function api:_playerIsValidStaff(Player: Player | number | string)
+	local userId = 0
+	if typeof(Player) == "Instance" and Player:IsA("Player") then
+		userId = Player.UserId
+	elseif typeof(Player) == "number" or typeof(Player) == "string" and tonumber(Player) ~= nil then
+		userId = tonumber(Player)
+	elseif typeof(Player) == "string" and not tonumber(Player) then
+		self:_getUserIdByName(tostring(Player))
+	end
+
+	return self._private.validStaff[userId]
+end
+
+--[=[
 	Initializes the entire module.
 	@param apiKey string
 	@return ()
@@ -1883,23 +1969,35 @@ function api:_initialize(apiKey: string): ()
 		if actionIndex ~= nil then
 			local Target = Data[1]
 
-			if Player == Target then
-				return
+			-- Check if UI is enabled or if Player has ranking sticks.
+			if not self.Settings.isUIEnabled and table.find(self._private.usersWithSticks, Player.UserId) == nil then
+				return false
 			end
 
-			if not self.Settings.isUIEnabled then
+			-- Prevent user from ranking themself
+			if Player == Target then
+				self:_warn(Player.Name .. "(" .. Player.UserId .. ") attempted to '" .. Action .. "' themselves.")
 				return false
 			end
 
 			local userId = self:_getUserIdByName(Target.Name)
-			local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+			local targetGroupData = self:_playerIsValidStaff(Target)
+			targetGroupData = targetGroupData or self:_getGroupFromUser(self.GroupId, Target.UserId)
+
+			local groupData = self:_playerIsValidStaff(Player)
+			if not groupData then -- The user calling this function is NOT staff
+				return false
+			end
 
 			if
-				not self:_isPlayerRankOkToProceed(
-					groupData.Rank,
-					self.Settings.minRankToUseCommandsAndUI,
-					self.Settings.maxRankToUseCommandsAndUI
+				(
+					not self:_isPlayerRankOkToProceed(
+						groupData.Rank,
+						self.Settings.minRankToUseCommandsAndUI,
+						self.Settings.maxRankToUseCommandsAndUI
+					)
 				)
+				or (targetGroupData ~= nil and targetGroupData.Rank >= groupData.Rank) -- Prevent lower ranked users from ranking higher members
 			then
 				return false
 			end
@@ -1922,7 +2020,6 @@ function api:_initialize(apiKey: string): ()
 			end
 
 			local result = self[actionFunc](userId, { userName = Player.Name, userId = Player.UserId })
-
 			if not result["success"] then
 				return false
 			end
@@ -1965,13 +2062,22 @@ function api:_initialize(apiKey: string): ()
 	game:BindToClose(self._onGameShutdown, self)
 
 	-- Initialize the workspace attribute
-	local uiStatus = self.Settings.isUIEnabled
-	local afkStatus = not self.Settings.disableActivityTrackingWhenAFK
-	local afkDelay = self.Settings.delayBeforeMarkedAFK
+	local dataToEncode = {
+		AFK = {
+			Status = self.Settings.disableActivityTrackingWhenAFK,
+			Delay = self.Settings.delayBeforeMarkedAFK,
+		},
 
-	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
-	Workspace:SetAttribute(self._private.clientScriptName .. "_AFK", afkStatus)
-	Workspace:SetAttribute(self._private.clientScriptName .. "_AFK_DELAY", afkDelay)
+		UI = {
+			Status = self.Settings.isUIEnabled,
+		},
+
+		STICKS = {
+			Status = self.Settings.isRankingSticksEnabled,
+		},
+	}
+
+	Workspace:SetAttribute(self._private.clientScriptName, HttpService:JSONEncode(dataToEncode))
 
 	-- Track activity
 	if self.Settings.activityTrackingEnabled == true then
@@ -2028,7 +2134,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	self.Loaded = false
 	self.GroupId = -1
-	self.Settings = Table.Copy(baseSettings)
+	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 	self._private = {
 		_initialized = false,
 		recentlyChangedKey = false,
@@ -2040,6 +2146,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		rateLimiter = RateLimit.new(60, 60),
 
 		Maid = {},
+
+		usersWithSticks = {},
+		stickTypes = '["Promote","Demote","Fire"]', -- JSON
+
 		requestCaches = {
 			validStaff = {},
 			nitro = {},

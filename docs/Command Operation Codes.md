@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 **Note: This is considered an advanced tutorial, if you don't understand lua/luau, I would not recommend attempting to create your own operations!**

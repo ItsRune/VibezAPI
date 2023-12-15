@@ -1,5 +1,6 @@
 -- Not as clean as the main module. But it works...
 --// Services \\--
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -10,15 +11,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
-local incrementedNumber = string.split(script.Name, "-")[2]
-local Remote = ReplicatedStorage:WaitForChild(
-	"4bc06805148f173646ac84bff8a02dda70cbe6da-2fada46fb6f0950336a4765018e59d30b4ac5255-" .. incrementedNumber,
-	math.huge
-)
+local Remote = ReplicatedStorage:WaitForChild(script.Name, math.huge)
 local eventHolder = {}
 local Maid = {}
-local afkConnections = {}
-local State = false
+local afkDelayOffset = 5
+local isUIContextEnabled = false
+local Zone = require(script.Zone)
 
 --// Functions \\--
 --selene: allow(unused_variable)
@@ -26,9 +24,106 @@ local function onSetupWidgets()
 	--
 end
 
+local function undoRankSticks()
+	if Maid["RankSticks"] ~= nil then
+		for _, v in pairs(Maid.RankSticks) do
+			if typeof(v) == "RBXScriptConnection" then
+				v:Disconnect()
+			elseif typeof(v) == "table" then
+				for _, b in pairs(v) do
+					b:Disconnect()
+				end
+			end
+		end
+	end
+
+	Maid["RankSticks"] = nil
+end
+
+local function onSetupRankSticks()
+	local custScriptName = string.split(script.Name, "-")[1]
+	local Character = Player.Character or Player.CharacterAdded:Wait()
+
+	undoRankSticks()
+	Maid["RankSticks"] = {}
+
+	table.insert(
+		Maid.RankSticks,
+		Character.ChildAdded:Connect(function(child: Instance)
+			if child:GetAttribute(custScriptName) == "RankSticks" and child:IsA("Tool") then
+				local actionName = child.Name
+
+				Maid.RankSticks[actionName] = {
+					child.Activated:Connect(function()
+						local cf, size = Character:GetBoundingBox()
+						local newPart = Instance.new("Part")
+						local Weld = Instance.new("WeldConstraint")
+
+						newPart.Name = actionName .. "_Checker"
+						newPart.Transparency = 0.5
+						newPart.CFrame = cf * CFrame.new(0, 0, -size.Z * 2.25)
+						newPart.Anchored = false
+						newPart.Size = size + Vector3.new(0, 0, size.Z)
+						newPart.BrickColor = BrickColor.Red()
+						newPart.Massless = true
+						newPart.Parent = Character.PrimaryPart
+
+						Weld.Name = newPart.Name
+						Weld.Part0 = newPart
+						Weld.Part1 = Character.PrimaryPart
+						Weld.Parent = newPart
+
+						local zone = Zone.new(newPart)
+						local players = zone:getPlayers()
+
+						zone:destroy()
+						newPart:Destroy()
+
+						local closestTarget = nil
+						for _, target: Player in pairs(players) do
+							local t_char = target.Character
+							local c_char = closestTarget.Character
+
+							if
+								closestTarget == nil
+								or (
+									closestTarget ~= nil
+									and (Character.PrimaryPart.Position - c_char.PrimaryPart.Position).Magnitude
+										> (Character.PrimaryPart.Position - t_char.PrimaryPart.Position).Magnitude
+								)
+							then
+								closestTarget = target
+							end
+						end
+
+						if closestTarget == nil then
+							return -- No one close enough
+						end
+
+						Remote:InvokeServer(string.lower(actionName), closestTarget)
+					end),
+				}
+			end
+		end)
+	)
+
+	table.insert(
+		Maid.RankSticks,
+		Character.ChildRemoved:Connect(function(child: Instance)
+			if child:GetAttribute(custScriptName) == "RankSticks" and child:IsA("Tool") then
+				if Maid.RankSticks[child.Name] ~= nil then
+					for _, v: RBXScriptConnection in pairs(Maid.RankSticks[child.Name]) do
+						v:Disconnect()
+					end
+				end
+			end
+		end)
+	)
+end
+
 local function onSetupUI()
-	if State == false then
-		State = StarterGui:GetCore("AvatarContextMenuEnabled")
+	if isUIContextEnabled == false then
+		isUIContextEnabled = StarterGui:GetCore("AvatarContextMenuEnabled")
 	end
 
 	eventHolder["Promote"] = Instance.new("BindableEvent")
@@ -141,33 +236,52 @@ local function undoUISetup()
 	end
 	eventHolder = {}
 
-	if State == true then
+	if isUIContextEnabled == true then
 		return
 	end
 
 	StarterGui:SetCore("AvatarContextMenuEnabled", false)
 end
 
+local function undoAfkCheck()
+	if not Maid["AFK"] then
+		return
+	end
+
+	for _, v in pairs(Maid.AFK) do
+		v:Disconnect()
+	end
+
+	pcall(function()
+		RunService:UnbindFromRenderStep("Vibez_AFK_Tracker")
+	end)
+
+	Maid.AFK = nil
+end
+
 local function setupAFKCheck()
+	undoAfkCheck()
+
 	local lastCheck = DateTime.now().UnixTimestamp
 	local Counter = 0
 
+	Maid["AFK"] = {}
 	table.insert(
-		afkConnections,
+		Maid.AFK,
 		UserInputService.WindowFocused:Connect(function()
 			Remote:InvokeServer("Afk", false)
 		end)
 	)
 
 	table.insert(
-		afkConnections,
+		Maid.AFK,
 		UserInputService.WindowFocusReleased:Connect(function()
 			Remote:InvokeServer("Afk", true)
 		end)
 	)
 
 	table.insert(
-		afkConnections,
+		Maid.AFK,
 		UserInputService.InputBegan:Connect(function()
 			if Counter >= 30 then
 				warn("undid Afk from counter")
@@ -181,14 +295,13 @@ local function setupAFKCheck()
 	pcall(function()
 		RunService:BindToRenderStep("Vibez_AFK_Tracker", Enum.RenderPriority.Last.Value, function()
 			local now = DateTime.now().UnixTimestamp
-			local delayOffset = Workspace:GetAttribute(script.Name .. "_AFK_DELAY")
 
-			if tonumber(delayOffset) == nil then
-				delayOffset = 30
+			if tonumber(afkDelayOffset) == nil then
+				afkDelayOffset = 30
 			end
 
 			-- Prevent checks from force updating the AFK
-			if Counter == delayOffset then
+			if Counter == afkDelayOffset then
 				return
 			end
 
@@ -199,50 +312,52 @@ local function setupAFKCheck()
 			lastCheck = now
 			Counter += 1
 
-			if Counter == delayOffset then
+			if Counter == afkDelayOffset then
 				Remote:InvokeServer("Afk", true)
 			end
 		end)
 	end)
 end
 
-local function undoAfkCheck()
-	for _, v in pairs(afkConnections) do
-		v:Disconnect()
-	end
-
-	pcall(function()
-		RunService:UnbindFromRenderStep("Vibez_AFK_Tracker")
-	end)
-
-	table.clear(afkConnections)
-end
-
-local function onAfkAttributeChanged()
-	local isEnabled = Workspace:GetAttribute(script.Name .. "_AFK")
-	if isEnabled then
-		setupAFKCheck()
-	else
-		undoAfkCheck()
-	end
-end
-
 local function onAttributeChanged()
-	local isEnabled = Workspace:GetAttribute(script.Name .. "_UI")
-	if isEnabled then
+	local isOk, States = nil, Workspace:GetAttribute(script.Name)
+
+	warn(isOk, States)
+	if not States then
+		return
+	end
+
+	isOk, States = pcall(HttpService.JSONDecode, HttpService, States)
+	if not isOk then
+		return
+	end
+
+	if States.UI.Status == true then
 		onSetupUI()
 	else
 		undoUISetup()
 	end
+
+	if States.AFK.Status == true then
+		setupAFKCheck()
+	else
+		undoAfkCheck()
+	end
+
+	if States.STICKS.Status == true then
+		onSetupRankSticks()
+	else
+		undoRankSticks()
+	end
+
+	afkDelayOffset = States.AFK.Delay
 end
 
 local function onStart()
-	onAfkAttributeChanged()
 	onAttributeChanged()
 
 	-- Attribute Checks
-	Workspace:GetAttributeChangedSignal(script.Name .. "_AFK"):Connect(onAfkAttributeChanged)
-	Workspace:GetAttributeChangedSignal(script.Name .. "_UI"):Connect(onAttributeChanged)
+	Workspace:GetAttributeChangedSignal(script.Name):Connect(onAttributeChanged)
 
 	if script.Parent.Name ~= "PlayerScripts" then
 		task.wait(5)

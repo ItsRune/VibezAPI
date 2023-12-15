@@ -54,6 +54,8 @@ export type activityResponse = {
 }
 
 export type rankResponse = {
+	success: boolean,
+	message: string?,
 	newRank: {
 		id: number,
 		name: string,
