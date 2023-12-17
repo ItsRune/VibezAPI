@@ -100,7 +100,7 @@ local function onSetupRankSticks()
 							return -- No one close enough
 						end
 
-						Remote:InvokeServer(string.lower(actionName), closestTarget)
+						Remote:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
 					end),
 				}
 			end
@@ -131,19 +131,19 @@ local function onSetupUI()
 	eventHolder["Fire"] = Instance.new("BindableEvent")
 
 	local function promote(target)
-		Remote:InvokeServer("promote", target)
+		Remote:InvokeServer("promote", "Interface", target)
 	end
 
 	local function demote(target)
-		Remote:InvokeServer("demote", target)
+		Remote:InvokeServer("demote", "Interface", target)
 	end
 
 	local function fire(target)
-		Remote:InvokeServer("fire", target)
+		Remote:InvokeServer("fire", "Interface", target)
 	end
 
 	local function blacklist(target)
-		Remote:InvokeServer("blacklist", target)
+		Remote:InvokeServer("blacklist", "Interface", target)
 	end
 
 	table.insert(Maid, eventHolder.Promote.Event:Connect(promote))

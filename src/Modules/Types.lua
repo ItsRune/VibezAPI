@@ -92,7 +92,7 @@ export type httpResponse = {
 	rawBody: string,
 }
 
-export type vibezSettings = {
+export type legacyVibezSettings = {
 	commandPrefix: string,
 	minRankToUseCommandsAndUI: number,
 	maxRankToUseCommandsAndUI: number,
@@ -107,6 +107,47 @@ export type vibezSettings = {
 	overrideGroupCheckForStudio: boolean,
 	ignoreWarnings: boolean,
 	usePromises: boolean,
+}
+
+export type vibezSettings = {
+	Commands: {
+		Enabled: boolean,
+		MinRank: number,
+		MaxRank: number,
+		Prefix: string,
+	},
+
+	RankSticks: {
+		Enabled: boolean,
+		MinRank: number,
+
+		SticksModel: Model?,
+	},
+
+	Interface: {
+		Enabled: boolean,
+		MinRank: number,
+		MaxRank: number,
+	},
+
+	ActivityTracker: {
+		Enabled: boolean,
+		MinRank: number,
+
+		disableWhenInStudio: boolean,
+		disableWhenAFK: boolean,
+		delayBeforeMarkedAFK: number,
+		shouldKickIfActivityTrackerFails: boolean,
+		trackerFailedMessage: string,
+	},
+
+	Misc: {
+		originLoggerText: string,
+		ignoreWarnings: boolean,
+		overrideGroupCheckForStudio: boolean,
+		isAsync: boolean,
+		usePromises: boolean,
+	},
 }
 
 export type httpFunction = (

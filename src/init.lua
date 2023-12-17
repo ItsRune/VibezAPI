@@ -22,25 +22,11 @@
 --// Documentation \\--
 --[=[
 	@interface extraOptionsType
-	.isChatCommandsEnabled boolean -- Automatically load commands for users.
-	.isUIEnabled boolean -- Allow for player's to click on another for ranking options.
-	.commandPrefix string -- Change the prefix of commands.
-	.minRankToUseCommandsAndUI number -- Minimum rank to use commands. (Default: 255)
-	.maxRankToUseCommandsAndUI number -- Maximum rank to use commands. (Default: 255)
-	.overrideGroupCheckForStudio boolean -- When in studio, it'll force any rank checks to be the 'maxRankForCommands' value.
-	.nameOfGameForLogging string -- Name of logger's 'Origin' embed field.
-	.ignoreWarnings boolean -- Ignores any VibezAPI warnings (Excluding Webhooks & Activity Tracking)
-	.activityTrackingEnabled boolean -- Track a user's activity if their rank is higher than 'rankToStartTrackingActivityFor'.
-	.rankToStartTrackingActivityFor boolean -- Minimum rank required to start tracking activity. (Default: 255)
-	.disableActivityTrackingWhenAFK boolean -- Subtracts time of users who are detected as 'AFK'.
-	.shouldKickPlayerIfActivityTrackerFails boolean -- When enabled, it'll kick the player if the activity tracker can't initialize a player.
-	.activityTrackerFailedMessage string -- The kick message for a player if their activity tracker fails to load.
-	.delayBeforeMarkedAFK number -- The amount of time in seconds before a player is marked 'AFK'. (Default: 30)
-	.disableActivityTrackingInStudio boolean -- Stops saving any activity tracked when play testing in studio.
-	.usePromises boolean -- Determines whether the module should return promises or not.
-	.isAsync boolean -- Determines whether initialization will yield your script or not.
-	.isRankingSticksEnabled boolean -- Determines whether ranking sticks are given to staff.
-	.giveRankSticksToRankAndAbove number -- A rank that has the tolerance of '>=' (Setting this to 1 will give everyone in ur group the rank sticks)
+	.Commands { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string }
+	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
+	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
+	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, shouldKickIfActivityTrackerFails: boolean, trackerFailedMessage: string }
+	.Misc { originLoggerText: string, ignoreWarnings: boolean, overrideGroupCheckForStudio: boolean, isAsync: boolean, usePromises: boolean }
 	@within VibezAPI
 ]=]
 
@@ -148,38 +134,49 @@ local Table = require(script.Modules.Table)
 --// Constants \\--
 local api = {}
 local rankStick = script.RankSticks
-local baseSettings = {
-	-- Commands
-	commandPrefix = "!",
+local legacySettings, baseSettings =
+	require(script.Modules.legacySettings), {
+		Commands = {
+			Enabled = false,
+			MinRank = 255,
+			MaxRank = 255,
 
-	-- Ranks for interactives
-	minRankToUseCommandsAndUI = 255,
-	maxRankToUseCommandsAndUI = 255,
-	giveRankSticksToRankAndAbove = 255,
+			Prefix = "!",
+		},
 
-	-- Interactives
-	isChatCommandsEnabled = false,
-	isUIEnabled = false,
-	isRankingSticksEnabled = false,
+		RankSticks = {
+			Enabled = false,
+			MinRank = 255,
+			MaxRank = 255,
 
-	-- Activity
-	disableActivityTrackingInStudio = true,
-	activityTrackingEnabled = false,
-	disableActivityTrackingWhenAFK = true,
-	rankToStartTrackingActivityFor = 255,
-	delayBeforeMarkedAFK = 30,
-	shouldKickPlayerIfActivityTrackerFails = false,
-	activityTrackerFailedMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
+			SticksModel = nil, -- Uses default
+		},
 
-	-- Logging origin name
-	nameOfGameForLogging = game.Name,
+		Interface = {
+			Enabled = false,
+			MinRank = 255,
+			MaxRank = 255,
+		},
 
-	-- Misc
-	overrideGroupCheckForStudio = false,
-	ignoreWarnings = false,
-	isAsync = false,
-	usePromises = false, -- Broken
-}
+		ActivityTracker = {
+			Enabled = false,
+			MinRank = 255,
+
+			disableWhenInStudio = true,
+			disableWhenAFK = false,
+			delayBeforeMarkedAFK = 30,
+			shouldKickIfActivityTrackerFails = false,
+			trackerFailedMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
+		},
+
+		Misc = {
+			originLoggerText = game.Name,
+			ignoreWarnings = false,
+			overrideGroupCheckForStudio = false,
+			isAsync = false,
+			usePromises = false, -- Broken
+		},
+	}
 
 --// Private Functions \\--
 --[=[
@@ -196,7 +193,7 @@ local baseSettings = {
 ]=]
 ---
 function api:_promisify(functionToBind: (...any) -> ...any, ...: any): any
-	if self.Settings.usePromises then
+	if self.Settings.Misc.usePromises then
 		return Promise.promisify(functionToBind)(...)
 	end
 
@@ -252,7 +249,7 @@ function api:Http(
 	Body = (Method ~= "GET" and Method ~= "HEAD") and Body or nil
 
 	if Body then
-		Body["origin"] = self.Settings.nameOfGameForLogging
+		Body["origin"] = self.Settings.Misc.originLoggerText
 	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
@@ -362,9 +359,9 @@ function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?)
 		return self._private.requestCaches.groupInfo[userId]
 	end
 
-	if RunService:IsStudio() and self.Settings.overrideGroupCheckForStudio == true then
+	if RunService:IsStudio() and self.Settings.Misc.overrideGroupCheckForStudio == true then
 		return {
-			Rank = self.Settings.maxRankToUseCommandsAndUI,
+			Rank = 255,
 		}
 	end
 
@@ -437,8 +434,8 @@ function api:_onPlayerAdded(Player: Player)
 	end
 
 	-- Distribute rank sticks to players
-	if self.Settings["isRankingSticksEnabled"] then
-		local rankToGiveTo = self.Settings.giveRankSticksToRankAndAbove
+	if self.Settings.RankSticks.Enabled then
+		local rankToGiveTo = self.Settings.RankSticks.MinRank
 
 		if theirGroupData and theirGroupData.Rank >= rankToGiveTo then
 			self:_warn("Giving ranking sticks to " .. Player.Name .. " (" .. Player.UserId .. ")")
@@ -458,8 +455,8 @@ function api:_onPlayerAdded(Player: Player)
 	client.Parent = PlayerGui
 
 	if
-		self.Settings.activityTrackingEnabled == true
-		and theirGroupData.Rank >= self.Settings.rankToStartTrackingActivityFor
+		self.Settings.ActivityTracker.Enabled == true
+		and theirGroupData.Rank >= self.Settings.ActivityTracker.MinRank
 	then
 		local tracker = ActivityTracker.new(self, Player)
 		table.insert(self._private.requestCaches.validStaff[Player.UserId], tracker)
@@ -853,7 +850,7 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	end
 
 	-- Commands handler
-	if self.Settings.isChatCommandsEnabled == false then
+	if self.Settings.Commands.Enabled == false then
 		return
 	end
 
@@ -864,7 +861,7 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	end
 
 	local args = string.split(message, " ")
-	local commandPrefix = self.Settings.commandPrefix
+	local commandPrefix = self.Settings.Commands.Prefix
 
 	if string.sub(args[1], 0, string.len(commandPrefix)) ~= commandPrefix then
 		return
@@ -1166,7 +1163,7 @@ end
 ]=]
 ---
 function api:_warn(...: string)
-	if self.Settings.ignoreWarnings then
+	if self.Settings.Misc.ignoreWarnings then
 		return
 	end
 
@@ -1375,12 +1372,12 @@ end
 ---
 function api:toggleCommands(override: boolean?): nil
 	if override ~= nil then
-		self.Settings.isChatCommandsEnabled = override
+		self.Settings.Commands.Enabled = override
 	else
-		self.Settings.isChatCommandsEnabled = not self.Settings.isChatCommandsEnabled
+		self.Settings.Commands.Enabled = not self.Settings.Commands.Enabled
 	end
 
-	local status = self.Settings.isChatCommandsEnabled
+	local status = self.Settings.Commands.Enabled
 	local functionToUse = (not status) and "onPlayerRemoved" or "onPlayerAdded"
 
 	for _, player in pairs(Players:GetPlayers()) do
@@ -1487,7 +1484,7 @@ end
 ]=]
 ---
 function api:updateLoggerName(newTitle: string): nil
-	self.Settings.nameOfGameForLogging = tostring(newTitle)
+	self.Settings.Misc.originLoggerText = tostring(newTitle)
 	return self
 end
 
@@ -1602,9 +1599,9 @@ end
 ---
 function api:toggleUI(override: boolean?): nil
 	if override ~= nil then
-		self.Settings.isUIEnabled = override
+		self.Settings.Interface.Enabled = override
 	else
-		self.Settings.isUIEnabled = not self.Settings.isUIEnabled
+		self.Settings.Interface.Enabled = not self.Settings.Interface.Enabled
 	end
 
 	for _, playerData in pairs(self._private.requestCaches.validStaff) do
@@ -1615,7 +1612,7 @@ function api:toggleUI(override: boolean?): nil
 		end
 	end
 
-	local uiStatus = self.Settings.isUIEnabled
+	local uiStatus = self.Settings.Interface.Enabled
 	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
 end
 
@@ -1960,7 +1957,12 @@ function api:_initialize(apiKey: string): ()
 
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
-	communicationRemote.OnServerInvoke = function(Player: Player, Action: string, ...: any)
+	communicationRemote.OnServerInvoke = function(
+		Player: Player,
+		Action: string,
+		Origin: "Interface" | "Sticks",
+		...: any
+	)
 		local rankingActions = { "promote", "demote", "fire" }
 		local Data = { ... }
 
@@ -1969,7 +1971,10 @@ function api:_initialize(apiKey: string): ()
 			local Target = Data[1]
 
 			-- Check if UI is enabled or if Player has ranking sticks.
-			if not self.Settings.isUIEnabled and table.find(self._private.usersWithSticks, Player.UserId) == nil then
+			if
+				not self.Settings.Interface.Enabled
+				and table.find(self._private.usersWithSticks, Player.UserId) == nil
+			then
 				return false
 			end
 
@@ -1992,11 +1997,16 @@ function api:_initialize(apiKey: string): ()
 				(
 					not self:_isPlayerRankOkToProceed(
 						groupData.Rank,
-						self.Settings.minRankToUseCommandsAndUI,
-						self.Settings.maxRankToUseCommandsAndUI
+						(Origin == "Interface") and self.Settings.Interface.MinRank
+							or (Origin == "Sticks" and self.Settings.RankSticks.MinRank)
+							or -1,
+						(Origin == "Interface") and self.Settings.Interface.MaxRank
+							or (Origin == "Sticks" and self.Settings.RankSticks.MaxRank)
+							or -1
 					)
 				)
-				or (targetGroupData ~= nil and targetGroupData.Rank >= groupData.Rank) -- Prevent lower ranked users from ranking higher members
+				or targetGroupData == nil
+				or (targetGroupData.Rank >= groupData.Rank) -- Prevent lower ranked users from ranking higher members
 			then
 				return false
 			end
@@ -2063,16 +2073,16 @@ function api:_initialize(apiKey: string): ()
 	-- Initialize the workspace attribute
 	local dataToEncode = {
 		AFK = {
-			Status = self.Settings.disableActivityTrackingWhenAFK,
-			Delay = self.Settings.delayBeforeMarkedAFK,
+			Status = self.Settings.ActivityTracker.disableWhenAFK,
+			Delay = self.Settings.ActivityTracker.delayBeforeMarkedAFK,
 		},
 
 		UI = {
-			Status = self.Settings.isUIEnabled,
+			Status = self.Settings.Interface.Enabled,
 		},
 
 		STICKS = {
-			Status = self.Settings.isRankingSticksEnabled,
+			Status = self.Settings.RankSticks.Enabled,
 		},
 	}
 
@@ -2093,6 +2103,29 @@ function api:_initialize(apiKey: string): ()
 end
 
 --// Constructor \\--
+local function deepFetch(tbl: { any }, index: string | number)
+	for k, v in pairs(tbl) do
+		if k == index then
+			return v
+		elseif typeof(v) == "table" then
+			return deepFetch(v)
+		end
+	end
+end
+
+local function deepChange(tbl: { any }, index: string | number, value: any)
+	for k, v in pairs(tbl) do
+		if k == index then
+			tbl[k] = value
+			break
+		elseif typeof(v) == "table" then
+			tbl[k] = deepChange(v, index, value)
+		end
+	end
+
+	return tbl
+end
+
 --[=[
 	@function new
 	@within VibezAPI
@@ -2209,23 +2242,66 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	extraOptions = extraOptions or {}
 	for key, value in pairs(extraOptions) do
 		if self.Settings[key] == nil then
+			if legacySettings[key] ~= nil then
+				local data = Table.Copy(legacySettings[key])
+				local hasWarned = false
+
+				for _, strPath: string in pairs(data) do
+					if not hasWarned then
+						hasWarned = true
+						local fixedText = (typeof(value) == "string") and `"{value}"` or tostring(value)
+						self:_warn(
+							`Optional setting '{key}' has been moved to \{["{string.split(strPath, ".")[1]}"] = \{["{string.split(strPath, ".")[2]}"] = {fixedText}\}\}`
+						)
+					end
+
+					local split = string.split(strPath, ".")
+					for i = 2, #split do
+						local tbl = self.Settings[split[1]]
+						if not tbl then
+							break
+						end
+
+						local toCheck = deepFetch(tbl, split[i])
+						if typeof(toCheck) ~= typeof(value) then
+							self:_warn(
+								`Optional key '{key}' is not the same as its default value of '{typeof(toCheck)}'!`
+							)
+							break
+						end
+
+						local newTbl = deepChange(tbl, split[i], value)
+						self.Settings[split[1]] = newTbl
+					end
+				end
+
+				continue
+			end
+
 			self:_warn(`Optional key '{key}' is not a valid option.`)
-			continue
-		elseif typeof(self.Settings[key]) ~= typeof(value) then
-			self:_warn( -- This is only made like this to fix github syntax highlights.
-				"Optional key '"
-					.. key
-					.. "' is not the same as it's defined value of "
-					.. typeof(self.Settings[key])
-					.. "!"
-			)
 			continue
 		end
 
-		self.Settings[key] = value
+		if typeof(value) == "table" then
+			for k, j in pairs(value) do
+				if self.Settings[key][k] == nil then
+					self:_warn(`Optional key 'Settings.{key}.{k}' is not a valid option.`)
+					continue
+				elseif typeof(self.Settings[key][k]) ~= typeof(j) then
+					-- stylua: ignore
+					-- Styles were messing up this line
+					self:_warn(`Optional key 'Settings.{key}.{k}' is not the same type as its default value of '{typeof(self.Settings[key][k])}'!`)
+					continue
+				end
+
+				self.Settings[key][k] = j
+			end
+		else
+			self.Settings[key] = value
+		end
 	end
 
-	if self.Settings.isAsync then
+	if self.Settings.Misc.isAsync then
 		coroutine.wrap(self._initialize)(self, apiKey)
 	else
 		self:_initialize(apiKey)
