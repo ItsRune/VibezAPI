@@ -11,7 +11,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
-local Remote = ReplicatedStorage:WaitForChild(script.Name, math.huge)
+local remoteFunction = ReplicatedStorage:WaitForChild(script.Name .. "_Function", math.huge)
+-- local remoteEvent = ReplicatedStorage:WaitForChild(script.Name .. "_Event", math.huge)
 local eventHolder = {}
 local Maid = {}
 local afkDelayOffset = 5
@@ -19,24 +20,79 @@ local isUIContextEnabled = false
 local Zone = require(script.Zone)
 
 --// Functions \\--
---selene: allow(unused_variable)
-local function onSetupWidgets()
-	--
+local function disconnect(data: { any } | RBXScriptConnection)
+	if typeof(data) == "table" then
+		for _, v in pairs(data) do
+			disconnect(v)
+		end
+	elseif typeof(data) == "RBXScriptConnection" then
+		data:Disconnect()
+	end
+end
+
+local function undoNotifications()
+	if not Maid["Notifications"] then
+		return
+	end
+
+	local PlayerGui = Player:WaitForChild("PlayerGui")
+	if PlayerGui:FindFirstChild(script.Name) ~= nil then
+		PlayerGui:FindFirstChild(script.Name):Destroy()
+	end
+
+	disconnect(Maid["Notifications"])
+	Maid["Notifications"] = nil
+end
+
+local function setupNotifications()
+	undoNotifications()
+	Maid["Notifications"] = {}
+
+	local PlayerGui = Player:WaitForChild("PlayerGui")
+	local Gui = script.Notifications:Clone()
+	-- local Data = HttpService:JSONDecode(Workspace:GetAttribute(script.Name))
+
+	Gui.Name = script.Name
+	Gui.Parent = PlayerGui
+
+	-- Positioning | TODO: Add functionality and support for notifications on ranking/blacklisting methods
+	-- local positions = {
+	-- 	-- Format: Position, AnchorPoint
+	-- 	-- | _ | Ignore character
+	-- 	["bottom"] = { "_,_,1,0", "_,1" },
+	-- 	["top"] = { "_,_,0,0", "_,0" },
+	-- 	["left"] = { "0,0,_,_", "0,_" },
+	-- 	["right"] = { "_,_,1,0", "1,_" },
+	-- }
+
+	-- local function findClosest(text: string)
+	-- 	for name, value in pairs(positions) do
+	-- 		if string.sub(string.lower(tostring(text)), 1, 1) == string.sub(string.lower(tostring(name)), 1, 1) then
+	-- 			return value
+	-- 		end
+	-- 	end
+	-- 	return nil
+	-- end
+
+	-- for _, posName: string in pairs(Data.UI.Notifications.Position) do
+	-- 	warn(posName, findClosest(posName))
+	-- end
+
+	-- Connection
+	-- table.insert(
+	-- 	Maid["Notifications"],
+	-- 	remoteEvent.OnClientEvent:Connect(function(Type: "Error" | "Warning" | "Info", Message: string)
+	-- 		--
+	-- 	end)
+	-- )
 end
 
 local function undoRankSticks()
-	if Maid["RankSticks"] ~= nil then
-		for _, v in pairs(Maid.RankSticks) do
-			if typeof(v) == "RBXScriptConnection" then
-				v:Disconnect()
-			elseif typeof(v) == "table" then
-				for _, b in pairs(v) do
-					b:Disconnect()
-				end
-			end
-		end
+	if Maid["RankSticks"] == nil then
+		return
 	end
 
+	disconnect(Maid["RankSticks"])
 	Maid["RankSticks"] = nil
 end
 
@@ -100,7 +156,7 @@ local function onSetupRankSticks()
 							return -- No one close enough
 						end
 
-						Remote:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
+						remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
 					end),
 				}
 			end
@@ -131,25 +187,26 @@ local function onSetupUI()
 	eventHolder["Fire"] = Instance.new("BindableEvent")
 
 	local function promote(target)
-		Remote:InvokeServer("promote", "Interface", target)
+		remoteFunction:InvokeServer("promote", "Interface", target)
 	end
 
 	local function demote(target)
-		Remote:InvokeServer("demote", "Interface", target)
+		remoteFunction:InvokeServer("demote", "Interface", target)
 	end
 
 	local function fire(target)
-		Remote:InvokeServer("fire", "Interface", target)
+		remoteFunction:InvokeServer("fire", "Interface", target)
 	end
 
 	local function blacklist(target)
-		Remote:InvokeServer("blacklist", "Interface", target)
+		remoteFunction:InvokeServer("blacklist", "Interface", target)
 	end
 
-	table.insert(Maid, eventHolder.Promote.Event:Connect(promote))
-	table.insert(Maid, eventHolder.Demote.Event:Connect(demote))
-	table.insert(Maid, eventHolder.Fire.Event:Connect(fire))
-	table.insert(Maid, eventHolder.Blacklist.Event:Connect(blacklist))
+	Maid["UI"] = {}
+	table.insert(Maid["UI"], eventHolder.Promote.Event:Connect(promote))
+	table.insert(Maid["UI"], eventHolder.Demote.Event:Connect(demote))
+	table.insert(Maid["UI"], eventHolder.Fire.Event:Connect(fire))
+	table.insert(Maid["UI"], eventHolder.Blacklist.Event:Connect(blacklist))
 
 	StarterGui:SetCore("AvatarContextMenuEnabled", true)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
@@ -207,7 +264,7 @@ local function onSetupUI()
 	end)
 
 	table.insert(
-		Maid,
+		Maid["UI"],
 		Workspace.CurrentCamera.ChildAdded:Connect(function(child)
 			if child.Name == "ContextMenuArrow" then
 				child:WaitForChild("Union").Color = Color3.fromRGB(251, 155, 213)
@@ -226,10 +283,8 @@ local function undoUISetup()
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Demote")
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Fire")
 
-	for _, connections: RBXScriptConnection in pairs(Maid) do
-		connections:Disconnect()
-	end
-	Maid = {}
+	disconnect(Maid["UI"])
+	Maid["UI"] = nil
 
 	for _, binds in pairs(eventHolder) do
 		binds:Destroy()
@@ -248,15 +303,12 @@ local function undoAfkCheck()
 		return
 	end
 
-	for _, v in pairs(Maid.AFK) do
-		v:Disconnect()
-	end
+	disconnect(Maid["AFK"])
+	Maid["AFK"] = nil
 
 	pcall(function()
 		RunService:UnbindFromRenderStep("Vibez_AFK_Tracker")
 	end)
-
-	Maid.AFK = nil
 end
 
 local function setupAFKCheck()
@@ -269,14 +321,14 @@ local function setupAFKCheck()
 	table.insert(
 		Maid.AFK,
 		UserInputService.WindowFocused:Connect(function()
-			Remote:InvokeServer("Afk", false)
+			remoteFunction:InvokeServer("Afk", false)
 		end)
 	)
 
 	table.insert(
 		Maid.AFK,
 		UserInputService.WindowFocusReleased:Connect(function()
-			Remote:InvokeServer("Afk", true)
+			remoteFunction:InvokeServer("Afk", true)
 		end)
 	)
 
@@ -285,7 +337,7 @@ local function setupAFKCheck()
 		UserInputService.InputBegan:Connect(function()
 			if Counter >= 30 then
 				warn("undid Afk from counter")
-				Remote:InvokeServer("Afk", false)
+				remoteFunction:InvokeServer("Afk", false)
 			end
 
 			Counter = 0
@@ -313,7 +365,7 @@ local function setupAFKCheck()
 			Counter += 1
 
 			if Counter == afkDelayOffset then
-				Remote:InvokeServer("Afk", true)
+				remoteFunction:InvokeServer("Afk", true)
 			end
 		end)
 	end)
@@ -321,8 +373,6 @@ end
 
 local function onAttributeChanged()
 	local isOk, States = nil, Workspace:GetAttribute(script.Name)
-
-	warn(isOk, States)
 	if not States then
 		return
 	end
@@ -342,6 +392,12 @@ local function onAttributeChanged()
 		setupAFKCheck()
 	else
 		undoAfkCheck()
+	end
+
+	if States.UI.Notifications.Status == true then
+		setupNotifications()
+	else
+		undoNotifications()
 	end
 
 	if States.STICKS.Status == true then

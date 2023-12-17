@@ -22,10 +22,11 @@
 --// Documentation \\--
 --[=[
 	@interface extraOptionsType
-	.Commands { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string }
+	.Commands { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
 	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
 	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
-	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, shouldKickIfActivityTrackerFails: boolean, trackerFailedMessage: string }
+	.Notifications { Enabled: boolean, Position: String }
+	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
 	.Misc { originLoggerText: string, ignoreWarnings: boolean, overrideGroupCheckForStudio: boolean, isAsync: boolean, usePromises: boolean }
 	@within VibezAPI
 ]=]
@@ -133,7 +134,6 @@ local Table = require(script.Modules.Table)
 
 --// Constants \\--
 local api = {}
-local rankStick = script.RankSticks
 local legacySettings, baseSettings =
 	require(script.Modules.legacySettings), {
 		Commands = {
@@ -142,6 +142,7 @@ local legacySettings, baseSettings =
 			MaxRank = 255,
 
 			Prefix = "!",
+			Alias = {},
 		},
 
 		RankSticks = {
@@ -149,7 +150,12 @@ local legacySettings, baseSettings =
 			MinRank = 255,
 			MaxRank = 255,
 
-			SticksModel = nil, -- Uses default
+			sticksModel = nil, -- Uses default
+		},
+
+		Notifications = {
+			Enabled = true,
+			Position = "Bottom-Right",
 		},
 
 		Interface = {
@@ -165,8 +171,8 @@ local legacySettings, baseSettings =
 			disableWhenInStudio = true,
 			disableWhenAFK = false,
 			delayBeforeMarkedAFK = 30,
-			shouldKickIfActivityTrackerFails = false,
-			trackerFailedMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
+			kickIfFails = false,
+			failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
 		},
 
 		Misc = {
@@ -260,7 +266,7 @@ function api:Http(
 	-- Prevents sending api key to external URLs
 	-- Remove from 'Route' extra slash that was added
 	-- Make 'apiToUse' an empty string since "Route" and "apiToUse" get concatenated on request.
-	if string.match(Route, "https://") ~= nil then
+	if string.match(Route, "[http://]|[https://]") ~= nil then
 		Route = string.sub(Route, 2, #Route)
 		apiToUse = ""
 		Headers["x-api-key"] = nil
@@ -731,6 +737,8 @@ end
 ---
 function api:_giveSticks(Player: Player)
 	local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
+	local rankStick = (self.Settings.RankSticks["sticksModel"] == nil) and script.RankSticks
+		or self.Settings.RankSticks["sticksModel"]
 
 	for _, operationName: string in ipairs(stickTypes) do
 		local cloned = rankStick:Clone()
@@ -828,7 +836,8 @@ function api:rankingStickSetModel(tool: Tool | Model): ()
 
 	tool.CanBeDropped = false
 	tool.Name = "RankingSticks"
-	rankStick = tool
+
+	self.Settings.RankSticks["sticksModel"] = tool
 end
 
 --[=[
@@ -1168,6 +1177,37 @@ function api:_warn(...: string)
 	end
 
 	warn("[Vibez]:", table.concat({ ... }, " "))
+end
+
+--[=[
+	Builds the attributes of the settings for workspace.
+
+	@within VibezAPI
+	@private
+	@since 2.3.1
+]=]
+---
+function api:_buildAttributes()
+	local dataToEncode = {
+		AFK = {
+			Status = self.Settings.ActivityTracker.disableWhenAFK,
+			Delay = self.Settings.ActivityTracker.delayBeforeMarkedAFK,
+		},
+
+		UI = {
+			Status = self.Settings.Interface.Enabled,
+			Notifications = {
+				Status = false, -- self.Settings.Notifications.Enabled,
+				Position = "Bottom-Right", -- self.Settings.Notifications.Position,
+			},
+		},
+
+		STICKS = {
+			Status = self.Settings.RankSticks.Enabled,
+		},
+	}
+
+	Workspace:SetAttribute(self._private.clientScriptName, HttpService:JSONEncode(dataToEncode))
 end
 
 --// Public Functions \\--
@@ -1612,8 +1652,7 @@ function api:toggleUI(override: boolean?): nil
 		end
 	end
 
-	local uiStatus = self.Settings.Interface.Enabled
-	Workspace:SetAttribute(self._private.clientScriptName .. "_UI", uiStatus)
+	self:_buildAttributes()
 end
 
 --[=[
@@ -2071,25 +2110,10 @@ function api:_initialize(apiKey: string): ()
 	game:BindToClose(self._onGameShutdown, self)
 
 	-- Initialize the workspace attribute
-	local dataToEncode = {
-		AFK = {
-			Status = self.Settings.ActivityTracker.disableWhenAFK,
-			Delay = self.Settings.ActivityTracker.delayBeforeMarkedAFK,
-		},
-
-		UI = {
-			Status = self.Settings.Interface.Enabled,
-		},
-
-		STICKS = {
-			Status = self.Settings.RankSticks.Enabled,
-		},
-	}
-
-	Workspace:SetAttribute(self._private.clientScriptName, HttpService:JSONEncode(dataToEncode))
+	self:_buildAttributes()
 
 	-- Track activity
-	if self.Settings.activityTrackingEnabled == true then
+	if self.Settings.ActivityTracker.Enabled == true then
 		RunService.Heartbeat:Connect(function()
 			for _, data in pairs(self._private.requestCaches.validStaff) do
 				if data[3] == nil then
@@ -2249,9 +2273,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				for _, strPath: string in pairs(data) do
 					if not hasWarned then
 						hasWarned = true
+
 						local fixedText = (typeof(value) == "string") and `"{value}"` or tostring(value)
+						local strPathSplit = string.split(strPath, ".")
+
 						self:_warn(
-							`Optional setting '{key}' has been moved to \{["{string.split(strPath, ".")[1]}"] = \{["{string.split(strPath, ".")[2]}"] = {fixedText}\}\}`
+							`Optional setting '{key}' has been moved to \{ ["{strPathSplit[1]}"] = \{ ["{strPathSplit[2]}"] = {fixedText} \} \}`
 						)
 					end
 

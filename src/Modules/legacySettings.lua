@@ -13,8 +13,8 @@ return {
 	["disableActivityTrackingInStudio"] = { "ActivityTracker.disableWhenInStudio" },
 	["disableActivityTrackingWhenAFK"] = { "ActivityTracker.disableWhenAFK" },
 	["delayBeforeMarkedAFK"] = { "ActivityTracker.delayBeforeMarkedAFK" },
-	["shouldKickPlayerIfActivityTrackerFails"] = { "ActivityTracker.shouldKickIfActivityTrackerFails" },
-	["activityTrackerFailedMessage"] = { "ActivityTracker.trackerFailedMessage" },
+	["shouldKickPlayerIfActivityTrackerFails"] = { "ActivityTracker.kickIfFails" },
+	["activityTrackerFailedMessage"] = { "ActivityTracker.failMessage" },
 
 	["nameOfGameForLogging"] = { "Misc.originLoggerText" },
 	["overrideGroupCheckForStudio"] = { "Misc.overrideGroupCheckForStudio" },

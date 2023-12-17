@@ -115,13 +115,19 @@ export type vibezSettings = {
 		MinRank: number,
 		MaxRank: number,
 		Prefix: string,
+		Alias: { string? },
 	},
 
 	RankSticks: {
 		Enabled: boolean,
 		MinRank: number,
 
-		SticksModel: Model?,
+		sticksModel: Model?,
+	},
+
+	Notifications: {
+		Enabled: boolean,
+		Position: string,
 	},
 
 	Interface: {
@@ -137,8 +143,8 @@ export type vibezSettings = {
 		disableWhenInStudio: boolean,
 		disableWhenAFK: boolean,
 		delayBeforeMarkedAFK: number,
-		shouldKickIfActivityTrackerFails: boolean,
-		trackerFailedMessage: string,
+		kickIfFails: boolean,
+		failMessage: string,
 	},
 
 	Misc: {
