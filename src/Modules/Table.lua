@@ -895,7 +895,32 @@ local function DecodeJSON(str: string): any
 	return HttpService:JSONDecode(str)
 end
 
+--[=[
+	@within TableUtil
+	@function Count
+	@param tbl { any }
+	@return number
+
+	Counts the amount of keys in a given table.
+
+	```lua
+	TableUtil.Count({}) -- 0
+	TableUtil.Count({"abc"}) -- 1
+	TableUtil.Count({abc = 32}) -- 1
+	```
+]=]
+local function Count(tbl: { any }): any
+	local count = 0
+
+	for _, _ in pairs(tbl) do
+		count += 1
+	end
+
+	return count
+end
+
 TableUtil.Copy = Copy
+TableUtil.Count = Count
 TableUtil.Sync = Sync
 TableUtil.Reconcile = Reconcile
 TableUtil.SwapRemove = SwapRemove

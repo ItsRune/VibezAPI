@@ -1,8 +1,8 @@
 ---
-sidebar_position: 13
+sidebar_position: 1
 ---
 
-<h3>Note: You do NOT need every example in your game, just pick and choose what you'd like.</h3>
+<h3>Note: We do have our own custom admin built into the module, if you'd like to use it head to this <a href="/VibezAPI/docs/Commands/Adding Command">page</a> </h3>
 
 These are more intermediate examples for the `Ranking` system, I'm expecting you to understand basic Lua syntax / concepts.
 

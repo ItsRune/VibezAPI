@@ -11,15 +11,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
-local remoteFunction = ReplicatedStorage:WaitForChild(script.Name .. "_Function", math.huge)
+local remoteFunction = ReplicatedStorage:WaitForChild(script.Name, math.huge)
 -- local remoteEvent = ReplicatedStorage:WaitForChild(script.Name .. "_Event", math.huge)
 local eventHolder = {}
 local Maid = {}
 local afkDelayOffset = 5
 local isUIContextEnabled = false
-local Zone = require(script.Zone)
+local Zone = require(script.Zone) -- Only used for ranking-sticks
 
 --// Functions \\--
+local function _warn(starter: string, ...: string)
+	local data = table.concat({ ... }, " ")
+	warn("[" .. starter .. "]: " .. data)
+end
+
 local function disconnect(data: { any } | RBXScriptConnection)
 	if typeof(data) == "table" then
 		for _, v in pairs(data) do
@@ -151,6 +156,11 @@ local function onSetupRankSticks()
 								closestTarget = target
 							end
 						end
+
+						_warn(
+							"Ranking Sticks",
+							`Rank sticks found {(closestTarget == nil) and "no players" or closestTarget.Name} to {child.Name}`
+						)
 
 						if closestTarget == nil then
 							return -- No one close enough
@@ -421,6 +431,11 @@ local function onStart()
 
 		local Clone = script:Clone()
 		Clone.Parent = StarterPlayerScripts
+	end
+
+	-- Simple way to make sure client is fully connected
+	remoteFunction.OnClientInvoke = function()
+		return true
 	end
 end
 

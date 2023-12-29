@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 2
 ---
 
 **Note: This is considered an advanced tutorial, if you don't understand lua/luau, I would not recommend attempting to create your own operations!**
@@ -32,6 +32,7 @@ VibezAPI:addCommandOperation("Rank", "r:", function(playerToCheck: Player, incom
     -- Make sure the tolerance is a valid tolerance.
     tolerance = tolerance or "<="
 
+    -- 'GetRankInGroup' caches when it's first called, this will not update if their rank changes.
     local isOk, currentPlayerRank = pcall(
         playerToCheck.GetRankInGroup,
         playerToCheck,

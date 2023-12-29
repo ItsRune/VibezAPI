@@ -1,5 +1,5 @@
 ---
-sidebar_position: 6
+sidebar_position: 2
 ---
 
 ### How does the activity tracking work?
@@ -12,20 +12,35 @@ The activity tracker is very simple to use. All you need to do is require the ma
 
 ```lua
 local Vibez = require(14946453963)("API Key", {
-    activityTrackingEnabled = true
+    ActivityTracker = {
+        Enabled = true, -- Enabled the tracker for players.
+        MinRank = 255, -- The minimum rank that a staff member must be to be tracked.
+    }
 })
 ```
 
-In addition to this setting is 2 other options: `rankToStartTrackingActivityFor` and `toggleTrackingOfAFKActivity`
-- `rankToStartTrackingActivityFor` is the rank that the activity tracker will start tracking activity for. This is useful if you want to only track activity for a specific rank.
-- `toggleTrackingOfAFKActivity` is a boolean that toggles whether or not the activity tracker will automatically pause counting activity for AFK users.
+In addition to this setting is a couple of other settings that you can change to your liking. These settings are as follows:
+
+| Setting | Type | Description |
+| :---: | :---: | :---: |
+| `Enabled` | `boolean` | Whether or not the activity tracker is enabled. |
+| `MinRank` | `number` | The minimum rank that a staff member must be to be tracked. |
+| `disableWhenInStudio` | `boolean` | Disables when studio play testing. |
+| `disableWhenAFK` | `boolean` | Disables when player is detected as AFK. |
+| `disableWhenInPrivateServer` | `boolean` | Disables when player is in a private server. |
+| `delayBeforeMarkedAFK` | `number` | The amount of seconds to wait before the player is marked AFK. |
+| `kickIfFails` | `boolean` | Sometimes ROBLOX can mess up player initialization, when this occurs it can cause the activity tracker to not setup with the player. Would you like to kick the player when this happens? |
+| `failMessage` | `string` | The message to kick the player with when `kickIfFails` is enabled. |
 
 ### How do I get the activity of a staff member?
 Getting the activity of a staff member is very simple. All you need to do is call the `getActivity` function on the Vibez object.
 
 ```lua
 local Vibez = require(14946453963)("API Key", {
-    activityTrackingEnabled = true
+    ActivityTracker = {
+        Enabled = true,
+        MinRank = 255,
+    }
 })
 
 local activity = Vibez:getActivity(107392833) -- 107392833 is the user id of the staff member
@@ -38,7 +53,10 @@ Vibez allows for customization when necessary, if you're writing your own activi
 
 ```lua
 local Vibez = require(14946453963)("API Key", {
-    activityTrackingEnabled = true
+    ActivityTracker = {
+        Enabled = true,
+        MinRank = 255,
+    }
 })
 
 local function addSecondsToPlayer(UserId: number, userRank: number, secondsSpent: number, messagesSent: number)

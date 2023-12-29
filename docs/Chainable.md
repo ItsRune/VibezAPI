@@ -19,21 +19,12 @@ You can do this:
 local VibezAPI = require(14946453963)("myApiKey")
 local myWebhook = VibezAPI:getWebhookBuilder("Discord Webhook Link")
 
-myWebhook:setTitle("my title"):setDescription("my description")
-```
-
-For readability sake you can do:
-
-```lua
-local VibezAPI = require(14946453963)("myApiKey")
-local myWebhook = VibezAPI:getWebhookBuilder("Discord Webhook Link")
-
 myWebhook
     :setTitle("my title")
     :setDescription("my description")
 ```
 
-Which not only saves lines but also makes it easier to read, by preventing your eyes from jumping to different lines.
+Which not only saves lines but also makes it easier to read!
 
 ---
 

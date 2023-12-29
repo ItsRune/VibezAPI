@@ -1,5 +1,7 @@
 --[=[
-    @class EmbedBuilder
+	Builder for discord embeds.
+    
+	@class EmbedBuilder
 ]=]
 local Embed = {}
 local Class = {}

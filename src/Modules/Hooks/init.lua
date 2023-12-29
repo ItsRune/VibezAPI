@@ -1,6 +1,7 @@
 --[=[
+	Creates an easy way to manage and use discord webhooks.
+
 	@class Webhooks
-	Creates easy to use webhook creation / usage.
 ]=]
 
 --[=[

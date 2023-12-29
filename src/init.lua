@@ -439,16 +439,6 @@ function api:_onPlayerAdded(Player: Player)
 		self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
 	end
 
-	-- Distribute rank sticks to players
-	if self.Settings.RankSticks.Enabled then
-		local rankToGiveTo = self.Settings.RankSticks.MinRank
-
-		if theirGroupData and theirGroupData.Rank >= rankToGiveTo then
-			self:_warn("Giving ranking sticks to " .. Player.Name .. " (" .. Player.UserId .. ")")
-			self:_giveSticks(Player)
-		end
-	end
-
 	local PlayerGui = Player:WaitForChild("PlayerGui", 10)
 	if PlayerGui and PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
 		return -- Player was already in game but got disconnected (typically from an in game rank change)
@@ -460,6 +450,7 @@ function api:_onPlayerAdded(Player: Player)
 	client.Enabled = true
 	client.Parent = PlayerGui
 
+	-- Enabled activity tracking for player
 	if
 		self.Settings.ActivityTracker.Enabled == true
 		and theirGroupData.Rank >= self.Settings.ActivityTracker.MinRank
@@ -683,7 +674,7 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_getPlayers(usernames: { string | number }): { Player? }
+function api:_getPlayers(playerWhoCalled: Player, usernames: { string | number }): { Player? }
 	local found = {}
 
 	for _, username in pairs(usernames) do
@@ -706,6 +697,7 @@ function api:_getPlayers(usernames: { string | number }): { Player? }
 				end
 
 				local operationResult = operationFunction(
+					playerWhoCalled,
 					player,
 					string.sub(username, string.len(tostring(operationCode)) + 1, string.len(username)),
 					{
@@ -740,12 +732,18 @@ function api:_giveSticks(Player: Player)
 	local rankStick = (self.Settings.RankSticks["sticksModel"] == nil) and script.RankSticks
 		or self.Settings.RankSticks["sticksModel"]
 
+	local playerBackpack = Player:WaitForChild("Backpack", 10)
+
+	if not playerBackpack then
+		return
+	end
+
 	for _, operationName: string in ipairs(stickTypes) do
 		local cloned = rankStick:Clone()
-
 		cloned:SetAttribute(self._private.clientScriptName, "RankSticks")
+
 		cloned.Name = operationName
-		cloned.Parent = Player:WaitForChild("Backpack", 10)
+		cloned.Parent = playerBackpack
 	end
 
 	table.insert(self._private.usersWithSticks, Player.UserId)
@@ -791,7 +789,7 @@ end
 	@since 1.3.0
 ]=]
 ---
-function api:rankingStickSetModel(tool: Tool | Model): ()
+function api:setRankStickTool(tool: Tool | Model): ()
 	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
 		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
 		return
@@ -806,14 +804,15 @@ function api:rankingStickSetModel(tool: Tool | Model): ()
 		local children = tool:GetChildren()
 		local modelReference = tool
 
-		tool = Instance.new("Tool")
-		tool.Parent = script
+		local t = Instance.new("Tool")
+		t.Parent = script
 
 		for _, v in pairs(children) do
-			v.Parent = tool
+			v.Parent = t
 		end
 
 		modelReference:Destroy()
+		tool = t
 	end
 
 	local handle = tool:FindFirstChild("Handle")
@@ -879,49 +878,12 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	local command = string.sub(string.lower(args[1]), string.len(commandPrefix) + 1, #args[1])
 	table.remove(args, 1)
 
-	local users = self:_getPlayers(string.split(args[1], ","))
-	table.remove(args, 1)
+	local keys = Table.Keys(self._private.commandOperations)
 
-	for _, Target: Player in pairs(users) do
-		if Target == Player then
-			continue
-		end
-
-		local targetGroupData = (self._private.validStaff[Target.UserId] ~= nil)
-				and { Rank = self._private.validStaff[Target.UserId][2] }
-			or self:_getGroupFromUser(self.GroupId, Target.UserId)
-
-		-- Check if target is a higher rank than the player using the command.
-		if not targetGroupData or targetGroupData.Rank >= callerStaffData[2] then
-			continue
-		end
-
-		local commandCallParameters = { Target.UserId, { userId = Player.UserId, userName = Player.Name } }
-		if command == "promote" then
-			self:_Promote(table.unpack(commandCallParameters))
-		elseif command == "demote" then
-			self:_Demote(table.unpack(commandCallParameters))
-		elseif command == "fire" then
-			self:_Fire(table.unpack(commandCallParameters))
-		elseif command == "blacklist" then
-			local res = self:addBlacklist(Target.UserId, table.concat(args, " "), Player.UserId)
-
-			--selene: allow(empty_if)
-			if not res.success then
-				self:_warn("Blacklist resulted in an error, please try again later.")
-				return
-			end
-
-			self:_warn(res.message)
-		elseif command == "unblacklist" then
-			local res = self:deleteBlacklist(Target.UserId)
-
-			--selene: allow(empty_if)
-			if not res.success then
-				-- warn user
-			end
-
-			self:_warn(res.message)
+	for _, key: string in pairs(keys) do
+		if command == string.lower(key) then
+			self._private.commandOperations[key](Player, args)
+			break
 		end
 	end
 end
@@ -1180,6 +1142,32 @@ function api:_warn(...: string)
 end
 
 --[=[
+	Adds an entry into the in-game logs.
+	@param calledBy Player
+	@param Action string
+	@param affectedUsers { { Name: string, UserId: number } }
+	@param ... any
+
+	@private
+	@within VibezAPI
+	@since 2.3.6
+]=]
+---
+function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any)
+	table.insert(self._private.inGameLogs, {
+		calledBy = calledBy,
+		affectedCount = (affectedUsers == nil) and 0 or #affectedUsers,
+		affectedUsers = affectedUsers,
+		extraData = { ... },
+
+		Action = Action,
+		Timestamp = DateTime.now().UnixTimestamp,
+	})
+
+	self._private.inGameLogs = Table.Truncate(self._private.inGameLogs, 100)
+end
+
+--[=[
 	Builds the attributes of the settings for workspace.
 
 	@within VibezAPI
@@ -1424,6 +1412,43 @@ function api:toggleCommands(override: boolean?): nil
 		coroutine.wrap(self[functionToUse])(self, player)
 	end
 
+	return self
+end
+
+--[=[
+	Creates a new command within our systems.
+	@param commandName string
+	@param commandOperation (Player: Player, Args: { string }, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }) -> ()
+	@return VibezAPI
+
+	@within VibezAPI
+	@tag Chainable
+	@since 2.3.6
+]=]
+function api:addCommand(
+	commandName: string,
+	commandOperation: (
+		Player: Player,
+		Args: { string },
+		addLog: (
+			calledBy: Player,
+			Action: string,
+			affectedUsers: { Player }?,
+			...any
+		) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }
+	) -> ()
+): Types.vibezApi
+	-- Make sure command doesn't already exist.
+	local keys = Table.Keys(self._private.commandOperations)
+
+	for _, key in ipairs(keys) do
+		if string.lower(tostring(key)) == string.lower(tostring(commandName)) then
+			return self
+		end
+	end
+
+	-- TODO: Allow developers to trigger 'self:_addLog' when their command runs.
+	self._private.commandOperations[string.lower(tostring(commandName))] = commandOperation
 	return self
 end
 
@@ -2150,6 +2175,42 @@ local function deepChange(tbl: { any }, index: string | number, value: any)
 	return tbl
 end
 
+local function stringifyTableDeep(tbl: { any }, tabbing: number?): string
+	tabbing = tabbing or 1
+	local str = "{\n"
+
+	local function applyTabbing()
+		if tabbing == 0 then
+			return
+		end
+
+		for _ = 1, tabbing do
+			str ..= "    "
+		end
+	end
+
+	for index, value in pairs(tbl) do
+		applyTabbing()
+
+		if typeof(index) == "string" then
+			str ..= string.format('["%s"] = ', index)
+		end
+
+		if typeof(value) == "table" then
+			str ..= stringifyTableDeep(value, tabbing + 1) .. ","
+		else
+			str ..= (typeof(value) == "string" and `"{value}"` or tostring(value)) .. ","
+		end
+
+		str ..= "\n"
+	end
+
+	tabbing -= 1
+	applyTabbing()
+
+	return str .. "}"
+end
+
 --[=[
 	@function new
 	@within VibezAPI
@@ -2182,7 +2243,9 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@class VibezAPI
-		**IMPORTANT**: When using this module, we recommend using the number-based format rather than importing the scripts into the game.
+		:::important
+		When using this module, we recommend using the number-based format rather than importing the scripts into the game.
+		:::
 	]=]
 
 	api.__index = api
@@ -2201,6 +2264,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
 		rateLimiter = RateLimit.new(60, 60),
 
+		inGameLogs = {},
 		Maid = {},
 
 		usersWithSticks = {},
@@ -2211,10 +2275,153 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			nitro = {},
 			groupInfo = {},
 		},
+
+		commandOperations = {
+			["promote"] = function(Player: Player, Args: { string })
+				local affectedUsers = {}
+				local users = self:_getPlayers(Player, string.split(Args[1], ","))
+				table.remove(Args, 1)
+
+				for _, Target: Player in pairs(users) do
+					local commandCallParameters = { Target.UserId, { userId = Player.UserId, userName = Player.Name } }
+					local result = self:_Promote(table.unpack(commandCallParameters))
+
+					if result.success then
+						table.insert(affectedUsers, Target)
+					end
+				end
+
+				self:_addLog(Player, "Promote", affectedUsers)
+			end,
+
+			["demote"] = function(Player: Player, Args: { string })
+				local affectedUsers = {}
+				local users = self:_getPlayers(Player, string.split(Args[1], ","))
+				table.remove(Args, 1)
+
+				for _, Target: Player in pairs(users) do
+					local commandCallParameters = { Target.UserId, { userId = Player.UserId, userName = Player.Name } }
+					local result = self:_Demote(table.unpack(commandCallParameters))
+
+					if result.success then
+						table.insert(affectedUsers, Target)
+					end
+				end
+
+				self:_addLog(Player, "Demote", affectedUsers)
+			end,
+
+			["fire"] = function(Player: Player, Args: { string })
+				local affectedUsers = {}
+				local users = self:_getPlayers(Player, string.split(Args[1], ","))
+				table.remove(Args, 1)
+
+				for _, Target: Player in pairs(users) do
+					local commandCallParameters = { Target.UserId, { userId = Player.UserId, userName = Player.Name } }
+					local result = self:_Fire(table.unpack(commandCallParameters))
+
+					if result.success then
+						table.insert(affectedUsers, Target)
+					end
+				end
+
+				self:_addLog(Player, "Fire", affectedUsers)
+			end,
+
+			["blacklist"] = function(Player: Player, Args: { string })
+				local affectedUsers = {}
+				local users = self:_getPlayers(Player, string.split(Args[1], ","))
+				table.remove(Args, 1)
+
+				local reason = table.concat(Args, " ")
+
+				for _, Target: Player in pairs(users) do
+					local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
+
+					if not res.success then
+						self:_warn("Blacklist resulted in an error, please try again later.")
+						return
+					end
+
+					table.insert(affectedUsers, Target)
+					self:_warn(res.message)
+				end
+
+				self:_addLog(Player, "Blacklist", affectedUsers, reason)
+			end,
+
+			["unblacklist"] = function(Player: Player, Args: { string })
+				local affectedUsers = {}
+				local targetData = table.remove(Args[1])
+				local Targets
+
+				Targets = Table.Map(string.split(targetData, ","), function(value)
+					if tonumber(value) ~= nil then
+						local nameIsOk, targetName = pcall(Players.GetNameFromUserIdAsync, Players, value)
+						if not nameIsOk then
+							return
+						end
+
+						return { Name = targetName, UserId = tonumber(value) }
+					else
+						local idIsOk, targetUserId = pcall(Players.GetUserIdFromNameAsync, Players, value)
+						if not idIsOk then
+							return
+						end
+
+						return { Name = value, UserId = targetUserId }
+					end
+				end)
+
+				for _, Target: { Name: string, UserId: number } in pairs(Targets) do
+					if not Target then
+						return
+					end
+
+					local res = self:deleteBlacklist(Target.UserId)
+
+					-- TODO: Add a way to warn client for their mistake!
+					--selene: allow(empty_if)
+					if not res.success then
+						-- self:_warn("")
+					end
+
+					table.insert(affectedUsers, Target)
+					self:_warn(res.message)
+				end
+
+				self:_addLog(Player, "Unblacklist", affectedUsers)
+			end,
+
+			["sticks"] = function(Player: Player) -- No arguments required.
+				local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
+				local foundSticks = Table.Filter(
+					Table.Assign(Player.Backpack:GetChildren(), Player.Character:GetChildren()),
+					function(value)
+						return value:IsA("Tool")
+							and table.find(stickTypes, value.Name) ~= nil
+							and value:GetAttribute(self._private.clientScriptName) == "RankSticks"
+					end
+				)
+
+				if #foundSticks > 0 then
+					self:_addLog(Player, "Rank-Sticks", nil, "Removed")
+
+					for _, v in pairs(foundSticks) do
+						v:Destroy()
+					end
+					return
+				end
+
+				self:_giveSticks(Player)
+				self:_addLog(Player, "Rank-Sticks", nil, "Given")
+			end,
+		},
+
 		commandOperationCodes = {
 			["Team"] = {
 				"%", -- Operation Code
-				function(playerToCheck: Player, incomingArgument: string): boolean
+				function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
 					return playerToCheck.Team ~= nil
 						and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
 							== string.lower(incomingArgument)
@@ -2223,7 +2430,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 			["Rank"] = {
 				"r:",
-				function(playerToCheck: Player, incomingArgument: string): boolean
+				function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
 					local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
 
 					if not tonumber(rank) then
@@ -2255,7 +2462,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 			["shortenedUsername"] = {
 				"", -- Operation Code (Empty on purpose)
-				function(playerToCheck: Player, incomingArgument: string): boolean
+				function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
 					return string.sub(string.lower(playerToCheck.Name), 0, string.len(incomingArgument))
 						== string.lower(incomingArgument)
 				end,
@@ -2264,23 +2471,21 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	}
 
 	extraOptions = extraOptions or {}
+	local fixedSettings = { {}, {} }
 	for key, value in pairs(extraOptions) do
 		if self.Settings[key] == nil then
 			if legacySettings[key] ~= nil then
 				local data = Table.Copy(legacySettings[key])
-				local hasWarned = false
 
 				for _, strPath: string in pairs(data) do
-					if not hasWarned then
-						hasWarned = true
+					local strPathSplit = string.split(strPath, ".")
 
-						local fixedText = (typeof(value) == "string") and `"{value}"` or tostring(value)
-						local strPathSplit = string.split(strPath, ".")
-
-						self:_warn(
-							`Optional setting '{key}' has been moved to \{ ["{strPathSplit[1]}"] = \{ ["{strPathSplit[2]}"] = {fixedText} \} \}`
-						)
+					if not fixedSettings[strPathSplit[1]] then
+						fixedSettings[strPathSplit[1]] = {}
 					end
+
+					fixedSettings[strPathSplit[1]][strPathSplit[2]] = value
+					table.insert(fixedSettings[2], key)
 
 					local split = string.split(strPath, ".")
 					for i = 2, #split do
@@ -2343,4 +2548,4 @@ return setmetatable({
 	__call = function(t, ...)
 		return rawget(t, "new")(...)
 	end,
-}) :: Types.vibezApi
+}) :: Types.vibezConstructor

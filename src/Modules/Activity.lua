@@ -8,7 +8,7 @@ Class.__index = Class
 
 --[=[
     @class ActivityTracker
-    An OOP class that handles updating/fetching/subtracting a user's timed activity.
+    Main tracker for player instances, holding information like when they're AFK and how long they've been in game.
 ]=]
 
 --[=[
@@ -86,6 +86,7 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	self._player = forPlayer
 	self._seconds = 0
 	self._messages = 0
+	self._afkCounter = 0
 	self._increment = 1
 	self._lastCheck = DateTime.now().UnixTimestamp
 	self._groupData = self._api:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
@@ -125,10 +126,15 @@ function Class:Increment()
 	self._lastCheck = DateTime.now().UnixTimestamp
 
 	if self.isAfk then
-		self._api:_warn(self._player.Name .. " is marked AFK and cannot earn activity.")
+		self._afkCounter += 1
+
+		if self._afkCounter ~= 0 and self._afkCounter % 30 == 0 then
+			self._api:_warn(self._player.Name .. " has been marked AFK for " .. self.self._afkCounter .. " seconds!")
+		end
 		return
 	end
 
+	self._afkCounter = 0
 	self._seconds += self._increment
 end
 
@@ -162,7 +168,7 @@ function Class:Left()
 	if RunService:IsStudio() and self._api.Settings.ActivityTracker.disableWhenInStudio == true then
 		self._api:_warn(
 			string.format(
-				"Saving activity has been disabled when playing in studio. Here's what we tracked\nUser: %s (%s)\nSeconds spent: %s\nMessages sent: %s",
+				"Saving activity has been disabled when playing in studio. Here's what we tracked\nUser: %s (%d)\nSeconds spent: %d\nMessages sent: %d",
 				self._player.Name,
 				self._player.UserId,
 				self._seconds,
@@ -187,13 +193,18 @@ end
 ]=]
 ---
 function Class:changeAfkState(override: boolean?): Types.ActivityTracker
-	local isToggled = self.isAfk
+	override = override or false
 
-	if override ~= nil then
-		isToggled = not override -- Flip the boolean so it doesn't cause issues below.
-	end
+	self._api:_warn(
+		self._player.Name
+			.. " ("
+			.. self._player.UserId
+			.. ") has been "
+			.. (not override and "marked" or "unmarked")
+			.. " as AFK."
+	)
 
-	self.isAfk = not isToggled
+	self.isAfk = not override
 end
 
 --[=[

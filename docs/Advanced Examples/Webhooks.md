@@ -1,5 +1,5 @@
 ---
-sidebar_position: 14
+sidebar_position: 2
 ---
 
 <h3>Note: You do NOT need every example in your game, just pick and choose what you'd like.</h3>
