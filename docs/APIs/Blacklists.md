@@ -17,12 +17,12 @@ Vibez:addBlacklist(1234567890, "My reason.", 1) -- Adds a new blacklist with a p
 ```
 
 ### How do I remove a blacklist?
-To remove a blacklist, you'd just call the `removeBlacklist` method.
+To remove a blacklist, you'd just call the `deleteBlacklist` method.
 
 ```lua
 local Vibez = require(14946453963)("My API Key")
 
-Vibez:removeBlacklist(1234567890) -- Removes a blacklist with the provided user id.
+Vibez:deleteBlacklist(1234567890) -- Removes a blacklist with the provided user id.
 ```
 
 ### How do I check a blacklist?

@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-<h3>Note: You do NOT need every example in your game, just pick and choose what you'd like.</h3>
+If you haven't read up on how to use our [webhooks](/docs/APIs/Webhooks) yet, we'd recommend reading that first.
 
 ### Colors
 Typically you would use a hexidecimal color code for the color parameter, but you can also use a `Color3` value. **Only works for `addEmbedWithBuilder`**
@@ -58,5 +58,25 @@ Vibez:getWebhookBuilder("https://discord.com/api/webhooks/")
             :setTitle("Embed Example 2")
             :setDescription("This is the second example of using an embed.")
     end)
+    :Send()
+```
+
+#### Embeds without the builder
+
+```lua
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
+
+Vibez:getWebhookBuilder("https://discord.com/api/webhooks/")
+    -- Since we're not using the builder, we have to use hex values for the "color" property.
+    :addEmbed({
+        title = "Embed Example",
+        description = "This is an example of using an embed.",
+        color = Color3.fromRGB(1, 1, 1):ToHex(), -- White | Default color is always light pink.
+    })
+    :addEmbed({
+        title = "Embed Example 2",
+        description = "This is the second example of using an embed.",
+        color = Color3.fromRGB(155, 155, 255):ToHex(), -- Light blue
+    })
     :Send()
 ```

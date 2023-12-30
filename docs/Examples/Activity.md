@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-<h3>Note: You do NOT need every example in your game, just pick and choose what you'd like.</h3>
+If you haven't read about how to use the [Activity Tracker](/docs/APIs/Activity%20Tracking) yet, we'd recommend reading that first.
 
 ### Get Activity
 ```lua

@@ -35,10 +35,10 @@ Chainability works by returning the class instance after every method call. This
 local VibezAPI = require(14946453963)("myApiKey")
 local playerToRank = game.Players:GetPlayers()[1]
 
-VibezAPI:removeCommandOperation("Team"):setRank(playerToRank, 1)
+VibezAPI:updateLoggerName("Custom Rank"):setRank(playerToRank, 1)
 ```
 
 ---
 
 ### How do I know if a method is chainable?
-If a method is chainable, it will be marked with a `Chainable` tag in the documentation. For example, the [:removeCommandOperation](/VibezAPI/api/VibezAPI#removeCommandOperation) method is chainable, so it will be marked with a `Chainable` tag in the documentation.
+If a method is chainable, it will be marked with a `Chainable` tag in the documentation. For example, the [updateLoggerName](/VibezAPI/api/VibezAPI#updateLoggerName) method is chainable, so it will be marked with a `Chainable` tag in the documentation.
