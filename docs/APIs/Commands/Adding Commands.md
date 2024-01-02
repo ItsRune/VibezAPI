@@ -2,12 +2,12 @@
 sidebar_position: 1
 ---
 
-Do our commands not fit your purpose? Well, luckily for you we made this simple to use method that allows you to create your own commands. This method is called `:addCommand`. This method takes **two arguments**: the command name and the command function.
+Do our commands not fit your purpose? Well, luckily for you we made this simple to use method that allows you to create your own commands. This method is called `:addCommand`. This method takes **three arguments**: the command name, any command aliases you'd like to use, and lastyl the command's executing function.
 
 ```lua
 local VibezAPI = require(14946453963)("myApiKey")
 
-VibezAPI:addCommand("myCommand", function(player: Player, commandArguments: {string})
+VibezAPI:addCommand("myCommand", {}, function(player: Player, commandArguments: {string})
     -- "player" is the Player who ran the command
     -- "commandArguments" are the extra arguments sent with the command
     warn(player.Name .. " ran the command with the arguments: " .. table.concat(commandArguments, ", "))
@@ -21,7 +21,7 @@ On a side note, I can't stress this enough. There are many things in the API tha
 ```lua
 local VibezAPI = require(14946453963)("myApiKey")
 
-VibezAPI:addCommand("myCommand", function(player: Player, commandArguments: {string})
+VibezAPI:addCommand("myCommand", {"myCmd"}, function(player: Player, commandArguments: {string})
     -- "player" is the Player who ran the command
     -- "commandArguments" are the extra arguments sent with the command
     if #commandArguments == 0 then
@@ -44,6 +44,8 @@ VibezAPI:addCommand("myCommand", function(player: Player, commandArguments: {str
 
     local userActivity = VibezAPI:getActivity(users[1])
     warn(userActivity)
+
+    -- Maybe pipe to a remote? Up to you.
 end)
 ```
 

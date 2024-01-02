@@ -919,6 +919,27 @@ local function Count(tbl: { any }): any
 	return count
 end
 
+--[=[
+	@within TableUtil
+	@function ForEach
+	@param tbl { any }
+	@param callback (value: any, index: any, tbl: {any}) -> ()
+	@return number
+
+	It's literally a for loop with a callback.
+
+	```lua
+	TableUtil.Count({}) -- 0
+	TableUtil.Count({"abc"}) -- 1
+	TableUtil.Count({abc = 32}) -- 1
+	```
+]=]
+local function ForEach(tbl: { any }, callback: (value: any, index: any, tbl: { any }) -> ()): ()
+	for i, v in pairs(tbl) do
+		callback(v, i, tbl)
+	end
+end
+
 TableUtil.Copy = Copy
 TableUtil.Count = Count
 TableUtil.Sync = Sync
@@ -927,6 +948,7 @@ TableUtil.SwapRemove = SwapRemove
 TableUtil.SwapRemoveFirstValue = SwapRemoveFirstValue
 TableUtil.Map = Map
 TableUtil.Filter = Filter
+TableUtil.ForEach = ForEach
 TableUtil.Reduce = Reduce
 TableUtil.Assign = Assign
 TableUtil.Extend = Extend

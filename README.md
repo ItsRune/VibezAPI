@@ -1,4 +1,1 @@
-# VibezAPI
-
-### Documentation
-Click [here](https://itsrune.github.io/VibezAPI/)
+[Click here to view our documentation](https://itsrune.github.io/VibezAPI/)

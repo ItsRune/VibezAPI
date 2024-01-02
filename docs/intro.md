@@ -9,12 +9,8 @@ sidebar_position: 1
 You can install by getting the package from the roblox website and requiring the module using the ID of the module. This is the recommended way to install the module as it will automatically update the module when a new version is released.
 
 ```lua
-local VibezAPI = require(14946453963)
+local VibezAPI = require(14946453963)("Your API Key")
 ```
-
-**OR**
-
-To install, just get the package from the roblox website and drag it into your studio place. Please make sure you parent the modulescript to `ServerStorage` or `ServerScriptService` in order to keep the module out of the hands of exploiters.
 
 ---
 
@@ -23,21 +19,19 @@ To install, just get the package from the roblox website and drag it into your s
 To begin, open a new `Script` in `ServerScriptService` and require the module:
 
 ```lua
-local VibezAPI = require(14946453963)
+local VibezAPI = require(14946453963)("Your API Key")
 ```
 
 From there, you can use the API to create a new Vibez instance:
 
 ```lua
 local myApiKey = "my-api-key"
-local Vibez = VibezAPI(myApiKey)
+local Vibez = VibezAPI(myApiKey)("Your API Key")
 ```
 
-Our api wrapper supports extra options for when creating the class. These options can be found [here](/VibezAPI/api/VibezAPI#extraOptionsType).
-
-Once all that's done, you're free to use our API for any means necessary.
+Alright, now you have a Vibez instance. You can either customize this by following the other API documentation or you can use the default settings.
 
 ---
 
 ### API Settings
-You can set specific settings when calling the constructor function. These settings are optional and can be found [here](/VibezAPI/api/VibezAPI#extraOptionsType).
+Our api wrapper supports extra options for when creating the class. [These options can be found here](/VibezAPI/docs/Settings).

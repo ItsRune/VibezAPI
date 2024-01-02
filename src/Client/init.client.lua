@@ -17,9 +17,21 @@ local eventHolder = {}
 local Maid = {}
 local afkDelayOffset = 5
 local isUIContextEnabled = false
-local Zone = require(script.Zone) -- Only used for ranking-sticks
+-- local Zone = require(script.Zone) -- Only used for ranking-sticks
 
 --// Functions \\--
+local function getTempFolder()
+	local folder = Workspace:FindFirstChild(script.Name .. "_Temp")
+
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = script.Name .. "_Temp"
+		folder.Parent = Workspace
+	end
+
+	return folder
+end
+
 local function _warn(starter: string, ...: string)
 	local data = table.concat({ ... }, " ")
 	warn("[" .. starter .. "]: " .. data)
@@ -113,37 +125,85 @@ local function onSetupRankSticks()
 		Character.ChildAdded:Connect(function(child: Instance)
 			if child:GetAttribute(custScriptName) == "RankSticks" and child:IsA("Tool") then
 				local actionName = child.Name
+				local deb = false
 
 				Maid.RankSticks[actionName] = {
 					child.Activated:Connect(function()
+						warn("Clicked")
+						if deb then
+							return
+						end
+						deb = true
+
 						local cf, size = Character:GetBoundingBox()
 						local newPart = Instance.new("Part")
 						local Weld = Instance.new("WeldConstraint")
 
 						newPart.Name = actionName .. "_Checker"
 						newPart.Transparency = 0.5
-						newPart.CFrame = cf * CFrame.new(0, 0, -size.Z * 2.25)
+						newPart.CFrame = cf * CFrame.new(0, 0, -size.Z)
 						newPart.Anchored = false
-						newPart.Size = size + Vector3.new(0, 0, size.Z)
+						newPart.Size = size + Vector3.new(size.X / 2, 0, size.Z)
 						newPart.BrickColor = BrickColor.Red()
 						newPart.Massless = true
-						newPart.Parent = Character.PrimaryPart
+						newPart.CanCollide = false
+						newPart.Parent = getTempFolder()
 
 						Weld.Name = newPart.Name
 						Weld.Part0 = newPart
 						Weld.Part1 = Character.PrimaryPart
 						Weld.Parent = newPart
 
-						local zone = Zone.new(newPart)
-						local players = zone:getPlayers()
+						local closestTargets, closestTarget = {}, nil
+						local hasReceived, secondsSpent, connection = false, 0, nil
 
-						zone:destroy()
+						connection = newPart.Touched:Connect(function()
+							hasReceived = true
+							local partsWithinPart = Workspace:GetPartsInPart(newPart)
+
+							for _, part in ipairs(partsWithinPart) do
+								local ancestorModel = part:FindFirstAncestorWhichIsA("Model")
+								local possiblePlayer = Players:FindFirstChild(ancestorModel.Name)
+								if
+									part:IsDescendantOf(child)
+									or not ancestorModel
+									or possiblePlayer == nil
+									or possiblePlayer == Player
+								then
+									continue
+								end
+
+								table.insert(closestTargets, possiblePlayer)
+							end
+						end)
+
+						while hasReceived == false do
+							if secondsSpent >= 3 then -- max amount of time the part will be active for
+								hasReceived = false
+								break
+							end
+
+							if hasReceived then
+								break
+							end
+
+							if not connection then
+								continue
+							end
+
+							task.wait(1)
+							secondsSpent += 1
+						end
+
 						newPart:Destroy()
 
-						local closestTarget = nil
-						for _, target: Player in pairs(players) do
+						if not hasReceived or child:IsDescendantOf(Player) then
+							return
+						end
+
+						for _, target: Player in pairs(closestTargets) do
 							local t_char = target.Character
-							local c_char = closestTarget.Character
+							local c_char = (closestTarget ~= nil) and closestTarget.Character or nil
 
 							if
 								closestTarget == nil
@@ -163,10 +223,15 @@ local function onSetupRankSticks()
 						)
 
 						if closestTarget == nil then
+							task.wait(0.25)
+							deb = false
 							return -- No one close enough
 						end
 
 						remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
+
+						task.wait(0.25)
+						deb = false
 					end),
 				}
 			end
@@ -195,6 +260,7 @@ local function onSetupUI()
 	eventHolder["Promote"] = Instance.new("BindableEvent")
 	eventHolder["Demote"] = Instance.new("BindableEvent")
 	eventHolder["Fire"] = Instance.new("BindableEvent")
+	eventHolder["Blacklist"] = Instance.new("BindableEvent")
 
 	local function promote(target)
 		remoteFunction:InvokeServer("promote", "Interface", target)
@@ -392,25 +458,33 @@ local function onAttributeChanged()
 		return
 	end
 
-	if States.UI.Status == true then
-		onSetupUI()
-	else
-		undoUISetup()
-	end
-
-	if States.AFK.Status == true then
-		setupAFKCheck()
-	else
-		undoAfkCheck()
-	end
-
 	if States.UI.Notifications.Status == true then
 		setupNotifications()
 	else
 		undoNotifications()
 	end
 
-	if States.STICKS.Status == true then
+	local isStaff =
+		remoteFunction:InvokeServer("isStaff", nil, "Interface", "RankSticks", "Commands", "ActivityTracker")
+
+	warn(isStaff)
+	if not isStaff then
+		return
+	end
+
+	if isStaff.Interface and States.UI.Status == true then
+		onSetupUI()
+	else
+		undoUISetup()
+	end
+
+	if isStaff.ActivityTracker and States.AFK.Status == true then
+		setupAFKCheck()
+	else
+		undoAfkCheck()
+	end
+
+	if isStaff.RankSticks and States.STICKS.Status == true then
 		onSetupRankSticks()
 	else
 		undoRankSticks()

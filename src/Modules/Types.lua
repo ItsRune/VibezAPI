@@ -112,10 +112,11 @@ export type legacyVibezSettings = {
 export type vibezSettings = {
 	Commands: {
 		Enabled: boolean,
+		useDefaultNames: boolean,
 		MinRank: number,
 		MaxRank: number,
 		Prefix: string,
-		Alias: { string? },
+		Alias: { { any } },
 	},
 
 	RankSticks: {

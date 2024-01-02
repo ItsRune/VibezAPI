@@ -1,0 +1,51 @@
+{
+    "Commands": {
+        "Enabled": { "type": "boolean", "default": false },
+        "useDefaultNames": { "type": "boolean", "default": true },
+        
+        "MinRank": { "type": "number", "default": 255 },
+        "MaxRank": { "type": "number", "default": 255 },
+        
+        "Prefix": { "type": "text", "default": ";" },
+        "Alias": { "type": "Array", "default": [] }
+    },
+
+    "RankSticks": {
+        "Enabled": { "type": "boolean", "default": false },
+        "MinRank": { "type": "number", "default": 255 },
+        "MaxRank": { "type": "number", "default": 255 },
+
+        "sticksModel": { "type": "userdata", "default": null }
+    },
+
+    "Notifications": {
+        "Enabled": { "type": "boolean", "default": false },
+        "Position": { "type": "string", "default": "Bottom-Right" }
+    },
+
+    "Interface": {
+        "Enabled": { "type": "boolean", "default": false },
+        "MinRank": { "type": "number", "default": 255 },
+        "MaxRank": { "type": "number", "default": 255 }
+    },
+
+    "ActivityTracking": {
+        "Enabled": { "type": "boolean", "default": false },
+        "MinRank": { "type": "number", "default": 255 },
+
+        "disableWhenInStudio": { "type": "boolean", "default": true },
+        "disableWhenAFK": { "type": "boolean", "default": false },
+        "delayBeforeMarkedAFK": { "type": "number", "default": 30 },
+        "kickIfFails": { "type": "boolean", "default": false },
+        "failMessage": { "type": "string", "default": "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!" }
+    },
+
+    "Misc": {
+        "originLoggerText": { "type": "string", "default": "Origin" },
+        "ignoreWarnings": { "type": "boolean", "default": false },
+        "overrideGroupCheckForStudio": { "type": "boolean", "default": false },
+        "isAsync": { "type": "boolean", "default": false },
+        "rankingCooldown": { "type": "number", "default": 30 },
+        "usePromises": { "type": "boolean", "default": false, "hidden": true }
+    }
+}
