@@ -9,8 +9,18 @@ Command operation codes are `shorteners` that allow you to use less characters w
 
 ---
 
+### Default Codes
+|       Name        | Code |                 Description                 |
+|:-----------------:|:----:|:--------------------------------------------|
+|       Team        |  `%` | Checks for a given team name                |
+|       Rank        | `r:` | Checks the player's rank with a tolerance   |
+| shortenedUsername | None | Checks for a portion of a player's username |
+|     External      | `e:` | Gets a player that is not in the server     |
+
+---
+
 ### How do they work?
-Command operations work by first splitting the sent command, then checking if the first argument is an operation code. If it is, it will run the operation code function and return the result. If it isn't, it will return the command argument as is. For example, if you sent `#myTeam` as a command argument, it would split the command into `#` and `myTeam`. It would then check if `#` is an operation code, and if it is, it will run the operation code function and return the result. If it isn't, it will return the command argument as is.
+Command operations work by first splitting the sent command, then checking if the first argument is an operation code. If it is, it will run the operation code function and return the result. If it isn't, it will return the command argument as is. For example, if you sent `%myTeam` as a command argument, it would split the command into `%` and `myTeam`. It would then check if `%` is an operation code, and if it is, it will run the operation code function and return the result. If it isn't, it will return the command argument as is.
 
 ---
 
@@ -67,13 +77,7 @@ Now, you can use the operation code in your commands: `!promote r:3:<=`
 ---
 
 ### How to remove operation codes
-To remove an operation code, you'll use the `:removeCommandOperation` method. This method takes **one argument**: the operation name. If you don't like how one operation code performs that was made by us, you can simply remove it. The default operation codes are:
-
-|       Name        | Code |                 Description                 |
-|:-----------------:|:----:|:--------------------------------------------|
-|       Team        | `%`  | Checks for a given team name                |
-|       Rank        | `r:` | Checks the player's rank with a tolerance   |
-| shortenedUsername | None | Checks for a portion of a player's username |
+To remove an operation code, you'll use the `:removeCommandOperation` method. This method takes **one argument**: the operation name. If you don't like how one operation code performs that was made by us, you can simply remove it.
 
 ```lua
 VibezAPI:removeCommandOperation("Rank") -- Removes the default rank operation code.

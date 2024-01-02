@@ -122,6 +122,7 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 --// Modules \\--
@@ -188,6 +189,18 @@ local legacySettings, baseSettings =
 	}
 
 --// Local Functions \\--
+local function getTemporaryStorage(): Folder
+	local folder = ServerStorage:FindFirstChild("Vibez_Storage")
+
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "Vibez_Storage"
+		folder.Parent = ServerStorage
+	end
+
+	return folder
+end
+
 local function onServerInvoke(
 	self: Types.vibezApi,
 	Player: Player,
@@ -1083,7 +1096,9 @@ function api:setRankStickTool(tool: Tool | Model): ()
 
 	tool.CanBeDropped = false
 	tool.Name = "RankingSticks"
+	tool.Parent = getTemporaryStorage()
 
+	self.Settings.RankSticks["sticksModel"]:Destroy()
 	self.Settings.RankSticks["sticksModel"] = tool
 end
 
@@ -2306,7 +2321,7 @@ function api:_initialize(apiKey: string): ()
 		self:Destroy()
 		return setmetatable({}, {
 			__index = function()
-				warn("API Key was not accepted, please make sure there are no special character or spaces.")
+				self:_warn("API Key was not accepted, please make sure there are no special character or spaces.")
 				return function() end
 			end,
 		})
@@ -2440,6 +2455,8 @@ end
 ---
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
 	if RunService:IsClient() then
+		warn("[Vibez]: Cannot fetch API on the client!")
+		script:Destroy()
 		return nil
 	end
 
@@ -2450,7 +2467,9 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		:::
 	]=]
 
+	api.__metatable = "Why are you trying to fetch the metatable..?" -- Stop fetching this metatable
 	api.__index = api
+
 	local self = setmetatable({}, api)
 
 	self.Loaded = false
@@ -2570,70 +2589,79 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	extraOptions = extraOptions or {}
 	local fixedSettings = { {}, {} }
-	for key, value in pairs(extraOptions) do
-		if self.Settings[key] == nil then
-			if legacySettings[key] ~= nil then
-				local data = Table.Copy(legacySettings[key])
-
-				for _, strPath: string in pairs(data) do
-					local strPathSplit = string.split(strPath, ".")
-
-					if not fixedSettings[strPathSplit[1]] then
-						fixedSettings[strPathSplit[1]] = {}
-					end
-
-					fixedSettings[strPathSplit[1]][strPathSplit[2]] = value
-					table.insert(fixedSettings[2], key)
-
-					local split = string.split(strPath, ".")
-					for i = 2, #split do
-						local tbl = self.Settings[split[1]]
-						if not tbl then
-							break
-						end
-
-						local toCheck = deepFetch(tbl, split[i])
-						if typeof(toCheck) ~= typeof(value) then
-							self:_warn(
-								`Optional key '{key}' is not the same as its default value of '{typeof(toCheck)}'!`
-							)
-							break
-						end
-
-						local newTbl = deepChange(tbl, split[i], value)
-						self.Settings[split[1]] = newTbl
-					end
-				end
-
+	for settingSubCategory, value in pairs(extraOptions) do
+		if self.Settings[settingSubCategory] == nil then
+			if legacySettings[settingSubCategory] == nil then
+				self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
 				continue
 			end
 
-			self:_warn(`Optional key '{key}' is not a valid option.`)
+			local data = Table.Copy(legacySettings[settingSubCategory])
+
+			for _, strPath: string in pairs(data) do
+				local strPathSplit = string.split(strPath, ".")
+
+				if not fixedSettings[strPathSplit[1]] then
+					fixedSettings[strPathSplit[1]] = {}
+				end
+
+				fixedSettings[strPathSplit[1]][strPathSplit[2]] = value
+				table.insert(fixedSettings[2], settingSubCategory)
+
+				local split = string.split(strPath, ".")
+				for i = 2, #split do
+					local tbl = self.Settings[split[1]]
+					if not tbl then
+						break
+					end
+
+					local toCheck = deepFetch(tbl, split[i])
+					if typeof(toCheck) ~= typeof(value) then
+						self:_warn(
+							`Optional key '{settingSubCategory}' is not the same as its default value of '{typeof(toCheck)}'!`
+						)
+						break
+					end
+
+					local newTbl = deepChange(tbl, split[i], value)
+					self.Settings[split[1]] = newTbl
+				end
+			end
 			continue
 		end
 
+		-- Final settings check
 		if typeof(value) == "table" then
-			for k, j in pairs(value) do
-				if self.Settings[key][k] == nil then
-					self:_warn(`Optional key 'Settings.{key}.{k}' is not a valid option.`)
+			for settingToChange, newSetting in pairs(value) do
+				-- 'sticksModel' is nil by default.
+				if self.Settings[settingSubCategory][settingToChange] == nil and settingToChange ~= "sticksModel" then
+					self:_warn(`Optional key 'Settings.{settingSubCategory}.{settingToChange}' is not a valid option.`)
 					continue
-				elseif typeof(self.Settings[key][k]) ~= typeof(j) then
-					-- stylua: ignore
-					-- Styles were messing up this line
-					self:_warn(`Optional key 'Settings.{key}.{k}' is not the same type as its default value of '{typeof(self.Settings[key][k])}'!`)
+				elseif
+					-- Write in custom logic for 'Instance' types.
+					typeof(self.Settings[settingSubCategory][settingToChange]) ~= typeof(newSetting)
+					and (settingToChange == "sticksModel" and typeof(newSetting) ~= "Instance")
+				then
+					self:_warn(
+						string.format(
+							"Optional key 'Settings.%s.%s' is not the same type as it's default value of '%s'",
+							settingSubCategory,
+							settingToChange,
+							typeof(self.Settings[settingSubCategory][settingToChange])
+						)
+					)
 					continue
 				end
 
-				self.Settings[key][k] = j
+				self.Settings[settingSubCategory][settingToChange] = newSetting
 			end
 		else
-			self.Settings[key] = value
+			self.Settings[settingSubCategory] = value
 		end
 	end
 
 	-- Add rest of the commands when "Commands" is enabled.
 	if self.Settings.Commands.Enabled == true then
-		--------------------------------PROMOTE----------------------------------
 		self:addCommand("promote", {}, function(Player: Player, Args: { string })
 			local affectedUsers = {}
 			local users = self:_getPlayers(Player, string.split(Args[1], ","))
@@ -2646,7 +2674,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_addLog(Player, "Promote", affectedUsers)
 		end)
 
-		--------------------------------DEMOTE----------------------------------
 		self:addCommand("demote", {}, function(Player: Player, Args: { string })
 			local affectedUsers = {}
 			local users = self:_getPlayers(Player, string.split(Args[1], ","))
@@ -2659,7 +2686,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_addLog(Player, "Demote", affectedUsers)
 		end)
 
-		--------------------------------FIRE----------------------------------
 		self:addCommand("fire", {}, function(Player: Player, Args: { string })
 			local affectedUsers = {}
 			local users = self:_getPlayers(Player, string.split(Args[1], ","))
@@ -2672,7 +2698,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_addLog(Player, "Fire", affectedUsers)
 		end)
 
-		--------------------------------BLACKLIST----------------------------------
 		self:addCommand("blacklist", {}, function(Player: Player, Args: { string })
 			local affectedUsers = {}
 			local users = self:_getPlayers(Player, string.split(Args[1], ","))
@@ -2695,7 +2720,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_addLog(Player, "Blacklist", affectedUsers, reason)
 		end)
 
-		--------------------------------UNBLACKLIST----------------------------------
 		self:addCommand("unblacklist", {}, function(Player: Player, Args: { string })
 			local affectedUsers = {}
 			local targetData = table.remove(Args[1])
