@@ -1106,7 +1106,7 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	end
 
 	-- Commands handler
-	if self.Settings.Commands.Enabled == false then
+	if self.Settings.Commands.Enabled == false and self.Settings.RankSticks.Enabled == false then
 		return
 	end
 
@@ -1448,6 +1448,10 @@ function api:_buildAttributes()
 
 		STICKS = {
 			Status = self.Settings.RankSticks.Enabled,
+		},
+
+		MISC = {
+			ignoreWarnings = self.Settings.Misc.ignoreWarnings,
 		},
 	}
 
@@ -2311,7 +2315,7 @@ function api:_initialize(apiKey: string): ()
 	-- UI communication handler
 	local communicationRemote = self:_createRemote() :: RemoteFunction
 	communicationRemote.OnServerInvoke = function(Player: Player, ...: any)
-		onServerInvoke(self, Player, ...)
+		return onServerInvoke(self, Player, ...)
 	end
 
 	-- Chat command connections
@@ -2478,134 +2482,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			groupInfo = {},
 		},
 
-		commandOperations = {
-			{
-				Name = "promote",
-				Alias = {},
-				Enabled = true,
-				Execute = function(Player: Player, Args: { string })
-					local affectedUsers = {}
-					local users = self:_getPlayers(Player, string.split(Args[1], ","))
-					table.remove(Args, 1)
-
-					for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
-						onServerInvoke(self, Player, "Promote", "Commands", Target)
-					end
-
-					self:_addLog(Player, "Promote", affectedUsers)
-				end,
-			},
-
-			{
-				Name = "demote",
-				Alias = {},
-				Enabled = true,
-				Execute = function(Player: Player, Args: { string })
-					local affectedUsers = {}
-					local users = self:_getPlayers(Player, string.split(Args[1], ","))
-					table.remove(Args, 1)
-
-					for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
-						onServerInvoke(self, Player, "Demote", "Commands", Target)
-					end
-
-					self:_addLog(Player, "Demote", affectedUsers)
-				end,
-			},
-
-			{
-				Name = "fire",
-				Alias = {},
-				Enabled = true,
-				Execute = function(Player: Player, Args: { string })
-					local affectedUsers = {}
-					local users = self:_getPlayers(Player, string.split(Args[1], ","))
-					table.remove(Args, 1)
-
-					for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
-						onServerInvoke(self, Player, "Fire", "Commands", Target)
-					end
-
-					self:_addLog(Player, "Fire", affectedUsers)
-				end,
-			},
-
-			{
-				Name = "blacklist",
-				Alias = {},
-				Enabled = true,
-				Execute = function(Player: Player, Args: { string })
-					local affectedUsers = {}
-					local users = self:_getPlayers(Player, string.split(Args[1], ","))
-					table.remove(Args, 1)
-
-					local reason = table.concat(Args, " ")
-
-					for _, Target: Player in pairs(users) do
-						local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
-
-						if not res.success then
-							self:_warn("Blacklist resulted in an error, please try again later.")
-							return
-						end
-
-						table.insert(affectedUsers, Target)
-						self:_warn(res.message)
-					end
-
-					self:_addLog(Player, "Blacklist", affectedUsers, reason)
-				end,
-			},
-
-			{
-				Name = "unblacklist",
-				Alias = {},
-				Enabled = true,
-				Execute = function(Player: Player, Args: { string })
-					local affectedUsers = {}
-					local targetData = table.remove(Args[1])
-					local Targets
-
-					Targets = Table.Map(string.split(targetData, ","), function(value)
-						if tonumber(value) ~= nil then
-							local nameIsOk, targetName = pcall(Players.GetNameFromUserIdAsync, Players, value)
-							if not nameIsOk then
-								return
-							end
-
-							return { Name = targetName, UserId = tonumber(value) }
-						else
-							local idIsOk, targetUserId = pcall(Players.GetUserIdFromNameAsync, Players, value)
-							if not idIsOk then
-								return
-							end
-
-							return { Name = value, UserId = targetUserId }
-						end
-					end)
-
-					for _, Target: { Name: string, UserId: number } in pairs(Targets) do
-						if not Target then
-							return
-						end
-
-						local res = self:deleteBlacklist(Target.UserId)
-
-						-- TODO: Add a way to warn client for their mistake!
-						--selene: allow(empty_if)
-						if not res.success then
-							-- self:_warn("")
-						end
-
-						table.insert(affectedUsers, Target)
-						self:_warn(res.message)
-					end
-
-					self:_addLog(Player, "Unblacklist", affectedUsers)
-				end,
-			},
-		},
-
+		commandOperations = {},
 		commandOperationCodes = {
 			["Team"] = {
 				Code = "%", -- Operation Code
@@ -2754,9 +2631,118 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 	end
 
-	-- Check for if ranking sticks and commands are enabled and add
-	-- sticks command
-	if self.Settings.RankSticks.Enabled == true and self.Settings.Commands.Enabled == true then
+	-- Add rest of the commands when "Commands" is enabled.
+	if self.Settings.Commands.Enabled == true then
+		--------------------------------PROMOTE----------------------------------
+		self:addCommand("promote", {}, function(Player: Player, Args: { string })
+			local affectedUsers = {}
+			local users = self:_getPlayers(Player, string.split(Args[1], ","))
+			table.remove(Args, 1)
+
+			for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
+				onServerInvoke(self, Player, "Promote", "Commands", Target)
+			end
+
+			self:_addLog(Player, "Promote", affectedUsers)
+		end)
+
+		--------------------------------DEMOTE----------------------------------
+		self:addCommand("demote", {}, function(Player: Player, Args: { string })
+			local affectedUsers = {}
+			local users = self:_getPlayers(Player, string.split(Args[1], ","))
+			table.remove(Args, 1)
+
+			for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
+				onServerInvoke(self, Player, "Demote", "Commands", Target)
+			end
+
+			self:_addLog(Player, "Demote", affectedUsers)
+		end)
+
+		--------------------------------FIRE----------------------------------
+		self:addCommand("fire", {}, function(Player: Player, Args: { string })
+			local affectedUsers = {}
+			local users = self:_getPlayers(Player, string.split(Args[1], ","))
+			table.remove(Args, 1)
+
+			for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
+				onServerInvoke(self, Player, "Fire", "Commands", Target)
+			end
+
+			self:_addLog(Player, "Fire", affectedUsers)
+		end)
+
+		--------------------------------BLACKLIST----------------------------------
+		self:addCommand("blacklist", {}, function(Player: Player, Args: { string })
+			local affectedUsers = {}
+			local users = self:_getPlayers(Player, string.split(Args[1], ","))
+			table.remove(Args, 1)
+
+			local reason = table.concat(Args, " ")
+
+			for _, Target: Player in pairs(users) do
+				local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
+
+				if not res.success then
+					self:_warn("Blacklist resulted in an error, please try again later.")
+					return
+				end
+
+				table.insert(affectedUsers, Target)
+				self:_warn(res.message)
+			end
+
+			self:_addLog(Player, "Blacklist", affectedUsers, reason)
+		end)
+
+		--------------------------------UNBLACKLIST----------------------------------
+		self:addCommand("unblacklist", {}, function(Player: Player, Args: { string })
+			local affectedUsers = {}
+			local targetData = table.remove(Args[1])
+			local Targets
+
+			Targets = Table.Map(string.split(targetData, ","), function(value)
+				if tonumber(value) ~= nil then
+					local nameIsOk, targetName = pcall(Players.GetNameFromUserIdAsync, Players, value)
+					if not nameIsOk then
+						return
+					end
+
+					return { Name = targetName, UserId = tonumber(value) }
+				else
+					local idIsOk, targetUserId = pcall(Players.GetUserIdFromNameAsync, Players, value)
+					if not idIsOk then
+						return
+					end
+
+					return { Name = value, UserId = targetUserId }
+				end
+			end)
+
+			for _, Target: { Name: string, UserId: number } in pairs(Targets) do
+				if not Target then
+					return
+				end
+
+				local res = self:deleteBlacklist(Target.UserId)
+
+				-- TODO: Add a way to warn client for their mistake!
+				--selene: allow(empty_if)
+				if not res.success then
+					-- self:_warn("")
+					continue
+				end
+
+				table.insert(affectedUsers, Target)
+				self:_warn(res.message)
+			end
+
+			self:_addLog(Player, "Unblacklist", affectedUsers)
+		end)
+	end
+
+	-- Only add "sticks" command when rank sticks is enabled.
+	if self.Settings.RankSticks.Enabled == true then
 		self:addCommand("sticks", {}, function(Player: Player)
 			local staffData = self:_playerIsValidStaff(Player)
 			if not staffData or staffData[2] == nil or staffData[2] < self.Settings.Commands.MinRank then

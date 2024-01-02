@@ -6,16 +6,13 @@
         "MinRank": { "type": "number", "default": 255 },
         "MaxRank": { "type": "number", "default": 255 },
         
-        "Prefix": { "type": "text", "default": ";" },
-        "Alias": { "type": "Array", "default": [] }
+        "Prefix": { "type": "string", "default": ";" }
     },
 
     "RankSticks": {
         "Enabled": { "type": "boolean", "default": false },
         "MinRank": { "type": "number", "default": 255 },
-        "MaxRank": { "type": "number", "default": 255 },
-
-        "sticksModel": { "type": "userdata", "default": null }
+        "MaxRank": { "type": "number", "default": 255 }
     },
 
     "Notifications": {

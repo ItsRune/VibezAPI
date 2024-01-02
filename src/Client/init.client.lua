@@ -16,7 +16,7 @@ local remoteFunction = ReplicatedStorage:WaitForChild(script.Name, math.huge)
 local eventHolder = {}
 local Maid = {}
 local afkDelayOffset = 5
-local isUIContextEnabled = false
+local isUIContextEnabled, isWarningsAllowed = false, true
 -- local Zone = require(script.Zone) -- Only used for ranking-sticks
 
 --// Functions \\--
@@ -33,6 +33,10 @@ local function getTempFolder()
 end
 
 local function _warn(starter: string, ...: string)
+	if not isWarningsAllowed then
+		return
+	end
+
 	local data = table.concat({ ... }, " ")
 	warn("[" .. starter .. "]: " .. data)
 end
@@ -129,7 +133,6 @@ local function onSetupRankSticks()
 
 				Maid.RankSticks[actionName] = {
 					child.Activated:Connect(function()
-						warn("Clicked")
 						if deb then
 							return
 						end
@@ -458,6 +461,8 @@ local function onAttributeChanged()
 		return
 	end
 
+	isWarningsAllowed = States.MISC.ignoreWarnings
+
 	if States.UI.Notifications.Status == true then
 		setupNotifications()
 	else
@@ -467,7 +472,6 @@ local function onAttributeChanged()
 	local isStaff =
 		remoteFunction:InvokeServer("isStaff", nil, "Interface", "RankSticks", "Commands", "ActivityTracker")
 
-	warn(isStaff)
 	if not isStaff then
 		return
 	end
