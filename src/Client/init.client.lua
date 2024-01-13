@@ -11,15 +11,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
-local remoteFunction = ReplicatedStorage:WaitForChild(script.Name, math.huge)
--- local remoteEvent = ReplicatedStorage:WaitForChild(script.Name .. "_Event", math.huge)
+--selene: allow(unused_variable)
+local remoteFunction, remoteEvent, widgetData
 local eventHolder = {}
 local Maid = {}
 local afkDelayOffset = 5
 local isUIContextEnabled, isWarningsAllowed = false, true
--- local Zone = require(script.Zone) -- Only used for ranking-sticks
 
 --// Functions \\--
+local function findFirstChildWhichIsAByName(parent: Instance, name: string, class: string): Instance?
+	for _, v in pairs(parent:GetChildren()) do
+		if v.Name == name and v:IsA(class) then
+			return v
+		end
+	end
+
+	return nil
+end
+
 local function getTempFolder()
 	local folder = Workspace:FindFirstChild(script.Name .. "_Temp")
 
@@ -498,6 +507,10 @@ local function onAttributeChanged()
 end
 
 local function onStart()
+	local eventConnection -- In case we decide to do auto updating of module for api route changes.
+	remoteFunction = findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteFunction")
+	remoteEvent = findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteEvent")
+
 	onAttributeChanged()
 
 	-- Attribute Checks
@@ -510,6 +523,23 @@ local function onStart()
 		local Clone = script:Clone()
 		Clone.Parent = StarterPlayerScripts
 	end
+
+	eventConnection = remoteEvent.OnClientEvent:Connect(function(Command: string, ...: any)
+		local Data = { ... }
+
+		if Command == "Notify" then
+			local Type: "Error" | "Warning" | "Info" = Data[1]
+			local Message = Data[2]
+			local Meta = Data[3] or {}
+
+			warn(Type, Message, Meta)
+		elseif Command == "Widget" then
+			widgetData = ...
+		elseif Command == "Disconnect" then
+			disconnect(Maid)
+			eventConnection:Disconnect()
+		end
+	end)
 
 	-- Simple way to make sure client is fully connected
 	remoteFunction.OnClientInvoke = function()

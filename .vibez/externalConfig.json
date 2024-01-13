@@ -37,6 +37,10 @@
         "failMessage": { "type": "string", "default": "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!" }
     },
 
+    "Widgets": {
+        "Enabled": { "type": "boolean", "default": false }
+    },
+
     "Misc": {
         "originLoggerText": { "type": "string", "default": "Origin" },
         "ignoreWarnings": { "type": "boolean", "default": false },

@@ -1,0 +1,67 @@
+## Implementation
+First things first, you'll need to [download it here.](https://vibez.dev/) Once you've done that, you'll need to open the file and publish to your group as a new game. Afterwards you're ready to customize it to your liking.
+
+## Usage
+### Important
+To use the rank center, you need to ensure you publish the game and that you have `Allow Third Party Teleports` enabled.
+<img src="/VibezAPI/allowThirdPartyTeleports.png"></img>
+
+### Configuration
+Within `ServerScriptService` you'll find a ModuleScript called `Configuration`. This is where all the settings for the rank center are stored. You can change the settings to your liking, but make sure you don't change the names of the settings or else the rank center will revert to it's default settings.
+
+```lua
+-- __     ___ _              
+-- \ \   / (_) |__   ___ ____
+--  \ \ / /| | '_ \ / _ \_  /
+--   \ V / | | |_) |  __// / 
+--    \_/  |_|_.__/ \___/___|
+
+
+-- You are using Vibez ranking centre v3.0
+-- Scripted by ltsRune (https://www.roblox.com/users/107392833/profile)
+-- UI Design by Flairsed (https://www.roblox.com/users/4331079432/profile)
+
+-- In this file you can edit all the settings on how the ranking center should behave.
+return {
+	["ApiKey"] = "", -- Vibez API Key
+	
+	--// Ranks \\--
+	["Ranks"] = {
+		toRankTo = 2; -- Ranks the player to this rank id.
+		rankRequired = 1; -- Rank the player needs, tolerance: ">="
+		passId = 0; -- Gamepass ID
+	},
+
+	-- UI Customization
+	-- This does filter the text to prevent bad actors, so be careful.
+	["uiTitle"] = "Rank Center",
+	
+	-- 'backgroundColor' includes any ui parts that are used as non-necessary frames.
+	 -- The main game may change this slightly to make it brighter/dimmer
+	["backgroundColor"] = Color3.fromRGB(31, 31, 31),
+	
+	-- 'textColor' includes any text related asset's color
+	 -- The main game may change this slightly to make it brighter/dimmer
+	["textColor"] = Color3.fromRGB(255, 255, 255),
+	
+	-- Foreground includes Frame's background,
+	 -- The main game may change this slightly to make it brighter/dimmer
+	["foregroundColor"] = Color3.fromRGB(224, 141, 186),
+
+	--// Kick Messages \\--
+	-- When a player is successfully ranked.
+	["successfullyRankedMessage"] = "You were ranked sucessfully!",
+	
+	-- When a player isn't in your group.
+	["notInGroupMessage"] = "Join the group first before trying to claim a rank.",
+
+	-- When a player's rank is too high to view passes.
+	["noPassesToLoadForUserMessage"] = "It appears your rank is too high to see any ranks.",
+	
+	-- When a player is failed to be ranked.
+	["failedToRankMessage"] = "There seems to have been an issue when attempting to rank you.",
+	
+	-- When the API Key can't be connected to our API.
+	["centerFailedToLoad"] = "API Error: Failed to startup!",
+}
+```

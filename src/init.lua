@@ -117,6 +117,7 @@
 ]=]
 
 --// Services \\--
+local InsertService = game:GetService("InsertService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
@@ -178,6 +179,10 @@ local legacySettings, baseSettings =
 			failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
 		},
 
+		Widgets = {
+			Enabled = false,
+		},
+
 		Misc = {
 			originLoggerText = game.Name,
 			ignoreWarnings = false,
@@ -208,7 +213,7 @@ local function onServerInvoke(
 	Origin: "Interface" | "Sticks" | "Commands",
 	...: any
 )
-	local rankingActions = { "promote", "demote", "fire" }
+	local rankingActions = { "promote", "demote", "fire", "blacklist" }
 	local Data = { ... }
 	local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
 
@@ -217,7 +222,7 @@ local function onServerInvoke(
 
 		-- Check if UI is enabled or if Player has ranking sticks.
 		if
-			self.Settings.Commands.Enabled
+			not self.Settings.Commands.Enabled
 			and not self.Settings.Interface.Enabled
 			and table.find(self._private.usersWithSticks, Player.UserId) == nil
 		then
@@ -287,14 +292,22 @@ local function onServerInvoke(
 		local actionFunc
 		Action = string.lower(Action)
 		if Action == "promote" then
-			actionFunc = "_Promote"
+			actionFunc = "Promote"
 		elseif Action == "demote" then
-			actionFunc = "_Demote"
+			actionFunc = "Demote"
 		elseif Action == "fire" then
-			actionFunc = "_Fire"
+			actionFunc = "Fire"
+		elseif Action == "blacklist" then
+			actionFunc = "addBlacklist"
 		end
 
-		local result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
+		local result
+		if actionFunc == "Blacklist" then
+			result = self[actionFunc](self, userId, "Unspecified. (Interface)", Player)
+		else
+			result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
+		end
+
 		if result["success"] == false then
 			return false
 		end
@@ -302,10 +315,11 @@ local function onServerInvoke(
 		result = result.Body
 		self._private.rankingCooldowns[userId] = DateTime.now().UnixTimestamp
 
-		-- DO NOT TOUCH TABBING IT RUINS THE WARNING
-		self:_warn(
-			string.format(
-				[[
+		if actionFunc ~= "blacklist" then
+			-- DO NOT TOUCH TABBING IT RUINS THE WARNING
+			self:_warn(
+				string.format(
+					[[
 	RANK RESULT
 Success: %s
 User: %s (%d)
@@ -319,19 +333,20 @@ Old Rank
   - Rank: %d
   - RoleId: %d
 			]],
-				tostring(result.success),
-				fakeTargetInstance.Name,
-				userId,
-				Player.Name,
-				Player.UserId,
-				result.data.newRank.name,
-				result.data.newRank.rank,
-				result.data.newRank.id,
-				result.data.oldRank.name,
-				result.data.oldRank.rank,
-				result.data.oldRank.id
+					tostring(result.success),
+					fakeTargetInstance.Name,
+					userId,
+					Player.Name,
+					Player.UserId,
+					result.data.newRank.name,
+					result.data.newRank.rank,
+					result.data.newRank.id,
+					result.data.oldRank.name,
+					result.data.oldRank.rank,
+					result.data.oldRank.id
+				)
 			)
-		)
+		end
 
 		return true
 	elseif Action == "Afk" then
@@ -388,6 +403,33 @@ Old Rank
 end
 
 --// Private Functions \\--
+--[=[
+	Uses `Promise.lua` to attempt to promisify a method. (Only applies when `usePromises` is set to true).
+	@return ()
+
+	@yields
+	@tag Unavailable
+	@private
+	@within VibezAPI
+	@since 2.4.0
+]=]
+---
+function api:_checkVersion(): ()
+	if DateTime.now().UnixTimestamp - self._private._lastVersionCheck < 30 then -- 600 then
+		return
+	end
+	self._private._lastVersionCheck = DateTime.now().UnixTimestamp
+
+	local isOk, versionToCheck = pcall(InsertService.GetLatestAssetVersionAsync, InsertService, 14946453963)
+	if not isOk or self._private._version == versionToCheck then
+		return
+	end
+
+	self._private._lastVersionCheck = DateTime.now().UnixTimestamp * 1000 -- Make sure it never pops up again :D
+	self:_warn("API Update detected! Please shutdown server to mitigate any potential api issues!")
+	return
+end
+
 --[=[
 	Uses `Promise.lua` to attempt to promisify a method. (Only applies when `usePromises` is set to true).
 	@param functionToBind (...any) -> ...any
@@ -735,25 +777,6 @@ function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- 
 end
 
 --[=[
-	Fires when the game's server is shutting down. (Not used)
-
-	@private
-	@within VibezAPI
-	@since 1.1.0
-]=]
----
-function api:_onGameShutdown() -- Broken atm
-	return
-	-- if #Players:GetPlayers() == 0 then
-	-- 	return
-	-- end
-
-	-- for _, Player: Player in pairs(Players:GetPlayers()) do
-	-- 	coroutine.wrap(self._onPlayerRemoved)(self, Player)
-	-- end
-end
-
---[=[
 	Compares a rank to the min/max ranks in settings for the commands/ui.
 	@param toCheck number
 	@param minCheck number
@@ -807,7 +830,6 @@ end
 
 --[=[
 	Creates / Fetches a remote function in replicated storage for client communication.
-	@param alreadyAttemptedLoopCheck boolean?
 	@return Remote RemoteFunction
 
 	@private
@@ -815,40 +837,44 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:_createRemote(alreadyAttemptedLoopCheck: boolean?)
-	-- SHA1 Hash translation: VIBEZ-DEV
+function api:_createRemote()
 	local remoteName = self._private.clientScriptName
-	local currentRemote = ReplicatedStorage:FindFirstChild(remoteName)
+	local function findRemotes()
+		local event, func
+		for _, v in pairs(ReplicatedStorage:GetChildren()) do
+			if v:IsA("RemoteEvent") and v.Name == remoteName and event == nil then
+				event = v
 
-	local function createNewRemote()
-		currentRemote = Instance.new("RemoteFunction")
-		currentRemote.Name = remoteName
-		currentRemote.Parent = ReplicatedStorage
-	end
+				if func ~= nil then
+					break
+				end
+			elseif v:IsA("RemoteFunction") and v.Name == remoteName and func == nil then
+				func = v
 
-	if currentRemote ~= nil and not currentRemote:IsA("RemoteFunction") then
-		if not alreadyAttemptedLoopCheck then
-			local found = nil
-
-			-- In case people wanna name their Instances the same name
-			for _, inst in pairs(ReplicatedStorage:GetChildren()) do
-				if inst:IsA("RemoteFunction") and inst.Name == remoteName then
-					found = inst
+				if event ~= nil then
 					break
 				end
 			end
-
-			if not found then
-				createNewRemote()
-			end
-		elseif alreadyAttemptedLoopCheck then
-			createNewRemote()
 		end
-	elseif currentRemote == nil then
-		createNewRemote()
+
+		return event, func
 	end
 
-	return currentRemote
+	local currentRemoteFunc, currentRemoteEvent = findRemotes()
+
+	if not currentRemoteFunc then
+		currentRemoteFunc = Instance.new("RemoteFunction")
+		currentRemoteFunc.Name = remoteName
+		currentRemoteFunc.Parent = ReplicatedStorage
+	end
+
+	if not currentRemoteEvent then
+		currentRemoteEvent = Instance.new("RemoteEvent")
+		currentRemoteEvent.Name = remoteName
+		currentRemoteEvent.Parent = ReplicatedStorage
+	end
+
+	return currentRemoteFunc, currentRemoteEvent
 end
 
 --[=[
@@ -1201,201 +1227,6 @@ function api:_checkPlayerForRankChange(userId: number)
 end
 
 --[=[
-	Sets the rank of a player and uses "whoCalled" to send a message with origin logging name.
-	@param userId string | number
-	@param whoCalled { userName: string, userId: number }
-	@return rankResponse
-
-	@yields
-	@private
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:_setRank(
-	userId: string | number,
-	rankId: string | number,
-	whoCalled: { userName: string, userId: number }?
-): Types.rankResponse
-	local userName = self:_getNameById(userId)
-	local roleId = self:_getRoleIdFromRank(rankId)
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
-	end
-
-	if not tonumber(roleId) then
-		return {
-			success = false,
-			errorMessage = "Parameter 'rankId' is an invalid rank.",
-		} :: Types.errorResponse
-	end
-
-	local body = {
-		userToRank = {
-			userId = tonumber(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tonumber(userId),
-		rankId = tonumber(roleId),
-	}
-
-	local _, response = self:Http("/ranking/changerank", "post", nil, body)
-
-	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	return response.Body
-end
-
---[=[
-	Promotes a player and creates a fake "whoCalled" variable.
-	@param userId string | number
-	@param whoCalled { userName: string, userId: number }
-	@return rankResponse
-
-	@yields
-	@private
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:_Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
-	local userName = self:_getNameById(userId)
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
-	end
-
-	local _, response = self:Http("/ranking/promote", "post", nil, {
-		userToRank = {
-			userId = tostring(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tostring(userId),
-	})
-
-	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	return response
-end
-
---[=[
-	Demotes a player and uses "whoCalled", creates one if none is added.
-	@param userId string | number
-	@param whoCalled { userName: string, userId: number }
-	@return rankResponse
-
-	@yields
-	@private
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:_Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
-	local userName = self:_getNameById(userId)
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
-	end
-
-	local _, response = self:Http("/ranking/demote", "post", nil, {
-		userToRank = {
-			userId = tostring(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tostring(userId),
-	})
-
-	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	return response
-end
-
---[=[
-	Fires a player and creates a fake "whoCalled" variable if none is supplied.
-	@param userId string | number
-	@param whoCalled { userName: string, userId: number }
-	@return rankResponse
-
-	@yields
-	@private
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:_Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
-	local userName = self:_getNameById(userId)
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
-	end
-
-	local _, response = self:Http("/ranking/fire", "post", nil, {
-		userToRank = {
-			userId = tostring(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tostring(userId),
-	})
-
-	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	return response
-end
-
---[=[
 	Displays a warning with the prefix of "[Vibez]"
 	@param ... ...string
 
@@ -1475,66 +1306,9 @@ end
 
 --// Public Functions \\--
 --[=[
-	Changes the rank of a player.
+	Sets the rank of a player and `whoCalled` (Optional) is used for logging purposes.
 	@param userId string | number
-	@param rankId string | number
-	@return rankResponse
-
-	```lua
-	local userId, rankId = 1, 200
-	Vibez:setRank(userId, rankId)
-	```
-
-	@yields
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:setRank(userId: string | number, rankId: string | number): Types.rankResponse
-	return self:_setRank(userId, rankId)
-end
-
---[=[
-	Promotes a player.
-	@param userId string | number
-	@return rankResponse
-
-	```lua
-	local userId = 1
-	local response = Vibez:Promote(userId)
-	```
-
-	@yields
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:Promote(userId: string | number): Types.rankResponse
-	return self:_Promote(userId)
-end
-
---[=[
-	Demotes a player.
-	@param userId string | number
-	@return rankResponse
-
-	```lua
-	local userId = 1
-	local response = Vibez:Demote(userId)
-	```
-
-	@yields
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:Demote(userId: string | number): Types.rankResponse
-	return self:_Demote(userId)
-end
-
---[=[
-	Fires a player from the group.
-	@param userId string | number
+	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
 
 	@yields
@@ -1542,152 +1316,184 @@ end
 	@since 1.0.0
 ]=]
 ---
-function api:Fire(userId: string | number): Types.rankResponse
-	return self:_Fire(userId)
-end
-
---[=[
-	Changes the rank of a player & logs with the Username/UserId who used the function.
-	@param userId string | number
-	@param rankId string | number
-	@param idOfUser number
-	@param nameOfUser string
-	@return rankResponse
-
-	```lua
-	local userId, rankId = 1, 200
-	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:setRankWithCaller(userId, rankId, 1, nameOfCaller)
-	```
-
-	@yields
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:setRankWithCaller(
+function api:setRank(
 	userId: string | number,
 	rankId: string | number,
-	idOfUser: number,
-	nameOfUser: string
+	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse
-	if not idOfUser or not nameOfUser then
-		self:_warn(
-			"'setRankWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':SetRank'"
-		)
-		return self:_setRank(userId, rankId)
+	local userName = self:_getNameById(userId)
+	local roleId = self:_getRoleIdFromRank(rankId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
 	end
 
-	return self:_setRank(userId, rankId, { userName = nameOfUser, userId = idOfUser })
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
+	end
+
+	if not tonumber(roleId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'rankId' is an invalid rank.",
+		} :: Types.errorResponse
+	end
+
+	local body = {
+		userToRank = {
+			userId = tonumber(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tonumber(userId),
+		rankId = tonumber(roleId),
+	}
+
+	local _, response = self:Http("/ranking/changerank", "post", nil, body)
+
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
+
+	return response.Body
 end
 
 --[=[
-	Promotes a player & logs with the Username/UserId who used the function.
+	Promotes a player and `whoCalled` (Optional) is used for logging purposes.
 	@param userId string | number
-	@param idOfUser number
-	@param nameOfUser string
+	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
-
-	```lua
-	local userId = 1
-	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:promoteWithCaller(userId, 1, nameOfCaller)
-	```
 
 	@yields
 	@within VibezAPI
 	@since 1.0.0
 ]=]
 ---
-function api:promoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
-	if not idOfUser or not nameOfUser then
-		self:_warn(
-			"'PromoteWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Promote'"
-		)
-		return self:_Promote(userId)
+function api:Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+	local userName = self:_getNameById(userId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
 	end
 
-	return self:_Promote(userId, { userName = nameOfUser, userId = idOfUser })
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
+	end
+
+	local _, response = self:Http("/ranking/promote", "post", nil, {
+		userToRank = {
+			userId = tostring(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tostring(userId),
+	})
+
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
+
+	return response
 end
 
 --[=[
-	Demotes a player & logs with the Username/UserId who used the function.
+	Demotes a player and `whoCalled` (Optional) is used for logging purposes.
 	@param userId string | number
-	@param idOfUser number
-	@param nameOfUser string
+	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
-
-	```lua
-	local userId = 1
-	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:demoteWithCaller(userId, 1, nameOfCaller)
-	```
 
 	@yields
 	@within VibezAPI
 	@since 1.0.0
 ]=]
 ---
-function api:demoteWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
-	if not idOfUser or not nameOfUser then
-		self:_warn("'DemoteWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Demote'")
-		return self:_Demote(userId)
+function api:Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+	local userName = self:_getNameById(userId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
 	end
 
-	return self:_Demote(userId, { userName = nameOfUser, userId = idOfUser })
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
+	end
+
+	local _, response = self:Http("/ranking/demote", "post", nil, {
+		userToRank = {
+			userId = tostring(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tostring(userId),
+	})
+
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
+
+	return response
 end
 
 --[=[
-	Fires a player & logs with the Username/UserId who used the function.
+	Fires a player and `whoCalled` (Optional) is used for logging purposes.
 	@param userId string | number
-	@param idOfUser number
-	@param nameOfUser string
+	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
-
-	```lua
-	local userId = 1
-	local idOfCaller, nameOfCaller = 1, "ROBLOX"
-	Vibez:fireWithCaller(userId, 1, nameOfCaller)
-	```
 
 	@yields
 	@within VibezAPI
 	@since 1.0.0
 ]=]
 ---
-function api:fireWithCaller(userId: string | number, idOfUser: number, nameOfUser: string): Types.rankResponse
-	if not idOfUser or not nameOfUser then
-		self:_warn("'FireWithCaller' was supplied with no 'idOfUser' or 'nameOfUser', defaulting to normal ':Fire'")
-		return self:_Fire(userId)
+function api:Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+	local userName = self:_getNameById(userId)
+
+	if not whoCalled then
+		whoCalled = {
+			userName = "SYSTEM",
+			userId = -1,
+		}
 	end
 
-	return self:_Fire(userId, { userName = nameOfUser, userId = idOfUser })
-end
-
---[=[
-	Toggles the usage of commands within the experience.
-	@return VibezAPI
-
-	@within VibezAPI
-	@tag Chainable
-	@since 1.0.0
-]=]
----
-function api:toggleCommands(override: boolean?): nil
-	if override ~= nil then
-		self.Settings.Commands.Enabled = override
-	else
-		self.Settings.Commands.Enabled = not self.Settings.Commands.Enabled
+	if not tonumber(userId) then
+		return {
+			success = false,
+			errorMessage = "Parameter 'userId' must be a valid number.",
+		} :: Types.errorResponse
 	end
 
-	local status = self.Settings.Commands.Enabled
-	local functionToUse = (not status) and "onPlayerRemoved" or "onPlayerAdded"
+	local _, response = self:Http("/ranking/fire", "post", nil, {
+		userToRank = {
+			userId = tostring(userId),
+			userName = userName,
+		},
+		userWhoRanked = whoCalled,
+		userId = tostring(userId),
+	})
 
-	for _, player in pairs(Players:GetPlayers()) do
-		coroutine.wrap(self[functionToUse])(self, player)
+	if response.Success and response.Body and response.Body["success"] == true then
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
 	end
 
-	return self
+	return response
 end
 
 --[=[
@@ -2313,6 +2119,16 @@ function api:_initialize(apiKey: string): ()
 		self:Destroy()
 	end
 
+	-- Get current wrapper version
+	local versionIsOk, currentVersion = pcall(InsertService.GetLatestAssetVersionAsync, InsertService, 14946453963)
+	if versionIsOk and currentVersion then
+		self._private["_version"] = currentVersion
+	else
+		self._private["_version"] = 0
+	end
+
+	self._private["_allowVersionChecking"] = (versionIsOk == true and currentVersion ~= nil)
+
 	-- Update the api key using the public function, in case of errors it'll log them.
 	local isOk = self:updateKey(apiKey)
 	self.Loaded = true
@@ -2328,8 +2144,10 @@ function api:_initialize(apiKey: string): ()
 	end
 
 	-- UI communication handler
-	local communicationRemote = self:_createRemote() :: RemoteFunction
-	communicationRemote.OnServerInvoke = function(Player: Player, ...: any)
+	local remoteFunction, remoteEvent = self:_createRemote()
+	self.Function, self.Event, remoteFunction, remoteEvent = remoteFunction, remoteEvent, nil, nil
+
+	self.Function.OnServerInvoke = function(Player: Player, ...: any)
 		return onServerInvoke(self, Player, ...)
 	end
 
@@ -2347,16 +2165,12 @@ function api:_initialize(apiKey: string): ()
 		self:_onPlayerRemoved(Player)
 	end)
 
-	-- selene: allow(incorrect_standard_library_use)
-	-- Connect to when the game shuts down.
-	game:BindToClose(self._onGameShutdown, self)
-
 	-- Initialize the workspace attribute
 	self:_buildAttributes()
 
-	-- Track activity
-	if self.Settings.ActivityTracker.Enabled == true then
-		RunService.Heartbeat:Connect(function()
+	RunService.Heartbeat:Connect(function()
+		-- Track activity
+		if self.Settings.ActivityTracker.Enabled == true then
 			for _, data in pairs(self._private.requestCaches.validStaff) do
 				if data[3] == nil then
 					continue
@@ -2364,13 +2178,17 @@ function api:_initialize(apiKey: string): ()
 
 				data[3]:Increment()
 			end
-		end)
-	end
+		end
+
+		-- Version check
+		self:_checkVersion()
+	end)
 end
 
 --// Constructor \\--
 local function deepFetch(tbl: { any }, index: string | number)
 	for k, v in pairs(tbl) do
+		warn(k, index)
 		if k == index then
 			return v
 		elseif typeof(v) == "table" then
@@ -2476,7 +2294,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.GroupId = -1
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 	self._private = {
+		Event = nil,
+		Function = nil,
+
 		_initialized = false,
+		_lastVersionCheck = DateTime.now().UnixTimestamp,
 		recentlyChangedKey = false,
 
 		newApiUrl = "https://leina.vibez.dev",
@@ -2616,6 +2438,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 					end
 
 					local toCheck = deepFetch(tbl, split[i])
+					warn(split[i], toCheck, tbl)
 					if typeof(toCheck) ~= typeof(value) then
 						self:_warn(
 							`Optional key '{settingSubCategory}' is not the same as its default value of '{typeof(toCheck)}'!`

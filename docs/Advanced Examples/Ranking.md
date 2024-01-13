@@ -61,10 +61,10 @@ local function onPlayerAdded(Player: Player)
 
         local command = string.split(string.lower(Message), " ")[1]
         local funcs = {
-            ["promote"] = "promoteWithCaller";
-            ["demote"] = "demoteWithCaller";
-            ["fire"] = "fireWithCaller";
-            ["setrank"] = "setRankWithCaller";
+            ["promote"] = "Promote";
+            ["demote"] = "Demote";
+            ["fire"] = "Fire";
+            ["setrank"] = "setRank";
         }
 
         local methodToUse = funcs[command]

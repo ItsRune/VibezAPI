@@ -148,6 +148,10 @@ export type vibezSettings = {
 		failMessage: string,
 	},
 
+	Widgets: {
+		Enabled: boolean,
+	},
+
 	Misc: {
 		originLoggerText: string,
 		ignoreWarnings: boolean,
@@ -183,13 +187,42 @@ export type vibezApi = {
 	GroupId: number,
 	Settings: vibezSettings,
 	_private: {
+		Event: RemoteEvent?,
+		Function: RemoteFunction?,
+
+		_initialized: boolean,
+		recentlyChangedKey: boolean,
+
 		newApiUrl: string,
 		oldApiUrl: string,
-		Maid: { RBXScriptConnection? },
-		validStaff: { [number]: {}? },
+
 		clientScriptName: string,
 		rateLimiter: RateLimit,
-		commandOperationCodes: { { any }? },
+
+		externalConfigCheckDelay: number,
+		lastLoadedExternalConfig: number,
+
+		inGameLogs: { {}? },
+		Maid: { RBXScriptConnection? },
+		rankingCooldowns: {},
+
+		usersWithSticks: { number },
+		stickTypes: string,
+
+		requestCaches: {
+			validStaff: { { any } },
+			nitro: { number? },
+			groupInfo: { any },
+		},
+
+		commandOperations: { {} },
+		commandOperationCodes: {
+			{
+				Code: string,
+				isExternal: boolean?,
+				Execute: (Player: Player, playerToCheck: Player, incomingArgument) -> boolean,
+			}?
+		},
 	},
 
 	-- Misc methods
@@ -211,35 +244,23 @@ export type vibezApi = {
 	isUserBlacklisted: (self: vibezApi, userId: number | string) -> blacklistResponse,
 
 	-- Ranking
-	Promote: (self: vibezApi, userId: string | number) -> responseBody,
-	Demote: (self: vibezApi, userId: string | number) -> responseBody,
-	Fire: (self: vibezApi, userId: string | number) -> responseBody,
-	SetRank: (self: vibezApi, userId: string | number, rankId: string | number) -> responseBody,
+	Promote: (
+		self: vibezApi,
+		userId: string | number,
+		whoCalled: { userName: string, userId: number }?
+	) -> responseBody,
+	Demote: (self: vibezApi, userId: string | number, whoCalled: { userName: string, userId: number }?) -> responseBody,
+	Fire: (self: vibezApi, userId: string | number, whoCalled: { userName: string, userId: number }?) -> responseBody,
+	SetRank: (
+		self: vibezApi,
+		userId: string | number,
+		rankId: string | number,
+		whoCalled: { userName: string, userId: number }?
+	) -> responseBody,
 
 	--- Ranking Sticks
 	giveRankSticks: (self: vibezApi, user: Player | string | number) -> boolean,
 	setRankStickModel: (self: vibezApi, tool: Tool | Model) -> (),
-
-	--- Ranking with callers
-	promoteWithCaller: (
-		self: vibezApi,
-		userId: string | number,
-		idOfCaller: number,
-		nameOfCaller: string
-	) -> rankResponse,
-	demoteWithCaller: (
-		self: vibezApi,
-		userId: string | number,
-		idOfCaller: number,
-		nameOfCaller: string
-	) -> rankResponse,
-	setRankWithCaller: (
-		self: vibezApi,
-		userId: string | number,
-		idOfCaller: number,
-		nameOfCaller: string
-	) -> rankResponse,
-	fireWithCaller: (self: vibezApi, userId: string | number, idOfCaller: number, nameOfCaller: string) -> rankResponse,
 
 	-- Features
 	toggleCommands: (self: vibezApi, override: boolean?) -> nil,
@@ -316,5 +337,7 @@ export type embedCreator = {
 }
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi
+
+export type widgetTypes = "Discord" -- Add more if we decide to add more. (Twitter / Etc)
 
 return nil
