@@ -404,7 +404,7 @@ end
 
 --// Private Functions \\--
 --[=[
-	Uses `Promise.lua` to attempt to promisify a method. (Only applies when `usePromises` is set to true).
+	Gets and checks the current version to the version saved to the module.
 	@return ()
 
 	@yields
@@ -435,6 +435,10 @@ end
 	@param functionToBind (...any) -> ...any
 	@param ... any
 	@return Promise | any
+
+	:::danger BROKEN
+	This method does nothing at the moment.
+	:::
 
 	@yields
 	@tag Unavailable
