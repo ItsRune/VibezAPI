@@ -2184,8 +2184,8 @@ function api:_initialize(apiKey: string): ()
 			end
 		end
 
-		-- Version check
-		self:_checkVersion()
+		-- Version check | Temporarily disabled until testing is completed.
+		-- self:_checkVersion()
 	end)
 end
 
