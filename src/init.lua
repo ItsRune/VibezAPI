@@ -117,7 +117,7 @@
 ]=]
 
 --// Services \\--
-local InsertService = game:GetService("InsertService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
@@ -133,6 +133,7 @@ local ActivityTracker = require(script.Modules.Activity)
 local RateLimit = require(script.Modules.RateLimit)
 local Promise = require(script.Modules.Promise)
 local Table = require(script.Modules.Table)
+local RoTime = require(script.Modules.RoTime)
 
 --// Constants \\--
 local api = {}
@@ -248,6 +249,16 @@ local function onServerInvoke(
 
 		local callerGroupRank = self:_playerIsValidStaff(Player)
 		if not callerGroupRank or callerGroupRank[2] == nil then -- The user calling this function is NOT staff
+			self:_warn(
+				string.format(
+					"%s (%d) attempted to '%s' user %s (%d) when they're not staff!",
+					Player.Name,
+					Player.UserId,
+					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
+					Target.Name,
+					userId
+				)
+			)
 			return false
 		end
 		callerGroupRank = callerGroupRank[2] -- THIS IS A NUMBER
@@ -262,14 +273,43 @@ local function onServerInvoke(
 			or -1
 
 		if minRank == -1 or maxRank == -1 then
+			self:_warn(
+				string.format(
+					"Failed to load min/max rank settings for action '%s'",
+					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
+				)
+			)
 			return false
 		end
 
-		if
-			callerGroupRank == nil -- basic check
-			or (callerGroupRank < minRank or callerGroupRank > maxRank) -- Prevent ppl with lower than max rank to use methods (if somehow got access to)
-			or (targetGroupRank >= callerGroupRank) -- Prevent lower/equal ranked users from ranking higher/equal members
-		then
+		if callerGroupRank == nil then
+			self:_warn(string.format("", ""))
+			return false
+		end
+
+		if targetGroupRank >= callerGroupRank then -- Prevent lower/equal ranked users from ranking higher/equal members
+			self:_warn(
+				string.format(
+					"Player %s (%d) is lower/equal to the member they're trying to perform action '%s' on!",
+					Player.Name,
+					Player.UserId,
+					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
+				)
+			)
+			return false
+		end
+
+		if callerGroupRank < minRank or callerGroupRank > maxRank then -- Prevent ppl with lower than max rank to use methods (if somehow got access to)
+			self:_warn(
+				string.format(
+					"Player %s (%d) attempted to use '%s' on %s (%d) but was rejected due to either being too low of a rank or too high of a rank!",
+					Player.Name,
+					Player.UserId,
+					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
+					Target.Name,
+					userId
+				)
+			)
 			return false
 		end
 
@@ -309,6 +349,7 @@ local function onServerInvoke(
 		end
 
 		if result["success"] == false then
+			self:_warn(string.format("Internal server error: %s", result.errorMessage))
 			return false
 		end
 
@@ -395,6 +436,11 @@ Old Rank
 		return tbl
 	else
 		-- Maybe actually log it somewhere... I have no clue where though.
+		self:_warn(
+			"Player %s (%d) was kicked for trying to perform an invalid action with our API.",
+			Player.Name,
+			Player.UserId
+		)
 		Player:Kick(
 			"Messing with vibez remotes, this has been logged and repeating offenders will be blacklisted from our services."
 		)
@@ -420,11 +466,20 @@ function api:_checkVersion(): ()
 	end
 	self._private._lastVersionCheck = DateTime.now().UnixTimestamp
 
-	local isOk, versionToCheck = pcall(InsertService.GetLatestAssetVersionAsync, InsertService, 14946453963)
-	if not isOk or self._private._version == versionToCheck then
+	local isOk, productInfo =
+		pcall(MarketplaceService.GetProductInfo, MarketplaceService, 14946453963, Enum.InfoType.Asset)
+	if not isOk then
 		return
 	end
 
+	local time = RoTime.new()
+	time:set(productInfo.Updated, "#yyyy-#mm-#ddT#hh:#m:#s.#msZ")
+
+	if time:getDateTime().UnixTimestamp == self._versionTime:getDateTime().UnixTimestamp then
+		return
+	end
+
+	self._versionTime = time
 	self._private._lastVersionCheck = DateTime.now().UnixTimestamp * 1000 -- Make sure it never pops up again :D
 	self:_warn("API Update detected! Please shutdown server to mitigate any potential api issues!")
 	return
@@ -1231,7 +1286,7 @@ function api:_checkPlayerForRankChange(userId: number)
 end
 
 --[=[
-	Displays a warning with the prefix of "[Vibez]"
+	Displays a warning with the prefix of "[Vibez-TIMESTAMP]"
 	@param ... ...string
 
 	@private
@@ -1244,7 +1299,11 @@ function api:_warn(...: string)
 		return
 	end
 
-	warn("[Vibez]:", table.concat({ ... }, " "))
+	local Time = RoTime.new()
+	local timeStamp = Time:getTimestamp()
+	Time:Destroy()
+
+	warn("[Vibez-" .. timeStamp .. "]:", table.concat({ ... }, " "))
 end
 
 --[=[
@@ -2124,14 +2183,15 @@ function api:_initialize(apiKey: string): ()
 	end
 
 	-- Get current wrapper version
-	local versionIsOk, currentVersion = pcall(InsertService.GetLatestAssetVersionAsync, InsertService, 14946453963)
-	if versionIsOk and currentVersion then
-		self._private["_version"] = currentVersion
+	local versionIsOk, productInfo =
+		pcall(MarketplaceService.GetProductInfo, MarketplaceService, 14946453963, Enum.InfoType.Asset)
+	if versionIsOk and productInfo then
+		self._private["_versionTime"] = RoTime.new():set(productInfo.Updated, "#yyyy-#mm-#ddT#hh:#m:#s.#msZ")
 	else
-		self._private["_version"] = 0
+		self._private["_versionTime"] = 0
 	end
 
-	self._private["_allowVersionChecking"] = (versionIsOk == true and currentVersion ~= nil)
+	self._private["_allowVersionChecking"] = (versionIsOk == true and productInfo ~= nil)
 
 	-- Update the api key using the public function, in case of errors it'll log them.
 	local isOk = self:updateKey(apiKey)

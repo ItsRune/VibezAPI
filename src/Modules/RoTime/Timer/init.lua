@@ -3,7 +3,6 @@ local HttpService = game:GetService("HttpService")
 local Signal = require(script.Signal)
 
 --- @class Timer
---- @ignore
 
 --[=[
     @within Timer

@@ -28,12 +28,25 @@ local function tokenize(input: string): { { token }? }
 		end
 
 		local pattern = Settings.Patterns[currentCapture]
+		if not pattern then
+			table.insert(tokens, {
+				code = "Unknown",
+				expected = currentCapture,
+				tokenType = "string",
+				indexStart = captureStartedAt,
+				indexEnd = captureEndedAt,
+			})
+			return
+		end
+
+		local requiresFormatting = table.find(Settings.tokensRequiringFormatting, pattern.expectedType) ~= nil
 		table.insert(tokens, {
 			code = currentCapture,
 			expected = pattern.expectedType,
 			tokenType = pattern.Type,
 			indexStart = captureStartedAt,
 			indexEnd = captureEndedAt,
+			needsFormatting = requiresFormatting,
 		})
 
 		currentCapture = ""

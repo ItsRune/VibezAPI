@@ -1,6 +1,4 @@
---!strict
 --- @class RoTime
---- @ignore
 
 --[=[
 	@prop Timer (start: number, finish: number, increment: number?) -> Timer
@@ -81,6 +79,34 @@ function RoTime.new(): Types.RoTime
 	return self
 end
 
+--[=[
+	Gets the amount of time between two numbers. (Seconds)
+	@param firstUnix number
+	@param secondUnix number
+	@return string
+
+	@since 2.0.0
+	@within RoTime
+]=]
+function RoTime.getHumanTimestamp(firstUnix: number, secondUnix: number)
+	local diff = math.abs(firstUnix - secondUnix)
+	local finalStr = {}
+
+	-- 16m 52s
+	local keys = Table.Reverse(Table.Keys(Settings.timesTable))
+	for i = 1, #keys do
+		local key = keys[i]
+		local data = Settings.timesTable[key]
+		local format = string.sub(string.lower(data), 1, 1)
+		local div = math.floor(diff / data)
+
+		diff -= data * div
+		table.insert(finalStr, div .. format)
+	end
+
+	return table.concat(finalStr, " ")
+end
+
 --// Private Functions \\--
 --[=[
 	Warns to the console with a prefix.
@@ -89,8 +115,57 @@ end
 	@since 2.0.0
 	@within RoTime
 ]=]
-function Class:_warn(...: string)
-	warn("[RoTime]:", ...)
+function Class:_warn() --...: string) | Removed for Vibez
+	-- warn("[RoTime]:", ...)
+end
+
+--[=[
+	Gets the current day out of a full year. ex: 100/365
+
+	@private
+	@since 2.0.0
+	@within RoTime
+]=]
+function Class:_getDayOfTheYear(): { currentCount: number, fullYear: number }
+	local formatted = self:format("#mm #dd")
+	local split = string.split(formatted, " ")
+	local currentMonthNum, currentDayNum = table.unpack(split)
+	currentMonthNum, currentDayNum = tonumber(currentMonthNum), tonumber(currentDayNum)
+
+	local toSubtract = (currentMonthNum > 2) and 2 or 1
+	local isLeapYear = self:isLeapYear()
+
+	local monthNum = currentMonthNum - toSubtract
+	local dayNum = monthNum * 31
+
+	if toSubtract == 2 then
+		dayNum += isLeapYear and 22 or 21
+	end
+
+	dayNum += currentDayNum
+	return {
+		currentCount = dayNum,
+		fullYear = isLeapYear and 366 or 365,
+	}
+end
+
+--[=[
+	Adds a zero in front of a number. (Used for formatting)
+
+	@private
+	@since 2.0.0
+	@within RoTime
+]=]
+function Class:_addZeroInFront(value: any): string
+	if tonumber(value) == nil then
+		return value
+	end
+
+	if tonumber(value) < 10 and tonumber(value) >= 0 then
+		value = "0" .. value
+	end
+
+	return value
 end
 
 --[=[
@@ -147,13 +222,14 @@ function Class:_getTokenInformation(tokenExpected: { string }): { [string]: stri
 		elseif token == "timezone" then
 			insert(token, tostring(self._timezone.name))
 		elseif token == "week_year" then
-			-- local firstThursday = weekDayNumber + ((weekDayNumber + 6) % 7)
-			insert(token, tostring("Not_implemented"))
+			local daysOfTheYear = self:_getDayOfTheYear()
+			insert(token, tostring(math.ceil(daysOfTheYear.currentCount / 7)))
 		elseif token == "year_day" then
-			-- day 100 / 365
-			local timeFrame = self:toNow("1/1", "#mm/#dd")
-			local difference = self:getDateTime().UnixTimestamp - timeFrame
-			insert(token, tostring(math.floor(difference / Settings.timesTable.Day)))
+			local daysOfTheYear = self:_getDayOfTheYear()
+			insert(token, tostring(daysOfTheYear.currentCount))
+		elseif token == "max_year_days" then
+			local daysOfTheYear = self:_getDayOfTheYear()
+			insert(token, tostring(daysOfTheYear.fullYear))
 		elseif token == "unix" then
 			insert(token, tostring(self._dt.UnixTimestamp))
 		elseif token == "unix_ms" then
@@ -210,6 +286,7 @@ end
 	@param timezoneName string
 	@return RoTime
 
+	@tag Chainable
 	@since 2.0.0
 	@within RoTime
 ]=]
@@ -244,7 +321,7 @@ function Class:setFormat(formattingString: string)
 end
 
 --[=[
-	Gets the current time from a unix timestamp.
+	Takes a future time and calculates the difference, returning time duration.
 	@param unix number
 	@param isMillisecond boolean?
 	@return number
@@ -339,6 +416,30 @@ function Class:getTime()
 end
 
 --[=[
+	Gets a specific formatting code's value.
+
+	@since 2.0.0
+	@within RoTime
+]=]
+function Class:get(...: { string }): ...string
+	local codes = { ... }
+	local vals = {}
+
+	for _, v in pairs(codes) do
+		local code = (string.sub(v, 1, 1) == "#") and v or "#" .. v
+
+		local tokens = Tokenizer(code)
+		local information = self:_getTokenInformation(Table.Map(tokens, function(value)
+			return (value.expected == "Unknown") and value.code or value.expected
+		end))
+
+		table.insert(vals, table.unpack(Table.Values(information)))
+	end
+
+	return table.unpack(vals)
+end
+
+--[=[
 	Gets the format used for timestamps.
 	@return string
 
@@ -348,27 +449,16 @@ end
 function Class:getTimestamp()
 	local dateData = self:getDateTime():ToUniversalTime()
 
-	local function addZeroInFront(value: number)
-		if value < 10 then
-			return "0" .. tostring(value)
-		end
-		return tostring(value)
-	end
-
-	local formatted = dateData.Year
-		.. "-"
-		.. addZeroInFront(dateData.Month)
-		.. "-"
-		.. addZeroInFront(dateData.Day)
-		.. "T"
-		.. addZeroInFront(dateData.Hour)
-		.. ":"
-		.. addZeroInFront(dateData.Minute)
-		.. ":"
-		.. addZeroInFront(dateData.Second)
-		.. "."
-		.. dateData.Millisecond
-		.. "Z"
+	local formatted = string.format(
+		"%d-%d-%dT%d:%d:%d.%dZ",
+		dateData.Year,
+		self:_addZeroInFront(dateData.Month),
+		self:_addZeroInFront(dateData.Day),
+		self:_addZeroInFront(dateData.Hour),
+		self:_addZeroInFront(dateData.Minute),
+		self:_addZeroInFront(dateData.Second),
+		dateData.Millisecond
+	)
 
 	return formatted
 end
@@ -486,8 +576,14 @@ Class.sub = Class.subtract
 	@within RoTime
 ]=]
 function Class:set(input: string, format: string)
-	assert(typeof(input) == "string", "error 1")
-	assert(typeof(format) == "string", "error 2")
+	assert(
+		typeof(input) == "string",
+		string.format("Input string for ':set' expected 'string', got '%s'", typeof(input))
+	)
+	assert(
+		typeof(format) == "string",
+		string.format("Format string for ':set' expected 'string', got '%s'", typeof(format))
+	)
 
 	local tokens = Tokenizer(format)
 	local parsed = Parser(input, false, tokens)
@@ -555,7 +651,6 @@ end
 	@param input string
 	@return string
 
-	@tag Chainable
 	@since 2.0.0
 	@within RoTime
 ]=]
@@ -567,7 +662,17 @@ function Class:format(input: string): string
 	end))
 
 	local resultingData = Table.Map(tokens, function(value)
-		return bulkData[(value.expected == "Unknown") and value.code or value.expected]
+		local result = bulkData[(value.expected == "Unknown") and value.code or value.expected]
+
+		if value["needsFormatting"] ~= true then
+			return result
+		end
+
+		if value.tokenType == "number" then
+			result = self:_addZeroInFront(result)
+		end
+
+		return result
 	end)
 
 	return table.concat(resultingData, "")
