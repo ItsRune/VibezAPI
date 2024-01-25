@@ -117,6 +117,7 @@
 ]=]
 
 --// Services \\--
+local Debris = game:GetService("Debris")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
@@ -163,7 +164,7 @@ local legacySettings, baseSettings =
 
 			Font = Enum.Font.Gotham,
 			FontSize = 16,
-			keyboardFontSizeMultiplier = 1.5, -- Multiplier for fontsize keyboard users
+			keyboardFontSizeMultiplier = 1.25, -- Multiplier for fontsize keyboard users
 			delayUntilRemoval = 20, -- Seconds
 
 			entranceTweenInfo = {
@@ -299,7 +300,6 @@ local function onServerInvoke(
 		end
 
 		if callerGroupRank == nil then
-			self:_warn(string.format("", ""))
 			return false
 		end
 
@@ -344,7 +344,7 @@ local function onServerInvoke(
 			)
 
 			self:_warn(message)
-			self:_notifyPlayer(Player, message)
+			self:_notifyPlayer(Player, "Error: " .. message)
 			return false
 		end
 
@@ -418,11 +418,14 @@ local function onServerInvoke(
 			self:_notifyPlayer(
 				Player,
 				string.format(
-					"Error: Attempting to rank %s (%d) resulted in an internal server error!",
+					"Success: Ranked <b>%s (%d)</b> to role <b>%s (%d)</b>!",
 					fakeTargetInstance.Name,
-					userId
+					userId,
+					result.data.newRank.name,
+					result.data.newRank.rank
 				)
 			)
+			return true
 		end
 
 		return true
@@ -804,8 +807,8 @@ function api:_onPlayerAdded(Player: Player)
 	-- Clone client script and parent to player gui
 	local client = script.Client:Clone()
 	client.Name = self._private.clientScriptName
-	client.Enabled = true
 	client.Parent = PlayerGui
+	client.Enabled = true
 
 	-- Enabled activity tracking for player
 	if
@@ -1156,7 +1159,7 @@ function api:_removeSticks(Player: Player)
 
 	if result ~= nil then
 		for _, v in pairs(result) do
-			v:Destroy()
+			Debris:AddItem(v, 0)
 		end
 	end
 end
@@ -1191,7 +1194,7 @@ function api:setRankStickTool(tool: Tool | Model): ()
 			v.Parent = t
 		end
 
-		modelReference:Destroy()
+		Debris:AddItem(modelReference, 0)
 		tool = t
 	end
 
@@ -1217,7 +1220,7 @@ function api:setRankStickTool(tool: Tool | Model): ()
 	tool.Name = "RankingSticks"
 	tool.Parent = getTemporaryStorage()
 
-	self.Settings.RankSticks["sticksModel"]:Destroy()
+	Debris:AddItem(self.Settings.RankSticks["sticksModel"], 0)
 	self.Settings.RankSticks["sticksModel"] = tool
 end
 
@@ -2205,9 +2208,10 @@ function api:_initialize(apiKey: string): ()
 
 	-- UI communication handler
 	local remoteFunction, remoteEvent = self:_createRemote()
-	self.Function, self.Event, remoteFunction, remoteEvent = remoteFunction, remoteEvent, nil, nil
+	self._private.Function, self._private.Event = remoteFunction, remoteEvent
+	remoteFunction, remoteEvent = nil, nil
 
-	self.Function.OnServerInvoke = function(Player: Player, ...: any)
+	self._private.Function.OnServerInvoke = function(Player: Player, ...: any)
 		return onServerInvoke(self, Player, ...)
 	end
 
@@ -2332,7 +2336,7 @@ end
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
 	if RunService:IsClient() then
 		warn("[Vibez]: Cannot fetch API on the client!")
-		script:Destroy()
+		Debris:AddItem(script, 0)
 		return nil
 	end
 
@@ -2700,7 +2704,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				self:_addLog(Player, "RankSticks", nil, "Removed")
 
 				for _, v in pairs(foundSticks) do
-					v:Destroy()
+					Debris:AddItem(v, 0)
 				end
 				return
 			end

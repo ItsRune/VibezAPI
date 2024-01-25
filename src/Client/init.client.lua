@@ -1,5 +1,6 @@
 -- Not as clean as the main module. But it works...
 --// Services \\--
+local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -97,7 +98,7 @@ local function onNotification(Message: string)
 		return
 	end
 
-	local notifGui = playerGui:FindFirstChild("Notifications")
+	local notifGui = playerGui:FindFirstChild(script.Name .. "_NOTIF")
 	if not notifGui then
 		warn("Notification failed, message content: " .. Message)
 		return
@@ -121,7 +122,7 @@ local function onNotification(Message: string)
 	)
 	if not isOk then
 		warn("Notification failed, message content: " .. Message)
-		newItem:Destroy()
+		Debris:AddItem(newItem, 0)
 		return
 	end
 
@@ -170,7 +171,7 @@ local function onNotification(Message: string)
 			notificationSettings.exitTweenInfo.timeItTakes,
 			false,
 			function()
-				newItem:Destroy()
+				Debris:AddItem(newItem, 0)
 			end
 		)
 	end)()
@@ -178,8 +179,8 @@ end
 
 local function undoNotifications()
 	local PlayerGui = Player:WaitForChild("PlayerGui")
-	if PlayerGui:FindFirstChild(script.Name) ~= nil then
-		PlayerGui:FindFirstChild(script.Name):Destroy()
+	if PlayerGui:FindFirstChild(script.Name .. "_NOTIF") ~= nil then
+		Debris:AddItem(PlayerGui:FindFirstChild(script.Name), 0)
 	end
 
 	onClientEventBinds["Notify"] = nil
@@ -187,6 +188,10 @@ end
 
 local function setupNotifications()
 	undoNotifications()
+	local newNotif = script.Notifications:Clone()
+	newNotif.Parent = Player:WaitForChild("PlayerGui", math.huge)
+	newNotif.Name = script.Name .. "_NOTIF"
+
 	onClientEventBinds["Notify"] = onNotification
 end
 
@@ -280,7 +285,7 @@ local function onSetupRankSticks()
 							secondsSpent += 1
 						end
 
-						newPart:Destroy()
+						Debris:AddItem(newPart, 0)
 
 						if not hasReceived or child:IsDescendantOf(Player) then
 							return
@@ -594,7 +599,9 @@ local function onStart()
 		script.Parent = Player:WaitForChild("PlayerScripts", math.huge)
 
 		local Clone = script:Clone()
+		Clone.Enabled = false
 		Clone.Parent = StarterPlayerScripts
+		Clone.Enabled = true
 	end
 
 	eventConnection = remoteEvent.OnClientEvent:Connect(function(Command: string, ...: any)
