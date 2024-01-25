@@ -25,7 +25,7 @@
 	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
 	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
 	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
-	.Notifications { Enabled: boolean, Position: String }
+	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
 	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
 	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, isAsync: boolean, usePromises: boolean }
 	@within VibezAPI
@@ -160,7 +160,23 @@ local legacySettings, baseSettings =
 
 		Notifications = {
 			Enabled = true,
-			Position = "Bottom-Right",
+
+			Font = Enum.Font.Gotham,
+			FontSize = 16,
+			keyboardFontSizeMultiplier = 1.5, -- Multiplier for fontsize keyboard users
+			delayUntilRemoval = 20, -- Seconds
+
+			entranceTweenInfo = {
+				Style = Enum.EasingStyle.Quint,
+				Direction = Enum.EasingDirection.InOut,
+				timeItTakes = 1, -- Seconds
+			},
+
+			exitTweenInfo = {
+				Style = Enum.EasingStyle.Quint,
+				Direction = Enum.EasingDirection.InOut,
+				timeItTakes = 1, -- Seconds
+			},
 		},
 
 		Interface = {
@@ -296,6 +312,7 @@ local function onServerInvoke(
 					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
 				)
 			)
+			self:_notifyPlayer(Player, "Error: That user's rank is higher OR equal to your rank.")
 			return false
 		end
 
@@ -310,6 +327,7 @@ local function onServerInvoke(
 					userId
 				)
 			)
+			self:_notifyPlayer(Player, "Error: No.")
 			return false
 		end
 
@@ -318,14 +336,15 @@ local function onServerInvoke(
 			theirCooldown ~= nil
 			and DateTime.now().UnixTimestamp - theirCooldown < self.Settings.Misc.rankingCooldown
 		then
-			self:_warn(
-				string.format(
-					"User %s (%d) still has %d seconds left on their ranking cooldown!",
-					Target.Name,
-					Target.UserId,
-					math.abs(self.Settings.Misc.rankingCooldown - (DateTime.now().UnixTimestamp - theirCooldown))
-				)
+			local message = string.format(
+				"%s (%d) still has %d seconds left on their ranking cooldown!",
+				Target.Name,
+				Target.UserId,
+				math.abs(self.Settings.Misc.rankingCooldown - (DateTime.now().UnixTimestamp - theirCooldown))
 			)
+
+			self:_warn(message)
+			self:_notifyPlayer(Player, message)
 			return false
 		end
 
@@ -350,6 +369,14 @@ local function onServerInvoke(
 
 		if result["success"] == false then
 			self:_warn(string.format("Internal server error: %s", result.errorMessage))
+			self:_notifyPlayer(
+				Player,
+				string.format(
+					"Error: Attempting to rank %s (%d) resulted in an internal server error!",
+					fakeTargetInstance.Name,
+					userId
+				)
+			)
 			return false
 		end
 
@@ -358,33 +385,42 @@ local function onServerInvoke(
 
 		if actionFunc ~= "blacklist" then
 			-- DO NOT TOUCH TABBING IT RUINS THE WARNING
-			self:_warn(
+			-- 			self:_warn(
+			-- 				string.format(
+			-- 					[[
+			-- 	RANK RESULT
+			-- Success: %s
+			-- User: %s (%d)
+			-- Ranked By: %s (%d)
+			-- New Rank
+			--   - Name: %s
+			--   - Rank: %d
+			--   - RoleId: %d
+			-- Old Rank
+			--   - Name: %s
+			--   - Rank: %d
+			--   - RoleId: %d
+			-- 			]],
+			-- 					tostring(result.success),
+			-- 					fakeTargetInstance.Name,
+			-- 					userId,
+			-- 					Player.Name,
+			-- 					Player.UserId,
+			-- 					result.data.newRank.name,
+			-- 					result.data.newRank.rank,
+			-- 					result.data.newRank.id,
+			-- 					result.data.oldRank.name,
+			-- 					result.data.oldRank.rank,
+			-- 					result.data.oldRank.id
+			-- 				)
+			-- 			)
+
+			self:_notifyPlayer(
+				Player,
 				string.format(
-					[[
-	RANK RESULT
-Success: %s
-User: %s (%d)
-Ranked By: %s (%d)
-New Rank
-  - Name: %s
-  - Rank: %d
-  - RoleId: %d
-Old Rank
-  - Name: %s
-  - Rank: %d
-  - RoleId: %d
-			]],
-					tostring(result.success),
+					"Error: Attempting to rank %s (%d) resulted in an internal server error!",
 					fakeTargetInstance.Name,
-					userId,
-					Player.Name,
-					Player.UserId,
-					result.data.newRank.name,
-					result.data.newRank.rank,
-					result.data.newRank.id,
-					result.data.oldRank.name,
-					result.data.oldRank.rank,
-					result.data.oldRank.id
+					userId
 				)
 			)
 		end
@@ -457,7 +493,6 @@ end
 	@tag Unavailable
 	@private
 	@within VibezAPI
-	@since 2.4.0
 ]=]
 ---
 function api:_checkVersion(): ()
@@ -499,7 +534,6 @@ end
 	@tag Unavailable
 	@private
 	@within VibezAPI
-	@since 1.0.12
 ]=]
 ---
 function api:_promisify(functionToBind: (...any) -> ...any, ...: any): any
@@ -522,7 +556,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:Http(
@@ -600,7 +633,6 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:getGroupId()
@@ -649,7 +681,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_getGroupRankFromName(groupRoleName: string): number?
@@ -681,7 +712,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?): any?
@@ -744,7 +774,6 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
@@ -794,7 +823,6 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
@@ -844,7 +872,6 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_isPlayerRankOkToProceed(toCheck: number, minCheck: number, maxCheck: number): boolean
@@ -859,7 +886,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_getUserIdByName(username: string): number
@@ -875,7 +901,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_getNameById(userId: number): string?
@@ -893,7 +918,6 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_createRemote()
@@ -944,7 +968,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_getRoleIdFromRank(rank: number | string): number?
@@ -980,6 +1003,21 @@ function api:_getRoleIdFromRank(rank: number | string): number?
 end
 
 --[=[
+	Gets the role id of a rank.
+	@param Player Player
+	@param Message string
+	@return number?
+
+	@yields
+	@private
+	@within VibezAPI
+]=]
+---
+function api:_notifyPlayer(Player: Player, Message: string): ()
+	self._private.Event:FireClient(Player, "Notify", Message)
+end
+
+--[=[
 	Gets the closest match to a player's username who's in game.
 	@param usernames {string}
 	@return {Player?}
@@ -987,7 +1025,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_getPlayers(playerWhoCalled: Player, usernames: { string | number }): { Player? }
@@ -1070,7 +1107,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.3.0
 ]=]
 ---
 function api:_giveSticks(Player: Player)
@@ -1102,7 +1138,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.3.0
 ]=]
 ---
 function api:_removeSticks(Player: Player)
@@ -1132,7 +1167,6 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.3.0
 ]=]
 ---
 function api:setRankStickTool(tool: Tool | Model): ()
@@ -1195,7 +1229,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
@@ -1251,7 +1284,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_checkHttp()
@@ -1267,7 +1299,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_checkPlayerForRankChange(userId: number)
@@ -1286,12 +1317,11 @@ function api:_checkPlayerForRankChange(userId: number)
 end
 
 --[=[
-	Displays a warning with the prefix of "[Vibez-TIMESTAMP]"
+	Displays a warning with the prefix of "Vibez @ TIMESTAMP: Message"
 	@param ... ...string
 
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:_warn(...: string)
@@ -1299,11 +1329,7 @@ function api:_warn(...: string)
 		return
 	end
 
-	local Time = RoTime.new()
-	local timeStamp = Time:getTimestamp()
-	Time:Destroy()
-
-	warn("[Vibez-" .. timeStamp .. "]:", table.concat({ ... }, " "))
+	warn("[Vibez]:", table.concat({ ... }, " "))
 end
 
 --[=[
@@ -1315,7 +1341,6 @@ end
 
 	@private
 	@within VibezAPI
-	@since 2.3.6
 ]=]
 ---
 function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any)
@@ -1337,7 +1362,6 @@ end
 
 	@within VibezAPI
 	@private
-	@since 2.3.1
 ]=]
 ---
 function api:_buildAttributes()
@@ -1350,8 +1374,24 @@ function api:_buildAttributes()
 		UI = {
 			Status = self.Settings.Interface.Enabled,
 			Notifications = {
-				Status = false, -- self.Settings.Notifications.Enabled,
-				Position = "Bottom-Right", -- self.Settings.Notifications.Position,
+				Status = self.Settings.Notifications.Enabled,
+				Font = self.Settings.Notifications.Font.Name,
+				FontSize = self.Settings.Notifications.FontSize,
+
+				keyboardFontSizeMultiplier = self.Settings.Notifications.keyboardFontSizeMultiplier,
+				delayUntilRemoval = self.Settings.Notifications.delayUntilRemoval,
+
+				entranceTweenInfo = {
+					Style = self.Settings.Notifications.entranceTweenInfo.Style.Name,
+					Direction = self.Settings.Notifications.entranceTweenInfo.Direction.Name,
+					timeItTakes = self.Settings.Notifications.entranceTweenInfo.timeItTakes,
+				},
+
+				exitTweenInfo = {
+					Style = self.Settings.Notifications.exitTweenInfo.Style.Name,
+					Direction = self.Settings.Notifications.exitTweenInfo.Direction.Name,
+					timeItTakes = self.Settings.Notifications.exitTweenInfo.timeItTakes,
+				},
 			},
 		},
 
@@ -1367,6 +1407,27 @@ function api:_buildAttributes()
 	Workspace:SetAttribute(self._private.clientScriptName, HttpService:JSONEncode(dataToEncode))
 end
 
+--[=[
+	Returns the staff member's cached data.
+	@param Player Player | number | string
+	@return { Player, number } | ()
+
+	@private
+	@within VibezAPI
+]=]
+function api:_playerIsValidStaff(Player: Player | number | string)
+	local userId = 0
+	if typeof(Player) == "Instance" and Player:IsA("Player") then
+		userId = Player.UserId
+	elseif typeof(Player) == "number" or typeof(Player) == "string" and tonumber(Player) ~= nil then
+		userId = tonumber(Player)
+	elseif typeof(Player) == "string" and not tonumber(Player) then
+		self:_getUserIdByName(tostring(Player))
+	end
+
+	return self._private.requestCaches.validStaff[userId]
+end
+
 --// Public Functions \\--
 --[=[
 	Sets the rank of a player and `whoCalled` (Optional) is used for logging purposes.
@@ -1376,7 +1437,6 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:setRank(
@@ -1435,7 +1495,6 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
@@ -1479,7 +1538,6 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
@@ -1523,7 +1581,6 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
@@ -1567,7 +1624,6 @@ end
 	@return VibezAPI
 
 	@within VibezAPI
-	@since 2.3.6
 ]=]
 function api:addCommand(
 	commandName: string,
@@ -1664,8 +1720,8 @@ end
 	```
 
 	@within VibezAPI
-	@tag Chainable
-	@since 1.0.0
+	@tag Chainab
+	
 ]=]
 function api:addCommandOperation(
 	operationName: string,
@@ -1704,8 +1760,8 @@ end
 	```
 
 	@within VibezAPI
-	@tag Chainable
-	@since 1.0.0
+	@tag Chainab
+	
 ]=]
 ---
 function api:removeCommandOperation(operationName: string): Types.vibezApi
@@ -1717,8 +1773,8 @@ end
 	Updates the logger's origin name.
 
 	@within VibezAPI
-	@tag Chainable
-	@since 1.0.0
+	@tag Chainab
+	
 ]=]
 ---
 function api:updateLoggerName(newTitle: string): nil
@@ -1733,7 +1789,6 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:updateKey(newApiKey: string): boolean
@@ -1770,7 +1825,6 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:isPlayerBoostingDiscord(User: number | string | Player): boolean
@@ -1818,7 +1872,6 @@ end
 	Destroys the VibezAPI class.
 
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:Destroy()
@@ -1828,38 +1881,11 @@ function api:Destroy()
 end
 
 --[=[
-	Toggles the client promote/demote/fire UI.
-	@param override boolean?
-
-	@within VibezAPI
-	@since 1.0.0
-]=]
----
-function api:toggleUI(override: boolean?): nil
-	if override ~= nil then
-		self.Settings.Interface.Enabled = override
-	else
-		self.Settings.Interface.Enabled = not self.Settings.Interface.Enabled
-	end
-
-	for _, playerData in pairs(self._private.requestCaches.validStaff) do
-		local player = playerData[1]
-
-		if player.PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
-			continue
-		end
-	end
-
-	self:_buildAttributes()
-end
-
---[=[
 	Initializes the Hooks class with the specified webhook.
 	@param webhook string
 	@return VibezHooks
 
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:getWebhookBuilder(webhook: string): Types.vibezHooks
@@ -1875,7 +1901,6 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
-	@since 1.1.0
 ]=]
 ---
 function api:addBlacklist(
@@ -1928,7 +1953,6 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
-	@since 1.1.0
 ]=]
 ---
 function api:deleteBlacklist(userToDelete: Player | string | number)
@@ -1964,7 +1988,6 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
-	@since 1.1.0
 ]=]
 ---
 function api:getBlacklists(userId: (string | number)?): Types.blacklistResponse
@@ -2017,7 +2040,6 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
-	@since 1.1.0
 ]=]
 ---
 function api:isUserBlacklisted(userId: (string | number)?): (boolean, string?, number?)
@@ -2042,7 +2064,6 @@ end
 
 	@tag Chainable
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:waitUntilLoaded(): Types.vibezApi?
@@ -2068,7 +2089,6 @@ end
 	@return activityResponse
 
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:getActivity(userId: (string | number)?): Types.activityResponse
@@ -2091,7 +2111,6 @@ end
 	@return httpResponse
 
 	@within VibezAPI
-	@since 1.0.0
 ]=]
 ---
 function api:saveActivity(
@@ -2139,35 +2158,12 @@ function api:saveActivity(
 end
 
 --[=[
-	Returns the staff member's cached data.
-	@param Player Player | number | string
-	@return { Player, number } | ()
-
-	@private
-	@within VibezAPI
-	@since 2.1.2
-]=]
-function api:_playerIsValidStaff(Player: Player | number | string)
-	local userId = 0
-	if typeof(Player) == "Instance" and Player:IsA("Player") then
-		userId = Player.UserId
-	elseif typeof(Player) == "number" or typeof(Player) == "string" and tonumber(Player) ~= nil then
-		userId = tonumber(Player)
-	elseif typeof(Player) == "string" and not tonumber(Player) then
-		self:_getUserIdByName(tostring(Player))
-	end
-
-	return self._private.requestCaches.validStaff[userId]
-end
-
---[=[
 	Initializes the entire module.
 	@param apiKey string
 	@return ()
 
 	@private
 	@within VibezAPI
-	@since 1.3.0
 ]=]
 function api:_initialize(apiKey: string): ()
 	if self._private._initialized then
@@ -2252,7 +2248,6 @@ end
 --// Constructor \\--
 local function deepFetch(tbl: { any }, index: string | number)
 	for k, v in pairs(tbl) do
-		warn(k, index)
 		if k == index then
 			return v
 		elseif typeof(v) == "table" then
@@ -2313,7 +2308,6 @@ end
 --[=[
 	@function new
 	@within VibezAPI
-
 	@param apiKey string -- Your Vibez API key.
 	@param extraOptions extraOptionsType -- Extra settings to configure the api to work for you.
 	@return VibezAPI
@@ -2354,9 +2348,32 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	local self = setmetatable({}, api)
 
+	--[=[
+		@prop Loaded boolean
+		@within VibezAPI
+		Determines whether the API has loaded.
+	]=]
 	self.Loaded = false
+
+	--[=[
+		@prop GroupId number
+		@within VibezAPI
+		Holds the groupId associated with the API Key.
+	]=]
 	self.GroupId = -1
+
+	--[=[
+		@prop Settings extraOptionsType
+		@within VibezAPI
+		Holds a copy of the settings for the API.
+	]=]
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
+
+	--[=[
+		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, inGameLogs: { any }, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}}
+		@within VibezAPI
+		From caches to simple booleans/instances/numbers, this table holds all the information necessary for this API to work. 
+	]=]
 	self._private = {
 		Event = nil,
 		Function = nil,
@@ -2502,10 +2519,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 					end
 
 					local toCheck = deepFetch(tbl, split[i])
-					warn(split[i], toCheck, tbl)
 					if typeof(toCheck) ~= typeof(value) then
 						self:_warn(
-							`Optional key '{settingSubCategory}' is not the same as its default value of '{typeof(toCheck)}'!`
+							string.format(
+								"Optional key '%s' is not the same as it's default value of '%s'!",
+								settingSubCategory,
+								typeof(toCheck)
+							)
 						)
 						break
 					end
@@ -2522,7 +2542,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			for settingToChange, newSetting in pairs(value) do
 				-- 'sticksModel' is nil by default.
 				if self.Settings[settingSubCategory][settingToChange] == nil and settingToChange ~= "sticksModel" then
-					self:_warn(`Optional key 'Settings.{settingSubCategory}.{settingToChange}' is not a valid option.`)
+					self:_warn(
+						string.format(
+							"Optional key 'Settings.%s.%s' is not a valid option.",
+							settingSubCategory,
+							settingToChange
+						)
+					)
 					continue
 				elseif
 					-- Write in custom logic for 'Instance' types.

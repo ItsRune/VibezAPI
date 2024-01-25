@@ -3,6 +3,7 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
@@ -11,12 +12,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
---selene: allow(unused_variable)
-local remoteFunction, remoteEvent, widgetData
-local eventHolder = {}
-local Maid = {}
+local remoteFunction, remoteEvent
+local eventHolder, Maid, onClientEventBinds = {}, {}, {}
 local afkDelayOffset = 5
 local isUIContextEnabled, isWarningsAllowed = false, true
+
+--// Modules \\--
+local Table = require(script.Table)
 
 --// Functions \\--
 local function findFirstChildWhichIsAByName(parent: Instance, name: string, class: string): Instance?
@@ -60,61 +62,132 @@ local function disconnect(data: { any } | RBXScriptConnection)
 	end
 end
 
-local function undoNotifications()
-	if not Maid["Notifications"] then
+local function fixNotificationStatus(message: string): string
+	local statusCodes = {
+		["Error"] = '<b><font color = "rgb(255, 90, 90)">%s</font></b>',
+		["Warning"] = '<b><font color = "rgb(255, 171, 36)">%s</font></b>',
+		["Info"] = '<b><font color = "rgb(70, 163, 255)">%s</font></b>',
+		["Success"] = '<b><font color = "rgb(90, 255, 145)">%s</font></b>',
+	}
+
+	local words = string.split(message, " ")
+	local firstWord = words[1]
+	if string.match(firstWord, "[a-zA-Z0-9]:") == nil or #firstWord < 3 then
+		return message
+	end
+
+	local splitTokens = string.split(firstWord, ":")
+	for i, v in pairs(statusCodes) do
+		if string.sub(string.lower(splitTokens[1]), 1, 3) == string.sub(string.lower(i), 1, 3) then
+			splitTokens[1] = string.format(v, splitTokens[1])
+			break
+		end
+	end
+
+	words[1] = table.concat(splitTokens, ":")
+	return table.concat(words, " ")
+end
+
+local function onNotification(Message: string)
+	local Settings = HttpService:JSONDecode(Workspace:GetAttribute(script.Name))
+	local notificationSettings = Settings.UI.Notifications
+	local playerGui = Player:FindFirstChild("PlayerGui")
+	if not playerGui then
+		warn("Notification failed, message content: " .. Message)
 		return
 	end
 
+	local notifGui = playerGui:FindFirstChild("Notifications")
+	if not notifGui then
+		warn("Notification failed, message content: " .. Message)
+		return
+	end
+
+	Message = fixNotificationStatus(Message)
+
+	local newItem = Instance.new("TextLabel")
+	newItem.Name = "Notification"
+	newItem.Text = Message
+	newItem.RichText = true
+
+	local isOk, textSize = pcall(
+		TextService.GetTextSize,
+		TextService,
+		newItem.ContentText,
+		UserInputService.TouchEnabled and notificationSettings.FontSize
+			or notificationSettings.FontSize * notificationSettings.keyboardFontSizeMultiplier,
+		notificationSettings.Font,
+		notifGui.Holder.AbsoluteSize
+	)
+	if not isOk then
+		warn("Notification failed, message content: " .. Message)
+		newItem:Destroy()
+		return
+	end
+
+	newItem.Parent = notifGui.Holder
+	newItem.TextWrapped = true
+	newItem.TextScaled = true
+	newItem.Font = notificationSettings.Font
+	newItem.TextColor3 = Color3.new(1, 1, 1)
+	newItem.Size = UDim2.new(0, textSize.X, 0, 0)
+	newItem.Position = UDim2.fromScale(0.5, 1)
+	newItem.AnchorPoint = Vector2.new(0.5, 1)
+	newItem.BackgroundTransparency = 1
+
+	newItem:TweenSize(
+		UDim2.fromOffset(textSize.X, textSize.Y),
+		notificationSettings.entranceTweenInfo.Direction,
+		notificationSettings.entranceTweenInfo.Style,
+		notificationSettings.entranceTweenInfo.timeItTakes
+	)
+
+	-- Filter others to move upwards
+	local children = Table.Filter(notifGui.Holder:GetChildren(), function(v)
+		return v ~= newItem
+	end)
+
+	if #children > 0 then
+		coroutine.wrap(function()
+			for _, v in pairs(children) do
+				v:TweenPosition(
+					UDim2.new(0.5, 0, 1, v.Position.Y.Offset - textSize.Y),
+					notificationSettings.entranceTweenInfo.Direction,
+					notificationSettings.entranceTweenInfo.Style,
+					notificationSettings.entranceTweenInfo.timeItTakes,
+					true
+				)
+			end
+		end)()
+	end
+
+	coroutine.wrap(function()
+		task.wait(notificationSettings.delayUntilRemoval)
+		newItem:TweenSize(
+			UDim2.fromScale(0, 0),
+			notificationSettings.exitTweenInfo.Direction,
+			notificationSettings.exitTweenInfo.Style,
+			notificationSettings.exitTweenInfo.timeItTakes,
+			false,
+			function()
+				newItem:Destroy()
+			end
+		)
+	end)()
+end
+
+local function undoNotifications()
 	local PlayerGui = Player:WaitForChild("PlayerGui")
 	if PlayerGui:FindFirstChild(script.Name) ~= nil then
 		PlayerGui:FindFirstChild(script.Name):Destroy()
 	end
 
-	disconnect(Maid["Notifications"])
-	Maid["Notifications"] = nil
+	onClientEventBinds["Notify"] = nil
 end
 
 local function setupNotifications()
 	undoNotifications()
-	Maid["Notifications"] = {}
-
-	local PlayerGui = Player:WaitForChild("PlayerGui")
-	local Gui = script.Notifications:Clone()
-	-- local Data = HttpService:JSONDecode(Workspace:GetAttribute(script.Name))
-
-	Gui.Name = script.Name
-	Gui.Parent = PlayerGui
-
-	-- Positioning | TODO: Add functionality and support for notifications on ranking/blacklisting methods
-	-- local positions = {
-	-- 	-- Format: Position, AnchorPoint
-	-- 	-- | _ | Ignore character
-	-- 	["bottom"] = { "_,_,1,0", "_,1" },
-	-- 	["top"] = { "_,_,0,0", "_,0" },
-	-- 	["left"] = { "0,0,_,_", "0,_" },
-	-- 	["right"] = { "_,_,1,0", "1,_" },
-	-- }
-
-	-- local function findClosest(text: string)
-	-- 	for name, value in pairs(positions) do
-	-- 		if string.sub(string.lower(tostring(text)), 1, 1) == string.sub(string.lower(tostring(name)), 1, 1) then
-	-- 			return value
-	-- 		end
-	-- 	end
-	-- 	return nil
-	-- end
-
-	-- for _, posName: string in pairs(Data.UI.Notifications.Position) do
-	-- 	warn(posName, findClosest(posName))
-	-- end
-
-	-- Connection
-	-- table.insert(
-	-- 	Maid["Notifications"],
-	-- 	remoteEvent.OnClientEvent:Connect(function(Type: "Error" | "Warning" | "Info", Message: string)
-	-- 		--
-	-- 	end)
-	-- )
+	onClientEventBinds["Notify"] = onNotification
 end
 
 local function undoRankSticks()
@@ -345,7 +418,7 @@ local function onSetupUI()
 			end
 
 			dir = (transparencyCounter >= 0.75 and -1) or (transparencyCounter <= 0 and 1) or dir
-			transparencyCounter += 0.02 * dir
+			transparencyCounter += 0.03 * dir
 
 			highLight.OutlineTransparency = transparencyCounter
 		end)
@@ -525,19 +598,11 @@ local function onStart()
 	end
 
 	eventConnection = remoteEvent.OnClientEvent:Connect(function(Command: string, ...: any)
-		local Data = { ... }
-
-		if Command == "Notify" then
-			local Type: "Error" | "Warning" | "Info" = Data[1]
-			local Message = Data[2]
-			local Meta = Data[3] or {}
-
-			warn(Type, Message, Meta)
-		elseif Command == "Widget" then
-			widgetData = ...
-		elseif Command == "Disconnect" then
+		if Command == "Disconnect" then
 			disconnect(Maid)
 			eventConnection:Disconnect()
+		elseif onClientEventBinds[Command] ~= nil then
+			onClientEventBinds[Command](...)
 		end
 	end)
 

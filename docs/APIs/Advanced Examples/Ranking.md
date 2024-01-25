@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-<h3>Note: We do have our own custom admin built into the module, if you'd like to use it head to this page </h3>
+<h3>Note: We do have our own custom admin built into the module, if you'd like to use it head to this <a href="/VibezAPI/docs/APIs/Commands/Adding%20Commands">page</a> </h3>
 
 <!-- <a href="/VibezAPI/docs/APIs/Commands/Adding Command">page</a> -->
 
