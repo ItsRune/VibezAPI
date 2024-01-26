@@ -191,6 +191,7 @@ export type vibezApi = {
 		Function: RemoteFunction?,
 
 		_initialized: boolean,
+		_lastVersionCheck: number,
 		recentlyChangedKey: boolean,
 
 		newApiUrl: string,
@@ -206,24 +207,48 @@ export type vibezApi = {
 		Maid: { RBXScriptConnection? },
 		rankingCooldowns: {},
 
-		usersWithSticks: { number },
+		usersWithSticks: { number? },
 		stickTypes: string,
 
 		requestCaches: {
 			validStaff: { { any } },
 			nitro: { number? },
-			groupInfo: { any },
+			groupInfo: { [number]: { any }? },
 		},
 
-		commandOperations: { {} },
-		commandOperationCodes: {
+		commandOperations: {
 			{
+				Name: string,
+				Alias: { string? },
+				Enabled: boolean,
+				Execute: (
+					Player: Player,
+					Args: { string },
+					addLog: (
+						calledBy: Player,
+						Action: string,
+						affectedUsers: { Player }?,
+						...any
+					) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }
+				) -> (),
+			}?
+		},
+		commandOperationCodes: {
+			[string]: {
 				Code: string,
 				isExternal: boolean?,
 				Execute: (Player: Player, playerToCheck: Player, incomingArgument) -> boolean,
-			}?
+			}?,
 		},
 	},
+
+	bindToAction: (
+		self: vibezApi,
+		name: string,
+		action: "Promote" | "Demote" | "Fire" | "Blacklist",
+		callback: (result: responseBody) -> ()
+	) -> vibezApi,
+	unbindFromAction: (name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist") -> vibezApi,
 
 	-- Misc methods
 	updateLoggerName: (self: vibezApi, newTitle: string) -> nil,
@@ -251,7 +276,7 @@ export type vibezApi = {
 	) -> responseBody,
 	Demote: (self: vibezApi, userId: string | number, whoCalled: { userName: string, userId: number }?) -> responseBody,
 	Fire: (self: vibezApi, userId: string | number, whoCalled: { userName: string, userId: number }?) -> responseBody,
-	SetRank: (
+	setRank: (
 		self: vibezApi,
 		userId: string | number,
 		rankId: string | number,
@@ -259,12 +284,8 @@ export type vibezApi = {
 	) -> responseBody,
 
 	--- Ranking Sticks
-	giveRankSticks: (self: vibezApi, user: Player | string | number) -> boolean,
+	giveRankSticks: (self: vibezApi, User: Player | string | number, shouldCheckPermissions: boolean?) -> boolean,
 	setRankStickModel: (self: vibezApi, tool: Tool | Model) -> (),
-
-	-- Features
-	toggleCommands: (self: vibezApi, override: boolean?) -> nil,
-	toggleUI: (self: vibezApi, override: boolean?) -> nil,
 
 	-- Activity
 	saveActivity: (

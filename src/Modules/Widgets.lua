@@ -254,9 +254,9 @@ function Class:_updateCache()
 				},
 
 				{
-					username = "Kemaxni",
+					username = "Kosmos",
 					status = "dnd",
-					playing = "Call of Duty©",
+					playing = "Derail Valley",
 				},
 			},
 		},

@@ -367,12 +367,19 @@ local function onServerInvoke(
 			result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
 		end
 
-		if result["success"] == false then
+		if self._private.Binds[actionFunc] ~= nil and Table.Count(self._private.Binds[actionFunc]) > 0 then
+			for _, callback in pairs(self._private.Binds[actionFunc]) do
+				coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
+			end
+		end
+
+		if result["Success"] == false then
 			self:_warn(string.format("Internal server error: %s", result.errorMessage))
 			self:_notifyPlayer(
 				Player,
 				string.format(
-					"Error: Attempting to rank %s (%d) resulted in an internal server error!",
+					"Error: Attempting to %s %s (%d) resulted in an internal server error!",
+					actionFunc == "Blacklist" and "blacklist" or "rank",
 					fakeTargetInstance.Name,
 					userId
 				)
@@ -385,36 +392,6 @@ local function onServerInvoke(
 
 		if actionFunc ~= "blacklist" then
 			-- DO NOT TOUCH TABBING IT RUINS THE WARNING
-			-- 			self:_warn(
-			-- 				string.format(
-			-- 					[[
-			-- 	RANK RESULT
-			-- Success: %s
-			-- User: %s (%d)
-			-- Ranked By: %s (%d)
-			-- New Rank
-			--   - Name: %s
-			--   - Rank: %d
-			--   - RoleId: %d
-			-- Old Rank
-			--   - Name: %s
-			--   - Rank: %d
-			--   - RoleId: %d
-			-- 			]],
-			-- 					tostring(result.success),
-			-- 					fakeTargetInstance.Name,
-			-- 					userId,
-			-- 					Player.Name,
-			-- 					Player.UserId,
-			-- 					result.data.newRank.name,
-			-- 					result.data.newRank.rank,
-			-- 					result.data.newRank.id,
-			-- 					result.data.oldRank.name,
-			-- 					result.data.oldRank.rank,
-			-- 					result.data.oldRank.id
-			-- 				)
-			-- 			)
-
 			self:_notifyPlayer(
 				Player,
 				string.format(
@@ -1017,6 +994,10 @@ end
 ]=]
 ---
 function api:_notifyPlayer(Player: Player, Message: string): ()
+	if self.Settings.Notifications.Enabled == false then
+		return
+	end
+
 	self._private.Event:FireClient(Player, "Notify", Message)
 end
 
@@ -1165,14 +1146,48 @@ function api:_removeSticks(Player: Player)
 end
 
 --[=[
-	Sets the ranking stick's tool.
-	@param tool Tool | Model
+	Gives the ranking sticks to the player. Succession depends on whether they pass permissions check OR if permissions check is turned off
+	@param User Player | string | number
+	@param shouldCheckPermissions boolean?
+	@return VibezAPI
 
 	@yields
+	@tag Chainable
 	@within VibezAPI
 ]=]
 ---
-function api:setRankStickTool(tool: Tool | Model): ()
+function api:giveRankSticks(User: Player | string | number, shouldCheckPermissions: boolean?): Types.vibezApi
+	local Player = (typeof(User) == "Instance" and User:IsA("Player")) and User
+		or (typeof(User) == "number" or (typeof(User) == "string" and tonumber(User) ~= nil)) and Players:GetPlayerByUserId(
+			tonumber(User)
+		)
+		or Players:FindFirstChild(tostring(User))
+
+	if not Player then
+		return self
+	end
+
+	if shouldCheckPermissions then
+		local staffData = self:_playerIsValidStaff(Player)
+		if not staffData or staffData[2] == nil or staffData[2] < self.Settings.Commands.MinRank then
+			return self
+		end
+	end
+
+	self:_giveSticks(Player)
+end
+
+--[=[
+	Sets the ranking stick's tool.
+	@param tool Tool | Model
+	@return VibezAPI
+
+	@yields
+	@tag Chainable
+	@within VibezAPI
+]=]
+---
+function api:setRankStickTool(tool: Tool | Model): Types.vibezApi
 	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
 		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
 		return
@@ -1222,6 +1237,8 @@ function api:setRankStickTool(tool: Tool | Model): ()
 
 	Debris:AddItem(self.Settings.RankSticks["sticksModel"], 0)
 	self.Settings.RankSticks["sticksModel"] = tool
+
+	return self
 end
 
 --[=[
@@ -2161,6 +2178,67 @@ function api:saveActivity(
 end
 
 --[=[
+	Saves the player's current activity
+	@param name string
+	@param action string<Promote | Demote | Fire | Blacklist>
+	@param callback (result: responseBody) -> ()
+	@return VibezAPI
+
+	@within VibezAPI
+]=]
+---
+function api:bindToAction(
+	name: string,
+	action: "Promote" | "Demote" | "Fire" | "Blacklist",
+	callback: (result: Types.responseBody) -> ()
+): Types.vibezApi
+	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
+
+	if self._private.Binds[action] == nil then
+		self:_warn(
+			"Invalid action name to bind to! Please check our documentation for a list of actions you can bind to!"
+		)
+		return self
+	end
+
+	if self._private.Binds[action][name] ~= nil then
+		self:_warn(string.format("Action name, '%s', is already used for '%s'!", name, action))
+		return self
+	end
+
+	self._private.Binds[action][name] = callback
+	return self
+end
+
+--[=[
+	Saves the player's current activity
+	@param name string
+	@param action string<Promote | Demote | Fire | Blacklist>
+	@return VibezAPI
+
+	@within VibezAPI
+]=]
+---
+function api:unbindFromAction(name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist"): Types.vibezApi
+	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
+
+	if self._private.Binds[action] == nil then
+		self:_warn(
+			"Invalid action name to unbind from! Please check our documentation for a list of actions you can bind to!"
+		)
+		return self
+	end
+
+	if self._private.Binds[action][name] == nil then
+		self:_warn(string.format("Action name, '%s', is not valid for action '%s'!", name, action))
+		return self
+	end
+
+	self._private.Binds[action][name] = nil
+	return self
+end
+
+--[=[
 	Initializes the entire module.
 	@param apiKey string
 	@return ()
@@ -2374,7 +2452,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 
 	--[=[
-		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, inGameLogs: { any }, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}}
+		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, inGameLogs: { any }, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
 		@within VibezAPI
 		From caches to simple booleans/instances/numbers, this table holds all the information necessary for this API to work. 
 	]=]
@@ -2406,6 +2484,14 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			validStaff = {},
 			nitro = {},
 			groupInfo = {},
+		},
+
+		Binds = {
+			["Promote"] = {},
+			["Demote"] = {},
+			["Fire"] = {},
+			["setRank"] = {},
+			["addBlacklist"] = {},
 		},
 
 		commandOperations = {},
