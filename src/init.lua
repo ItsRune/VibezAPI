@@ -466,6 +466,70 @@ end
 
 --// Private Functions \\--
 --[=[
+	Sets up the _G API.
+	@return ()
+
+	@private
+	@within VibezAPI
+]=]
+---
+function api:_setupGlobals(): ()
+	--selene: allow(global_usage)
+	if _G["VibezApi"] ~= nil then
+		return
+	end
+
+	local Ranking = {
+		Promote = function(userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
+			return self:Promote(userId, whoCalled)
+		end,
+
+		Fire = function(userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
+			return self:Fire(userId, whoCalled)
+		end,
+
+		Demote = function(userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
+			return self:Demote(userId, whoCalled)
+		end,
+
+		setRank = function(
+			userId: number | string | Player,
+			rank: number | string,
+			whoCalled: { userName: string, userId: number }?
+		)
+			return self:setRank(userId, rank, whoCalled)
+		end,
+	}
+
+	local Activity = {
+		getActivity = function(userId: number | string | Player)
+			return self:getActivity(userId)
+		end,
+
+		saveActivity = function(
+			userId: string | number,
+			userRank: number,
+			secondsSpent: number?,
+			messagesSent: (number | { string })?,
+			shouldFetchGroupRank: boolean?
+		)
+			return self:saveActivity(userId, userRank, secondsSpent, messagesSent, shouldFetchGroupRank)
+		end,
+	}
+
+	local Hooks = function(webhook: string): Types.vibezHooks
+		return self:getWebhookBuilder(webhook)
+	end
+
+	--selene: allow(global_usage)
+	_G.VibezApi = {
+		Ranking = Ranking,
+		Activity = Activity,
+		Hooks = Hooks,
+	}
+end
+
+--[=[
 	Gets and checks the current version to the version saved to the module.
 	@return ()
 
@@ -2425,7 +2489,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		:::
 	]=]
 
-	api.__metatable = "Why are you trying to fetch the metatable..?" -- Stop fetching this metatable
 	api.__index = api
 
 	local self = setmetatable({}, api)
@@ -2852,6 +2915,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_initialize(apiKey)
 	end
 
+	self:_setupGlobals()
 	return self :: Types.vibezApi
 end
 

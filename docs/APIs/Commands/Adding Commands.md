@@ -1,5 +1,5 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
 ---
 
 Do our commands not fit your purpose? Well, luckily for you we made this simple to use method that allows you to create your own commands. This method is called `:addCommand`. This method takes **three arguments**: the command name, any command aliases you'd like to use, and lastyl the command's executing function.

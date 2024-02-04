@@ -230,7 +230,7 @@ local function onSetupRankSticks()
 						local Weld = Instance.new("WeldConstraint")
 
 						newPart.Name = actionName .. "_Checker"
-						newPart.Transparency = 0.5
+						newPart.Transparency = 1
 						newPart.CFrame = cf * CFrame.new(0, 0, -size.Z)
 						newPart.Anchored = false
 						newPart.Size = size + Vector3.new(size.X / 2, 0, size.Z)
