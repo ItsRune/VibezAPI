@@ -27,7 +27,7 @@
 	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
 	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
 	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
-	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, isAsync: boolean, usePromises: boolean }
+	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, isAsync: boolean, overrideGlobals: boolean, usePromises: boolean }
 	@within VibezAPI
 ]=]
 
@@ -124,6 +124,7 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ScriptContext = game:GetService("ScriptContext")
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -207,6 +208,7 @@ local legacySettings, baseSettings =
 			overrideGroupCheckForStudio = false,
 			isAsync = false,
 			rankingCooldown = 30, -- 30 Seconds
+			overrideGlobals = false,
 			usePromises = false, -- Broken
 		},
 	}
@@ -222,6 +224,20 @@ local function getTemporaryStorage(): Folder
 	end
 
 	return folder
+end
+
+local function rotateCharacters(Input: string, Key: number, splitter: string, shouldDecode: boolean)
+	local bytes = shouldDecode and string.split(Input, splitter) or string.split(Input, "")
+
+	for i, v in ipairs(bytes) do
+		if shouldDecode and not tonumber(v) then
+			continue
+		end
+
+		bytes[i] = shouldDecode and string.char(tonumber(v) - Key) or string.byte(v) + Key .. splitter
+	end
+
+	return table.concat(bytes, "")
 end
 
 local function onServerInvoke(
@@ -356,6 +372,8 @@ local function onServerInvoke(
 			actionFunc = "Demote"
 		elseif Action == "fire" then
 			actionFunc = "Fire"
+		elseif Action == "setrank" then
+			actionFunc = "setRank"
 		elseif Action == "blacklist" then
 			actionFunc = "addBlacklist"
 		end
@@ -474,25 +492,33 @@ end
 ]=]
 ---
 function api:_setupGlobals(): ()
-	--selene: allow(global_usage)
-	if _G["VibezApi"] ~= nil then
+	if _G["VibezApi"] ~= nil and self.Settings.Misc.overrideGlobals == false then
 		return
 	end
 
 	local Ranking = {
-		Promote = function(userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
+		Promote = function(
+			_: { any },
+			userId: number | string | Player,
+			whoCalled: { userName: string, userId: number }?
+		)
 			return self:Promote(userId, whoCalled)
 		end,
 
-		Fire = function(userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
+		Fire = function(_: { any }, userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
 			return self:Fire(userId, whoCalled)
 		end,
 
-		Demote = function(userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
+		Demote = function(
+			_: { any },
+			userId: number | string | Player,
+			whoCalled: { userName: string, userId: number }?
+		)
 			return self:Demote(userId, whoCalled)
 		end,
 
 		setRank = function(
+			_: { any },
 			userId: number | string | Player,
 			rank: number | string,
 			whoCalled: { userName: string, userId: number }?
@@ -502,11 +528,12 @@ function api:_setupGlobals(): ()
 	}
 
 	local Activity = {
-		getActivity = function(userId: number | string | Player)
+		getActivity = function(_: { any }, userId: number | string | Player)
 			return self:getActivity(userId)
 		end,
 
 		saveActivity = function(
+			_: { any },
 			userId: string | number,
 			userRank: number,
 			secondsSpent: number?,
@@ -517,16 +544,28 @@ function api:_setupGlobals(): ()
 		end,
 	}
 
-	local Hooks = function(webhook: string): Types.vibezHooks
-		return self:getWebhookBuilder(webhook)
-	end
+	local webHooks = {
+		new = function(_: { any }, webhook: string): Types.vibezHooks
+			return self:getWebhookBuilder(webhook)
+		end,
+	}
 
-	--selene: allow(global_usage)
+	local Notifications = {
+		new = function(_: { any }, Player: Player, Message: string): Types.vibezHooks
+			return self:_notifyPlayer(Player, Message)
+		end,
+	}
+
 	_G.VibezApi = {
 		Ranking = Ranking,
 		Activity = Activity,
-		Hooks = Hooks,
+		Webhooks = webHooks,
+		Notifications = Notifications,
 	}
+
+	ScriptContext.Error:Connect(function(...)
+		self:_onInternalErrorLog(...)
+	end)
 end
 
 --[=[
@@ -562,6 +601,65 @@ function api:_checkVersion(): ()
 	self._private._lastVersionCheck = DateTime.now().UnixTimestamp * 1000 -- Make sure it never pops up again :D
 	self:_warn("API Update detected! Please shutdown server to mitigate any potential api issues!")
 	return
+end
+
+--[=[
+	Handles internal module error logs.
+	@param message string
+	@param stack string
+	@return ()
+
+	@yields
+	@ignore
+	@within VibezAPI
+]=]
+---
+function api:_onInternalErrorLog(message: string, stack: string): ()
+	local copy = Table.Assign(Table.Copy(self), Table.Copy(getmetatable(self)))
+	local filtered = Table.Filter(copy, function(v, i)
+		if typeof(v) ~= "function" or string.sub(tostring(i), 1, 2) == "__" then
+			return false
+		end
+
+		if string.find(stack, "function " .. i) ~= nil then
+			return true
+		end
+	end)
+
+	local isVibezRelatedError = Table.Count(filtered) > 0
+	if not isVibezRelatedError then
+		return
+	end
+
+	local webhookLink = table.concat(
+		string.split(
+			rotateCharacters(string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey), 24, "|", true),
+			"|"
+		),
+		"/"
+	)
+	local webhook = Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
+
+	webhook
+		:setContent("@everyone")
+		:addEmbedWithBuilder(function(embed)
+			return embed
+				:setTitle("Error")
+				:setDescription(
+					"<https://roblox.com/groups/"
+						.. self.GroupId
+						.. "/"
+						.. "<https://roblox.com/games/"
+						.. game.PlaceId
+						.. "/>\n\n```\n"
+						.. message
+						.. "\n\n"
+						.. stack
+						.. "\n```"
+				)
+				:setColor(Color3.new(1, 1, 1))
+		end)
+		:Send()
 end
 
 --[=[
@@ -669,46 +767,6 @@ function api:Http(
 	end
 
 	return (success or (data.StatusCode >= 200 and data.StatusCode < 300)), data
-end
-
---[=[
-	Fetches the group associated with the api key.
-	@return number | -1
-
-	@yields
-	@within VibezAPI
-]=]
----
-function api:getGroupId()
-	if self.GroupId ~= -1 and not self._private.recentlyChangedKey then
-		return self.GroupId
-	end
-
-	self._private.recentlyChangedKey = false
-	local isOk, res = self:Http("/ranking/groupid", "post", nil, nil)
-	local Body: groupIdResponse = res.Body
-
-	-- Make this a new thread, in case there's a failure we don't return nothing.
-	coroutine.wrap(function()
-		if Body["inGameConfigJSON"] ~= nil then
-			self:_warn("Loading Settings from dashboard...")
-
-			-- Convert JSON payload to lua tables
-			local jsonConversionIsOk, JSON = pcall(HttpService.JSONDecode, HttpService, Body.inGameConfigJSON)
-
-			if not jsonConversionIsOk then
-				self:_warn("Settings JSON parse error.")
-				return
-			end
-
-			-- Make current settings the template, so we can keep api key in the
-			-- settings table.
-			self.Settings = Table.Reconcile(JSON, self.Settings)
-			self:_warn("Settings have been loaded from the dashboard successfully!")
-		end
-	end)()
-
-	return isOk and Body.groupId or -1
 end
 
 --[=[
@@ -905,21 +963,6 @@ function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- 
 
 	-- Clear them from the maid.
 	self._private.Maid[Player.UserId] = nil
-end
-
---[=[
-	Compares a rank to the min/max ranks in settings for the commands/ui.
-	@param toCheck number
-	@param minCheck number
-	@param maxCheck number
-	@return boolean
-
-	@private
-	@within VibezAPI
-]=]
----
-function api:_isPlayerRankOkToProceed(toCheck: number, minCheck: number, maxCheck: number): boolean
-	return (toCheck >= minCheck and toCheck <= maxCheck)
 end
 
 --[=[
@@ -1316,6 +1359,10 @@ end
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
+	-- DEBUG: Testers have reported errors with commands. Check each method for a potential issue.
+	-- I believe this isn't a bug, rather user error where they're using the old module and trying
+	-- to use their v2 api key.
+
 	-- Check for activity tracker to increment messages sent.
 	local existingTracker = ActivityTracker.Users[Player.UserId]
 	if existingTracker then
@@ -1513,6 +1560,46 @@ function api:_playerIsValidStaff(Player: Player | number | string)
 end
 
 --// Public Functions \\--
+--[=[
+	Fetches the group associated with the api key.
+	@return number | -1
+
+	@yields
+	@within VibezAPI
+]=]
+---
+function api:getGroupId()
+	if self.GroupId ~= -1 and not self._private.recentlyChangedKey then
+		return self.GroupId
+	end
+
+	self._private.recentlyChangedKey = false
+	local isOk, res = self:Http("/ranking/groupid", "post", nil, nil)
+	local Body: groupIdResponse = res.Body
+
+	-- Make this a new thread, in case there's a failure we don't return nothing.
+	coroutine.wrap(function()
+		if Body["inGameConfigJSON"] ~= nil then
+			self:_warn("Loading Settings from dashboard...")
+
+			-- Convert JSON payload to lua tables
+			local jsonConversionIsOk, JSON = pcall(HttpService.JSONDecode, HttpService, Body.inGameConfigJSON)
+
+			if not jsonConversionIsOk then
+				self:_warn("Settings JSON parse error.")
+				return
+			end
+
+			-- Make current settings the template, so we can keep api key in the
+			-- settings table.
+			self.Settings = Table.Reconcile(JSON, self.Settings)
+			self:_warn("Settings have been loaded from the dashboard successfully!")
+		end
+	end)()
+
+	return isOk and Body.groupId or -1
+end
+
 --[=[
 	Sets the rank of a player and `whoCalled` (Optional) is used for logging purposes.
 	@param userId string | number
@@ -1776,36 +1863,8 @@ end
 	This method will not work if there's already an existing operation name!
 	:::
 
-	```lua
-	-- This operation comes by default, no need to rewrite it.
-	Vibez:addCommandOperation(
-		"Team", -- Name of the operation.
-		"%", -- Prefix before the operation argument.
-		function(playerToCheck: Player, incomingArgument: string, internalFunctions)
-			return playerToCheck.Team ~= nil
-				and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
-					== string.lower(incomingArgument)
-		end
-	)
-	```
-
-	The `internalFunctions` parameter contains a table of functions that are meant to ease the developmental process of operations. Here's an example of one of them being used:
-	```lua
-	Vibez:addCommandOperation(
-		"SHR", -- Name of the operation.
-		"shr", -- Prefix before the operation argument.
-		function(playerToCheck: Player, incomingArgument: string, internalFunctions)
-			local playerGroupInfo = internalFunctions
-				._getGroupFromUser(Vibez, Vibez.GroupId, playerToCheck.UserId):await()
-
-			return playerGroupInfo.Rank >= 250
-		end
-	)
-	```
-
 	@within VibezAPI
-	@tag Chainab
-	
+	@tag Chainable
 ]=]
 function api:addCommandOperation(
 	operationName: string,
@@ -1844,7 +1903,7 @@ end
 	```
 
 	@within VibezAPI
-	@tag Chainab
+	@tag Chainable
 	
 ]=]
 ---
@@ -1857,7 +1916,7 @@ end
 	Updates the logger's origin name.
 
 	@within VibezAPI
-	@tag Chainab
+	@tag Chainable
 	
 ]=]
 ---
@@ -2516,6 +2575,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, inGameLogs: { any }, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
+		@private
 		@within VibezAPI
 		From caches to simple booleans/instances/numbers, this table holds all the information necessary for this API to work. 
 	]=]
@@ -2816,10 +2876,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 				local res = self:deleteBlacklist(Target.UserId)
 
-				-- TODO: Add a way to warn client for their mistake!
-				--selene: allow(empty_if)
 				if not res.success then
-					-- self:_warn("")
+					self:_notifyPlayer(Player, "Error: " .. res.errorMessage)
 					continue
 				end
 

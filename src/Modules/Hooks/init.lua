@@ -200,6 +200,7 @@ function Class:addEmbed(data: { [string]: any }): Types.vibezHooks
 	end
 
 	assert(typeof(data) == "table", "parameter 'handler' expected a 'table' but received a '" .. typeof(table) .. "'")
+	data["type"] = "rich"
 
 	self.toSend.embeds[#self.toSend.embeds + 1] = data
 	return self
@@ -300,7 +301,7 @@ function Class:Send(): Types.httpResponse
 	local isOk, response =
 		self.Api:Http(string.format("/hooks/%s/%s", webhookData.ID, webhookData.Token), "post", nil, self.toSend)
 
-	if not isOk then
+	if not isOk or response.StatusCode ~= 200 then
 		self.Api:_warn(response.Body.message)
 	end
 

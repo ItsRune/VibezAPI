@@ -16,8 +16,24 @@
     },
 
     "Notifications": {
-        "Enabled": { "type": "boolean", "default": false },
-        "Position": { "type": "string", "default": "Bottom-Right" }
+        "Enabled": { "type": "boolean", "default": true },
+        "delayUntilRemoval": { "type": "number", "default": 5 },
+        
+        "Font": { "type": "string", "default": "Gotham" },
+        "FontSize": { "type": "number", "default": 16 },
+        "keyboardFontSizeMultiplier": { "type": "number", "default": 1.25 },
+        
+        "entranceTweenInfo": {
+            "Style": { "type": "string", "default": "Quint" },
+            "Direction": { "type": "string", "default": "InOut" },
+            "timeItTakes": { "type": "number", "default": 1 }
+        },
+        
+        "exitTweenInfo": {
+            "Style": { "type": "string", "default": "Quint" },
+            "Direction": { "type": "string", "default": "InOut" },
+            "timeItTakes": { "type": "number", "default": 1 }
+        }
     },
 
     "Interface": {
@@ -47,6 +63,7 @@
         "overrideGroupCheckForStudio": { "type": "boolean", "default": false },
         "isAsync": { "type": "boolean", "default": false },
         "rankingCooldown": { "type": "number", "default": 30 },
+        "overrideGlobals": { "type": "boolean", "default": false },
         "usePromises": { "type": "boolean", "default": false, "hidden": true }
     }
 }

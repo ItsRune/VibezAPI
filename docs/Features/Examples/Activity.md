@@ -4,14 +4,22 @@ sidebar_position: 1
 
 If you haven't read about how to use the [Activity Tracker](/docs/APIs/Activity%20Tracking) yet, we'd recommend reading that first.
 
-### Get Activity
+### Creating a backup of a player's activity
 ```lua
+--// Services \\--
+local Players = game:GetService("Players")
+local DataStoreService = game:GetService("DataStoreService")
+
+--// Variables \\--
 local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
-local function getActivity(Player: Player)
-    local activity = Vibez:getActivity(Player.UserId)
-    return activity
+--// Functions \\--
+local function onPlayerLeft(Player: Player)
+    local userActivity = Vibez:getActivity(Player.UserId)
 end
+
+--// Connections \\--
+Players.PlayerRemoving:Connect(onPlayerLeft)
 ```
 
 ### Add Activity
