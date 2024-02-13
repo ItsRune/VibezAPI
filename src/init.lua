@@ -620,6 +620,10 @@ end
 ]=]
 ---
 function api:_onInternalErrorLog(message: string, stack: string): ()
+	-- TODO: Add a better way of checking errors are from this module.
+	-- - Check to make sure it's from a script called "MainModule"?
+	-- - Check methods within the module and check based on stack trace?
+	-- - Create a fake HTTP method to make sure we don't increment their rate limit?
 	local copy = Table.Assign(Table.Copy(self), Table.Copy(getmetatable(self)))
 	local filtered = Table.Filter(copy, function(v, i)
 		if typeof(v) ~= "function" or string.sub(tostring(i), 1, 2) == "__" then
@@ -2321,11 +2325,15 @@ function api:saveActivity(
 end
 
 --[=[
-	Saves the player's current activity
+	Binds a custom function to a specific internal method.
 	@param name string
 	@param action string<Promote | Demote | Fire | Blacklist>
 	@param callback (result: responseBody) -> ()
 	@return VibezAPI
+
+	:::info
+	When a ranking action is triggered, your custom function will run with the response.
+	:::
 
 	@within VibezAPI
 ]=]
@@ -2354,7 +2362,7 @@ function api:bindToAction(
 end
 
 --[=[
-	Saves the player's current activity
+	Unbinds a custom function from a method.
 	@param name string
 	@param action string<Promote | Demote | Fire | Blacklist>
 	@return VibezAPI
