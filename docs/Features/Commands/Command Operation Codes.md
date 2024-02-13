@@ -32,6 +32,7 @@ local VibezAPI = require(14946453963)("myApiKey")
 
 VibezAPI:addCommandOperation("Rank", "r:", function(playerToCheck: Player, incomingArgument: string)
     -- Operation code is automatically removed from the 'incomingArgument'.
+    -- incomeArgument would look something like this: "3:<="
     local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
     
     -- Make sure the rank is a number.
@@ -42,11 +43,14 @@ VibezAPI:addCommandOperation("Rank", "r:", function(playerToCheck: Player, incom
     -- Make sure the tolerance is a valid tolerance.
     tolerance = tolerance or "<="
 
+    -- Convert 'rank' to a number.
+    rank = tonumber(rank)
+
     -- 'GetRankInGroup' caches when it's first called, this will not update if their rank changes.
     local isOk, currentPlayerRank = pcall(
         playerToCheck.GetRankInGroup,
         playerToCheck,
-        tonumber(rank)
+        rank
     )
     
     -- Make sure the player is in the group and their rank was fetched.
@@ -56,15 +60,15 @@ VibezAPI:addCommandOperation("Rank", "r:", function(playerToCheck: Player, incom
 
     -- Check the tolerances
     if tolerance == "<=" then
-        return currentPlayerRank <= tonumber(rank)
+        return currentPlayerRank <= rank
     elseif tolerance == ">=" then
-        return currentPlayerRank >= tonumber(rank)
+        return currentPlayerRank >= rank
     elseif tolerance == "<" then
-        return currentPlayerRank < tonumber(rank)
+        return currentPlayerRank < rank
     elseif tolerance == ">" then
-        return currentPlayerRank > tonumber(rank)
+        return currentPlayerRank > rank
     elseif tolerance == "==" then
-        return currentPlayerRank == tonumber(rank)
+        return currentPlayerRank == rank
     end
 
     -- If the tolerance is invalid, return false.

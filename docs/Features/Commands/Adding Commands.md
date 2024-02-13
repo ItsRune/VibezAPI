@@ -5,8 +5,6 @@ sidebar_position: 2
 Do our commands not fit your purpose? Well, luckily for you we made this simple to use method that allows you to create your own commands. This method is called `:addCommand`. This method takes **three arguments**: the command name, any command aliases you'd like to use, and lastyl the command's executing function.
 
 ```lua
-local VibezAPI = require(14946453963)("myApiKey")
-
 VibezAPI:addCommand("myCommand", {}, function(player: Player, commandArguments: {string})
     -- "player" is the Player who ran the command
     -- "commandArguments" are the extra arguments sent with the command
@@ -19,8 +17,6 @@ Now, you can use the command in-game: `!myCommand`... But this command isn't rea
 On a side note, I can't stress this enough. There are many things in the API that are **marked** private, and you **shouldn't** use them. If you do, we are not to blame for anything you accidentally break/leak. If you do want insights on how to use private methods, you can see all private methods when on the API page by clicking the "Show Private" button. Anything starting with an "_" is a private method/variable.
 
 ```lua
-local VibezAPI = require(14946453963)("myApiKey")
-
 VibezAPI:addCommand("myCommand", {"myCmd"}, function(player: Player, commandArguments: {string})
     -- "player" is the Player who ran the command
     -- "commandArguments" are the extra arguments sent with the command

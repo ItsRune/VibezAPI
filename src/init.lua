@@ -202,6 +202,11 @@ local legacySettings, baseSettings =
 			Enabled = false,
 		},
 
+		Blacklists = {
+			Enabled = true,
+			userIsBlacklistedMessage = "You have been blacklisted from the game for: <BLACKLIST_REASON>",
+		},
+
 		Misc = {
 			originLoggerText = game.Name,
 			ignoreWarnings = false,
@@ -879,6 +884,21 @@ end
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
+	-- Check if player is currently blacklisted.
+	if self.Settings.Blacklists.Enabled then
+		local isBlacklisted, blacklistReason, blacklistedBy = self:isUserBlacklisted(Player)
+
+		if isBlacklisted then
+			local formattedString =
+				string.gsub(self.Settings.Blacklists.userIsBlacklistedMessage, "<BLACKLIST_REASON>", blacklistReason)
+			formattedString =
+				string.gsub(self.Settings.Blacklists.userIsBlacklistedMessage, "<BLACKLIST_BY>", blacklistedBy)
+
+			Player:Kick(formattedString)
+			return
+		end
+	end
+
 	-- Get group data for setup below.
 	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 
