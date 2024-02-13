@@ -47,10 +47,6 @@ We have a variety of global APIs available for you to use, each method returns f
 ### Examples
 Here are some examples of how you can use our global APIs:
 
-:::info
-example
-:::
-
 <details>
 <summary>Welcome Message</summary>
 <br />
