@@ -1402,10 +1402,6 @@ end
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
-	-- DEBUG: Testers have reported errors with commands. Check each method for a potential issue.
-	-- I believe this isn't a bug, rather user error where they're using the old module and trying
-	-- to use their v2 api key.
-
 	-- Check for activity tracker to increment messages sent.
 	local existingTracker = ActivityTracker.Users[Player.UserId]
 	if existingTracker then
