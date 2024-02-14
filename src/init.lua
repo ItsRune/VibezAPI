@@ -386,14 +386,14 @@ local function onServerInvoke(
 		local result
 		if actionFunc == "Blacklist" then
 			result = self[actionFunc](self, userId, "Unspecified. (Interface)", Player)
+
+			if Table.Count(self._private.Binds[actionFunc]) > 0 then
+				for _, callback in pairs(self._private.Binds[actionFunc]) do
+					coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
+				end
+			end
 		else
 			result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
-		end
-
-		if self._private.Binds[actionFunc] ~= nil and Table.Count(self._private.Binds[actionFunc]) > 0 then
-			for _, callback in pairs(self._private.Binds[actionFunc]) do
-				coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
-			end
 		end
 
 		if result["Success"] == false then
@@ -1679,6 +1679,12 @@ function api:setRank(
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
 	end
 
+	if self._private.Binds["setrank"] ~= nil and Table.Count(self._private.Binds["setrank"]) > 0 then
+		for _, callback in pairs(self._private.Binds["setrank"]) do
+			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
+		end
+	end
+
 	return response.Body
 end
 
@@ -1720,6 +1726,12 @@ function api:Promote(userId: string | number, whoCalled: { userName: string, use
 
 	if response.Success and response.Body and response.Body["success"] == true then
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
+
+	if self._private.Binds["promote"] ~= nil and Table.Count(self._private.Binds["promote"]) > 0 then
+		for _, callback in pairs(self._private.Binds["promote"]) do
+			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
+		end
 	end
 
 	return response
@@ -1765,6 +1777,12 @@ function api:Demote(userId: string | number, whoCalled: { userName: string, user
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
 	end
 
+	if self._private.Binds["demote"] ~= nil and Table.Count(self._private.Binds["demote"]) > 0 then
+		for _, callback in pairs(self._private.Binds["demote"]) do
+			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
+		end
+	end
+
 	return response
 end
 
@@ -1806,6 +1824,12 @@ function api:Fire(userId: string | number, whoCalled: { userName: string, userId
 
 	if response.Success and response.Body and response.Body["success"] == true then
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+	end
+
+	if self._private.Binds["fire"] ~= nil and Table.Count(self._private.Binds["fire"]) > 0 then
+		for _, callback in pairs(self._private.Binds["fire"]) do
+			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
+		end
 	end
 
 	return response
@@ -2340,24 +2364,24 @@ end
 ---
 function api:bindToAction(
 	name: string,
-	action: "Promote" | "Demote" | "Fire" | "Blacklist",
+	action: "Promote" | "Demote" | "Fire" | "Blacklist" | "setRank",
 	callback: (result: Types.responseBody) -> ()
 ): Types.vibezApi
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
-	if self._private.Binds[action] == nil then
+	if self._private.Binds[string.lower(action)] == nil then
 		self:_warn(
 			"Invalid action name to bind to! Please check our documentation for a list of actions you can bind to!"
 		)
 		return self
 	end
 
-	if self._private.Binds[action][name] ~= nil then
+	if self._private.Binds[string.lower(action)][name] ~= nil then
 		self:_warn(string.format("Action name, '%s', is already used for '%s'!", name, action))
 		return self
 	end
 
-	self._private.Binds[action][name] = callback
+	self._private.Binds[string.lower(action)][name] = callback
 	return self
 end
 
@@ -2638,11 +2662,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		},
 
 		Binds = {
-			["Promote"] = {},
-			["Demote"] = {},
-			["Fire"] = {},
-			["setRank"] = {},
-			["addBlacklist"] = {},
+			["promote"] = {},
+			["demote"] = {},
+			["fire"] = {},
+			["setrank"] = {},
+			["addblacklist"] = {},
 		},
 
 		commandOperations = {},
