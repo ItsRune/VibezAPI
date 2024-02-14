@@ -22,14 +22,20 @@ local isUIContextEnabled, isWarningsAllowed = false, true
 local Table = require(script.Table)
 
 --// Functions \\--
-local function findFirstChildWhichIsAByName(parent: Instance, name: string, class: string): Instance?
+local function findFirstChildWhichIsAByName(parent: Instance, name: string, class: string, tries: number?): Instance?
+	tries = tries or 0
+	if tries >= 50 then
+		return nil
+	end
+
 	for _, v in pairs(parent:GetChildren()) do
 		if v.Name == name and v:IsA(class) then
 			return v
 		end
 	end
 
-	return nil
+	task.wait(0.25)
+	return findFirstChildWhichIsAByName(parent, name, class, tries + 1)
 end
 
 local function getTempFolder()
