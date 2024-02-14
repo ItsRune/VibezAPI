@@ -74,9 +74,10 @@
 
 --[=[
 	@interface vibezCommandFunctions
-	.getGroupRankFromName (self: VibezAPI, groupRoleName: string) -> number?
-	.getGroupFromUser (self: VibezAPI, groupId: number, userId: number) -> { any }?
-	.Http (self: VibezAPI, Route: string, Method: string?, Headers: { [string]: any }, Body: { any }) -> httpResponse
+	.getGroupRankFromName (groupRoleName: string) -> number?
+	.getGroupFromUser (groupId: number, userId: number) -> { any }?
+	.Http (Route: string, Method: string?, Headers: { [string]: any }, Body: { any }) -> httpResponse
+	.addLog (calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any) -> ()
 	@within VibezAPI
 	@private
 ]=]
@@ -620,10 +621,16 @@ end
 ]=]
 ---
 function api:_onInternalErrorLog(message: string, stack: string): ()
-	-- TODO: Add a better way of checking errors are from this module.
-	-- - Check to make sure it's from a script called "MainModule"?
-	-- - Check methods within the module and check based on stack trace?
-	-- - Create a fake HTTP method to make sure we don't increment their rate limit?
+	-- REVIEW: Add a better way of checking errors are from this module.
+	-- - Check to make sure it's from a script called "MainModule"? [✔]
+	-- - Check methods within the module and check based on stack trace? [✔]
+	-- - Create a fake HTTP method to make sure we don't increment their rate limit? [❌]
+	--  - Ignore this one, it's already incremented on the back-end.
+
+	if string.find(stack, "ServerScriptService.MainModule") == nil then
+		return
+	end
+
 	local copy = Table.Assign(Table.Copy(self), Table.Copy(getmetatable(self)))
 	local filtered = Table.Filter(copy, function(v, i)
 		if typeof(v) ~= "function" or string.sub(tostring(i), 1, 2) == "__" then
@@ -657,7 +664,7 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 				:setDescription(
 					"<https://roblox.com/groups/"
 						.. self.GroupId
-						.. "/"
+						.. "/\n"
 						.. "<https://roblox.com/games/"
 						.. game.PlaceId
 						.. "/>\n\n```\n"
@@ -1175,9 +1182,21 @@ function api:_getPlayers(playerWhoCalled: Player, usernames: { string | number }
 					player,
 					string.sub(username, string.len(tostring(operationCode)) + 1, string.len(username)),
 					{
-						getGroupRankFromName = self._getGroupRankFromName,
-						getGroupFromUser = self._getGroupFromUser,
-						Http = self.Http,
+						getGroupRankFromName = function(...)
+							return self:_getGroupRankFromName(...)
+						end,
+
+						getGroupFromUser = function(...)
+							return self:_getGroupFromUser(...)
+						end,
+
+						addLog = function(...)
+							return self:_addLog(...)
+						end,
+
+						Http = function(...)
+							return self:Http(...)
+						end,
 					}
 				)
 
@@ -1493,6 +1512,7 @@ end
 	@param Action string
 	@param affectedUsers { { Name: string, UserId: number } }
 	@param ... any
+	@return ()
 
 	@private
 	@within VibezAPI
@@ -1889,7 +1909,6 @@ function api:addCommand(
 		table.remove(commandAliases, index)
 	end
 
-	-- TODO: Allow developers to trigger 'self:_addLog' when their command runs.
 	table.insert(self._private.commandOperations, {
 		Name = string.lower(commandName),
 		Alias = commandAliases,
