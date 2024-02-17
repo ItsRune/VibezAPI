@@ -27,7 +27,7 @@
 	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
 	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
 	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
-	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, isAsync: boolean, overrideGlobals: boolean, usePromises: boolean }
+	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
 	@within VibezAPI
 ]=]
 
@@ -212,9 +212,9 @@ local legacySettings, baseSettings =
 			originLoggerText = game.Name,
 			ignoreWarnings = false,
 			overrideGroupCheckForStudio = false,
+			createGlobalVariables = false,
 			isAsync = false,
 			rankingCooldown = 30, -- 30 Seconds
-			overrideGlobals = false,
 			usePromises = false, -- Broken
 		},
 	}
@@ -498,7 +498,7 @@ end
 ]=]
 ---
 function api:_setupGlobals(): ()
-	if _G["VibezApi"] ~= nil and self.Settings.Misc.overrideGlobals == false then
+	if _G["VibezApi"] ~= nil or self.Settings.Misc.createGlobalVariables == false then
 		return
 	end
 
@@ -3040,7 +3040,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_initialize(apiKey)
 	end
 
-	self:_setupGlobals()
+	if self.Settings.Misc.createGlobalVariables then
+		self:_setupGlobals()
+	end
+
 	return self :: Types.vibezApi
 end
 
