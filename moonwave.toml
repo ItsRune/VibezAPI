@@ -6,6 +6,7 @@ classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
 onBrokenLinks = "warn"
 onBrokenMarkdownLinks = "warn"
 favicon = "https://github.com/ItsRune/VibezAPI/blob/903c060edf6b7982f6c04bc68626f07c2a653255/.moonwave/static/favicon.png?raw=true"
+# scripts = [{"src": "./.moonwave/scripts/test.js", "async": true}]
 
 # Home page settings
 [home]

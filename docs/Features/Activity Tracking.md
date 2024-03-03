@@ -72,3 +72,6 @@ end
 addSecondsToPlayer(107392833, 250, 10, 5)
 addSecondsToPlayerWithoutRank(107392833, 10, 5)
 ```
+
+### How do I get everyone's activity?
+Currently you cannot, but in the future we hope to add this as a feature.

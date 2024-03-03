@@ -9,8 +9,6 @@ Blacklisting a user will prevent them from doing anything that uses your API key
 To blacklist a user, you'd just require the module as normal and call the `addBlacklist` method.
 
 ```lua
-local Vibez = require(14946453963)("My API Key")
-
 Vibez:addBlacklist(1234567890) -- Adds a new blacklist with an "Unknown" reason
 Vibez:addBlacklist(1234567890, "My reason.") -- Adds a new blacklist with a provided reason.
 Vibez:addBlacklist(1234567890, "My reason.", 1) -- Adds a new blacklist with a provided reason and says ROBLOX blacklisted them.
@@ -20,8 +18,6 @@ Vibez:addBlacklist(1234567890, "My reason.", 1) -- Adds a new blacklist with a p
 To remove a blacklist, you'd just call the `deleteBlacklist` method.
 
 ```lua
-local Vibez = require(14946453963)("My API Key")
-
 Vibez:deleteBlacklist(1234567890) -- Removes a blacklist with the provided user id.
 ```
 
@@ -29,7 +25,6 @@ Vibez:deleteBlacklist(1234567890) -- Removes a blacklist with the provided user 
 To check a blacklist, you'd just call the `isUserBlacklisted` method.
 
 ```lua
-local Vibez = require(14946453963)("My API Key")
 local isBlacklisted, blacklistReason, blacklistedBy = Vibez:isUserBlacklisted(1234567890)
 ```
 
@@ -37,6 +32,5 @@ local isBlacklisted, blacklistReason, blacklistedBy = Vibez:isUserBlacklisted(12
 To get all blacklists, you'd just call the `getBlacklists` method.
 
 ```lua
-local Vibez = require(14946453963)("My API Key")
 local blacklists = Vibez:getBlacklists()
 ```

@@ -2,7 +2,7 @@
 sidebar_position: 2
 ---
 
-If you haven't read up on how to use our [webhooks](/docs/APIs/Webhooks) yet, we'd recommend reading that first.
+If you haven't read up on how to use our [webhooks](/docs/Features/Webhooks) yet, we'd recommend reading that first.
 
 ### Colors
 Typically you would use a hexidecimal color code for the color parameter, but you can also use a `Color3` value. **Only works for `addEmbedWithBuilder`**

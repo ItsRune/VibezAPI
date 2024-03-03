@@ -14,9 +14,6 @@ Yes! You can create your own commands. Head over to the [Adding Commands](/Vibez
 ## Can I create my own shorteners?
 Yes! You can create your own shorteners. Head over to the [Command Operation Codes](/VibezAPI/docs/Features/Commands/Command%20Operation%20Codes) page to learn how to create your own shorteners.
 
-## Can I use the API with other admin systems?
-Yes you can, however you will need to use the [Global API](/VibezAPI/docs/Features/Global) and you'll need to script it yourself.
-
 ## Command Settings
 ```lua
 Enabled = false,
@@ -28,3 +25,661 @@ MaxRank = 255,
 Prefix = "!",
 Alias = {},
 ```
+
+## How can I use the module with another admin system?
+We understand that many people use other admin systems that have much more complex features and would prefer to use that instead. Below we have listed a few examples of the top
+admin systems and how you can use the module with them. Please make sure you are using the [Global API](/VibezAPI/docs/Features/Global) to use the module with these admin systems.
+
+<details>
+<summary>Basic Admin Essentials</summary>
+<br />
+
+<details>
+<summary>All in one command</summary>
+<br />
+
+```lua
+local Plugin = function(...)
+    local Data = { ... }
+
+    -- Included Functions and Info --
+    local remoteEvent = Data[1][1]
+    local remoteFunction = Data[1][2]
+    local returnPermissions = Data[1][3]
+    local Commands = Data[1][4]
+    local Prefix = Data[1][5]
+    local actionPrefix = Data[1][6]
+    local returnPlayers = Data[1][7]
+    local cleanData = Data[1][8] -- cleanData(Sender,Receiver,Data)
+    -- Practical example, for a gui specifically for a player, from another player
+    -- cleanData(Sender,Receiver,"hi") -- You need receiver because it's being sent to everyone
+    -- Or for a broadcast (something everyone sees, from one person, to nobody specific)
+    -- cleanData(Sender,nil,"hi") -- Receiver is nil because it is a broadcast
+
+    -- Plugin Configuration --
+    local pluginName = 'rank'
+    local pluginPrefix = Prefix
+    local pluginLevel = 1
+    local pluginUsage = "<Type> <User(s)>" -- leave blank if the command has no arguments
+    local pluginDescription = "Promotes/Demotes/Sets a player's rank within the group."
+
+    local vibezApi = nil
+
+    while vibezApi == nil do
+        vibezApi = _G["VibezApi"]
+        task.wait(.25)
+    end
+
+    -- Example Plugin Function --
+    local function pluginFunction(Args) -- keep the name of the function as "pluginFunction"
+        local Sender = Args[1]
+        local Users = returnPlayers(Sender, Args[3])
+        local succeeeded, failed = {}, {}
+
+        if string.sub(string.lower(Type), 1, 1) == "p" then
+            Type = "Promote"
+        elseif string.sub(string.lower(Type), 1, 1) == "d" then
+            Type = "Demote"
+        elseif string.sub(string.lower(Type), 1, 1) == "f" then
+            Type = "Fire"
+        elseif string.sub(string.lower(Type), 1, 1) == "s" then
+            Type = "SetRank"
+
+            if not Args[5] then
+                remoteEvent:FireClient(Sender, "Hint", "Error", "You need to specify a rank to set the user(s) to.")
+                return
+            end
+        else
+            remoteEvent:FireClient(Sender, "Hint", "Error", "Invalid ranking type. We expected 'Promote', 'Demote', 'Fire' or 'SetRank'.")
+        end
+
+        for _, User in pairs(Users) do
+            local response = vibezApi.Ranking[Type]({}, User.UserId, Args[5])
+
+            if response.Success and response.Body and response.Body.success then
+                table.insert(succeeded, User.Name)
+            else
+                table.insert(failed, User.Name)
+            end
+        end
+
+        local firstNames = table.concat(succeeded, ", ", 1, 3)
+        local failedNames = table.concat(failed, ", ", 1, 3)
+        local fixedString = {
+            ["Promote"] = "Promotion",
+            ["Demote"] = "Demotion",
+            ["Fire"] = "Firing",
+            ["SetRank"] = "Set The Rank Of"
+        }
+
+        if #succeeded > 3 then
+            firstNames = table.concat(succeeded, ", ", 1, 3) .. "(" .. #succeeded - 3 .. ")"
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                fixedString[Type],
+                "Successfully " .. string.lower(Type) .. "d '" .. firstNames .. "' user(s)" .. (string.len(failed) > 0 and " and failed to " .. string.lower(Type) .. " " .. string.len(failed) .. " user(s)" or "")
+            )
+        elseif #succeeded <= 3 and #succeeded ~= 0 then
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                fixedString[Type],
+                "Successfully " .. string.lower(Type) .. "d '" .. firstNames .. "'!"
+            )
+        elseif #failed > 0 then
+            if #failed > 3 then
+                failedNames ..= " (" .. #failed - 3 .. ")"
+            end
+        
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                fixedString[Type],
+                "Failed to " .. string.lower(Type) .. " '" .. failedNames .. "'!"
+            )
+        end
+    end
+
+    -- Return Everything to the MainModule --
+    local descToReturn
+    if pluginUsage ~= "" then
+        descToReturn = pluginPrefix..pluginName..' '..pluginUsage..'\n'..pluginDescription
+    else
+        descToReturn = pluginPrefix..pluginName..'\n'..pluginDescription
+    end
+
+    return pluginName,pluginFunction,pluginLevel,pluginPrefix,{pluginName,pluginUsage,pluginDescription}
+end
+
+return Plugin
+```
+
+</details>
+
+<details>
+<summary>Promote</summary>
+<br />
+
+```lua
+local Plugin = function(...)
+    local Data = { ... }
+
+    -- Included Functions and Info --
+    local remoteEvent = Data[1][1]
+    local remoteFunction = Data[1][2]
+    local returnPermissions = Data[1][3]
+    local Commands = Data[1][4]
+    local Prefix = Data[1][5]
+    local actionPrefix = Data[1][6]
+    local returnPlayers = Data[1][7]
+    local cleanData = Data[1][8] -- cleanData(Sender,Receiver,Data)
+    -- Practical example, for a gui specifically for a player, from another player
+    -- cleanData(Sender,Receiver,"hi") -- You need receiver because it's being sent to everyone
+    -- Or for a broadcast (something everyone sees, from one person, to nobody specific)
+    -- cleanData(Sender,nil,"hi") -- Receiver is nil because it is a broadcast
+
+    -- Plugin Configuration --
+    local pluginName = 'promote'
+    local pluginPrefix = Prefix
+    local pluginLevel = 1
+    local pluginUsage = "<User(s)>" -- leave blank if the command has no arguments
+    local pluginDescription = "Promotes a player's rank within the group."
+
+    local vibezApi = nil
+
+    while vibezApi == nil do
+        vibezApi = _G["VibezApi"]
+        task.wait(.25)
+    end
+
+    -- Example Plugin Function --
+    local function pluginFunction(Args) -- keep the name of the function as "pluginFunction"
+        local Sender = Args[1]
+        local Users = returnPlayers(Sender, Args[3])
+        local succeeded, failed = {}, {}
+
+        if #Users == 0 then
+            return remoteEvent:FireClient(Sender, "Hint", "Error", "No user(s) to promote!")
+        end
+
+        for _, User in pairs(Users) do
+            local response = vibezApi.Ranking.Promote(User.UserId, {
+                userName = Sender.Name,
+                userId = Sender.UserId
+            })
+
+            if response.Success and response.Body and response.Body.success then
+                table.insert(succeeded, User.Name)
+            else
+                table.insert(failed, User.Name)
+            end
+        end
+
+        local firstNames = table.concat(succeeded, ", ", 1, 3)
+        local failedNames = table.concat(failed, ", ", 1, 3)
+
+        if #succeeded > 3 then
+            firstNames = table.concat(succeeded, ", ", 1, 3) .. "(" .. #succeeded - 3 .. ")"
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Promotion",
+                "Successfully promoted '" .. firstNames .. "' user(s)" .. (string.len(failed) > 0 and " and failed to promote " .. string.len(failed) .. " user(s)" or "")
+            )
+        elseif #succeeded <= 3 and #succeeded ~= 0 then
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Promotion",
+                "Successfully promoted '" .. firstNames .. "'!"
+            )
+        elseif #failed > 0 then
+            if #failed > 3 then
+                failedNames ..= " (" .. #failed - 3 .. ")"
+            end
+        
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Promotion",
+                "Failed to promote '" .. failedNames .. "'!"
+            )
+        end
+    end
+
+    -- Return Everything to the MainModule --
+    local descToReturn
+    if pluginUsage ~= "" then
+        descToReturn = pluginPrefix..pluginName..' '..pluginUsage..'\n'..pluginDescription
+    else
+        descToReturn = pluginPrefix..pluginName..'\n'..pluginDescription
+    end
+
+    return pluginName,pluginFunction,pluginLevel,pluginPrefix,{pluginName,pluginUsage,pluginDescription}
+end
+
+return Plugin
+```
+
+</details>
+
+<details>
+<summary>Demote</summary>
+<br />
+
+```lua
+local Plugin = function(...)
+    local Data = { ... }
+
+    -- Included Functions and Info --
+    local remoteEvent = Data[1][1]
+    local remoteFunction = Data[1][2]
+    local returnPermissions = Data[1][3]
+    local Commands = Data[1][4]
+    local Prefix = Data[1][5]
+    local actionPrefix = Data[1][6]
+    local returnPlayers = Data[1][7]
+    local cleanData = Data[1][8] -- cleanData(Sender,Receiver,Data)
+    -- Practical example, for a gui specifically for a player, from another player
+    -- cleanData(Sender,Receiver,"hi") -- You need receiver because it's being sent to everyone
+    -- Or for a broadcast (something everyone sees, from one person, to nobody specific)
+    -- cleanData(Sender,nil,"hi") -- Receiver is nil because it is a broadcast
+
+    -- Plugin Configuration --
+    local pluginName = 'demote'
+    local pluginPrefix = Prefix
+    local pluginLevel = 1
+    local pluginUsage = "<User(s)>" -- leave blank if the command has no arguments
+    local pluginDescription = "Demotes a player's rank within the group."
+
+    local vibezApi = nil
+
+    while vibezApi == nil do
+        vibezApi = _G["VibezApi"]
+        task.wait(.25)
+    end
+
+    -- Example Plugin Function --
+    local function pluginFunction(Args) -- keep the name of the function as "pluginFunction"
+        local Sender = Args[1]
+        local Users = returnPlayers(Sender, Args[3])
+        local succeeded, failed = {}, {}
+
+        if #Users == 0 then
+            return remoteEvent:FireClient(Sender, "Hint", "Error", "No user(s) to demote!")
+        end
+
+        for _, User in pairs(Users) do
+            local response = vibezApi.Ranking.Demote(User.UserId, {
+                userName = Sender.Name,
+                userId = Sender.UserId
+            })
+
+            if response.Success and response.Body and response.Body.success then
+                table.insert(succeeded, User.Name)
+            else
+                table.insert(failed, User.Name)
+            end
+        end
+
+        local firstNames = table.concat(succeeded, ", ", 1, 3)
+        local failedNames = table.concat(failed, ", ", 1, 3)
+
+        if #succeeded > 3 then
+            firstNames = table.concat(succeeded, ", ", 1, 3) .. "(" .. #succeeded - 3 .. ")"
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Demotion",
+                "Successfully demoted '" .. firstNames .. "' user(s)" .. (string.len(failed) > 0 and " and failed to demote " .. string.len(failed) .. " user(s)" or "")
+            )
+        elseif #succeeded <= 3 and #succeeded ~= 0 then
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Demotion",
+                "Successfully demoted '" .. firstNames .. "'!"
+            )
+        elseif #failed > 0 then
+            if #failed > 3 then
+                failedNames ..= " (" .. #failed - 3 .. ")"
+            end
+        
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Demotion",
+                "Failed to demote '" .. failedNames .. "'!"
+            )
+        end
+    end
+
+    -- Return Everything to the MainModule --
+    local descToReturn
+    if pluginUsage ~= "" then
+        descToReturn = pluginPrefix..pluginName..' '..pluginUsage..'\n'..pluginDescription
+    else
+        descToReturn = pluginPrefix..pluginName..'\n'..pluginDescription
+    end
+
+    return pluginName,pluginFunction,pluginLevel,pluginPrefix,{pluginName,pluginUsage,pluginDescription}
+end
+
+return Plugin
+```
+
+</details>
+
+<details>
+<summary>Fire</summary>
+<br />
+
+```lua
+local Plugin = function(...)
+    local Data = { ... }
+
+    -- Included Functions and Info --
+    local remoteEvent = Data[1][1]
+    local remoteFunction = Data[1][2]
+    local returnPermissions = Data[1][3]
+    local Commands = Data[1][4]
+    local Prefix = Data[1][5]
+    local actionPrefix = Data[1][6]
+    local returnPlayers = Data[1][7]
+    local cleanData = Data[1][8] -- cleanData(Sender,Receiver,Data)
+    -- Practical example, for a gui specifically for a player, from another player
+    -- cleanData(Sender,Receiver,"hi") -- You need receiver because it's being sent to everyone
+    -- Or for a broadcast (something everyone sees, from one person, to nobody specific)
+    -- cleanData(Sender,nil,"hi") -- Receiver is nil because it is a broadcast
+
+    -- Plugin Configuration --
+    local pluginName = 'fire'
+    local pluginPrefix = Prefix
+    local pluginLevel = 1
+    local pluginUsage = "<User(s)>" -- leave blank if the command has no arguments
+    local pluginDescription = "Fires a player the group."
+
+    local vibezApi = nil
+
+    while vibezApi == nil do
+        vibezApi = _G["VibezApi"]
+        task.wait(.25)
+    end
+
+    -- Example Plugin Function --
+    local function pluginFunction(Args) -- keep the name of the function as "pluginFunction"
+        local Sender = Args[1]
+        local Users = returnPlayers(Sender, Args[3])
+        local succeeded, failed = {}, {}
+
+        if #Users == 0 then
+            return remoteEvent:FireClient(Sender, "Hint", "Error", "No user(s) to fire!")
+        end
+
+        for _, User in pairs(Users) do
+            local response = vibezApi.Ranking.Fire(User.UserId, {
+                userName = Sender.Name,
+                userId = Sender.UserId
+            })
+
+            if response.Success and response.Body and response.Body.success then
+                table.insert(succeeded, User.Name)
+            else
+                table.insert(failed, User.Name)
+            end
+        end
+
+        local firstNames = table.concat(succeeded, ", ", 1, 3)
+        local failedNames = table.concat(failed, ", ", 1, 3)
+
+        if #succeeded > 3 then
+            firstNames = table.concat(succeeded, ", ", 1, 3) .. "(" .. #succeeded - 3 .. ")"
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Fire",
+                "Successfully fired '" .. firstNames .. "' user(s)" .. (string.len(failed) > 0 and " and failed to fire " .. string.len(failed) .. " user(s)" or "")
+            )
+        elseif #succeeded <= 3 and #succeeded ~= 0 then
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Fire",
+                "Successfully fired '" .. firstNames .. "'!"
+            )
+        elseif #failed > 0 then
+            if #failed > 3 then
+                failedNames ..= " (" .. #failed - 3 .. ")"
+            end
+        
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "Fire",
+                "Failed to fire '" .. failedNames .. "'!"
+            )
+        end
+    end
+
+    -- Return Everything to the MainModule --
+    local descToReturn
+    if pluginUsage ~= "" then
+        descToReturn = pluginPrefix..pluginName..' '..pluginUsage..'\n'..pluginDescription
+    else
+        descToReturn = pluginPrefix..pluginName..'\n'..pluginDescription
+    end
+
+    return pluginName,pluginFunction,pluginLevel,pluginPrefix,{pluginName,pluginUsage,pluginDescription}
+end
+
+return Plugin
+```
+
+</details>
+
+<details>
+<summary>SetRank</summary>
+<br />
+
+```lua
+local Plugin = function(...)
+    local Data = { ... }
+
+    -- Included Functions and Info --
+    local remoteEvent = Data[1][1]
+    local remoteFunction = Data[1][2]
+    local returnPermissions = Data[1][3]
+    local Commands = Data[1][4]
+    local Prefix = Data[1][5]
+    local actionPrefix = Data[1][6]
+    local returnPlayers = Data[1][7]
+    local cleanData = Data[1][8] -- cleanData(Sender,Receiver,Data)
+    -- Practical example, for a gui specifically for a player, from another player
+    -- cleanData(Sender,Receiver,"hi") -- You need receiver because it's being sent to everyone
+    -- Or for a broadcast (something everyone sees, from one person, to nobody specific)
+    -- cleanData(Sender,nil,"hi") -- Receiver is nil because it is a broadcast
+
+    -- Plugin Configuration --
+    local pluginName = 'setrank'
+    local pluginPrefix = Prefix
+    local pluginLevel = 1
+    local pluginUsage = "<User(s)> <NewRank>" -- leave blank if the command has no arguments
+    local pluginDescription = "Sets the rank of a player within the group."
+
+    local vibezApi = nil
+
+    while vibezApi == nil do
+        vibezApi = _G["VibezApi"]
+        task.wait(.25)
+    end
+
+    -- Example Plugin Function --
+    local function pluginFunction(Args) -- keep the name of the function as "pluginFunction"
+        local Sender = Args[1]
+        local Users = returnPlayers(Sender, Args[3])
+        local succeeded, failed = {}, {}
+
+        if #Users == 0 then
+            return remoteEvent:FireClient(Sender, "Hint", "Error", "No user(s) to fire!")
+        elseif tonumber(Args[4]) == nil then
+            return remoteEvent:FireClient(Sender, "Hint", "Error", "'Rank' has to be of type 'number', NOT '" .. typeof(Args[4]) .. "'!")
+        end
+
+        for _, User in pairs(Users) do
+            local response = vibezApi.Ranking.SetRank(User.UserId, tonumber(Args[4]), {
+                userName = Sender.Name,
+                userId = Sender.UserId
+            })
+
+            if response.Success and response.Body and response.Body.success then
+                table.insert(succeeded, User.Name)
+            else
+                table.insert(failed, User.Name)
+            end
+        end
+
+        local firstNames = table.concat(succeeded, ", ", 1, 3)
+        local failedNames = table.concat(failed, ", ", 1, 3)
+
+        if #succeeded > 3 then
+            firstNames = table.concat(succeeded, ", ", 1, 3) .. "(" .. #succeeded - 3 .. ")"
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "SetRank",
+                "Successfully set the rank of '" .. firstNames .. "' user(s)" .. (string.len(failed) > 0 and " and failed to fire " .. string.len(failed) .. " user(s)" or "")
+            )
+        elseif #succeeded <= 3 and #succeeded ~= 0 then
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "SetRank",
+                "Successfully set the rank of '" .. firstNames .. "'!"
+            )
+        elseif #failed > 0 then
+            if #failed > 3 then
+                failedNames ..= " (" .. #failed - 3 .. ")"
+            end
+        
+            remoteEvent:FireClient(
+                Sender,
+                "Hint",
+                "SetRank",
+                "Failed to set the rank of '" .. failedNames .. "'!"
+            )
+        end
+    end
+
+    -- Return Everything to the MainModule --
+    local descToReturn
+    if pluginUsage ~= "" then
+        descToReturn = pluginPrefix..pluginName..' '..pluginUsage..'\n'..pluginDescription
+    else
+        descToReturn = pluginPrefix..pluginName..'\n'..pluginDescription
+    end
+
+    return pluginName,pluginFunction,pluginLevel,pluginPrefix,{pluginName,pluginUsage,pluginDescription}
+end
+
+return Plugin
+```
+
+</details>
+
+</details>
+
+<details>
+<summary>Adonis (Untested)</summary>
+<br />
+
+```lua
+return function(Vargs)
+	local server = Vargs.Server
+	local service = Vargs.Service
+
+        --// Add a new command to the Commands table at index "ExampleCommand1"
+	server.Commands.Promote = {						--// The index & table of the command
+		Prefix = server.Settings.Prefix;					--// The prefix the command will use, this is the ':' in ':ff me'
+		Commands = {"Promote"};	--// A table containing the command strings (the things you chat in-game to run the command, the 'ff' in ':ff me')
+		Args = {"playerToPromote"};						--// Command arguments, these will be available in order as args[1], args[2], args[3], etc; This is the 'me' in ':ff me'
+		Description = "Promotes the rank of a player.";					--// The description of the command
+		AdminLevel = 100; -- Moderators						--// The command's minimum admin level; This can also be a table containing specific levels rather than a minimum level: {124, 152, "HeadAdmins", etc};
+		--// Alternative option: AdminLevel = "Moderators";
+		Filter = true;								--// Should user supplied text passed to this command be filtered automatically? Use this if you plan to display a user-defined message to other players
+		Fun = false;								--// Is this command considered as fun?
+		Hidden = false;								--// Should this command be hidden from the command list?
+		Disabled = false;							--// Should this command be unusable?
+		NoStudio = false;							--// Should this command be blocked from being executed in a Studio environment?
+		NonChattable = false;							--// Should this command be blocked from being executed via chat?
+		CrossServerDenied = false;						--// If true, this command will not be usable via :crossserver
+		Function = function(plr: Player, args: {string}, data: {})		--// The command's function; This is the actual code of the command which runs when you run the command
+			--// "plr" is the player running the command
+			--// "args" is a table containing command arguments supplied by the user
+			--// "data" is a table containing information related to the command and the player running it, such as data.PlayerData.Level (the player's admin level)
+			local vibezApi = nil
+
+            while vibezApi == nil do
+                vibezApi = _G["VibezApi"]
+                task.wait(.25)
+            end
+
+            vibezApi.Ranking:Promote(args[1], { userName = plr.Name, userId = plr.UserId })
+		end
+	}
+
+    server.Commands.Demote = {						--// The index & table of the command
+		Prefix = server.Settings.Prefix;					--// The prefix the command will use, this is the ':' in ':ff me'
+		Commands = {"Demote"};	--// A table containing the command strings (the things you chat in-game to run the command, the 'ff' in ':ff me')
+		Args = {"playerToDemote"};						--// Command arguments, these will be available in order as args[1], args[2], args[3], etc; This is the 'me' in ':ff me'
+		Description = "Demotes the rank of a player.";					--// The description of the command
+		AdminLevel = 100; -- Moderators						--// The command's minimum admin level; This can also be a table containing specific levels rather than a minimum level: {124, 152, "HeadAdmins", etc};
+		--// Alternative option: AdminLevel = "Moderators";
+		Filter = true;								--// Should user supplied text passed to this command be filtered automatically? Use this if you plan to display a user-defined message to other players
+		Fun = false;								--// Is this command considered as fun?
+		Hidden = false;								--// Should this command be hidden from the command list?
+		Disabled = false;							--// Should this command be unusable?
+		NoStudio = false;							--// Should this command be blocked from being executed in a Studio environment?
+		NonChattable = false;							--// Should this command be blocked from being executed via chat?
+		CrossServerDenied = false;						--// If true, this command will not be usable via :crossserver
+		Function = function(plr: Player, args: {string}, data: {})		--// The command's function; This is the actual code of the command which runs when you run the command
+			local vibezApi = nil
+
+            while vibezApi == nil do
+                vibezApi = _G["VibezApi"]
+                task.wait(.25)
+            end
+
+            vibezApi.Ranking:Demote(args[1], { userName = plr.Name, userId = plr.UserId })
+		end
+	}
+
+    server.Commands.setRank = {						--// The index & table of the command
+		Prefix = server.Settings.Prefix;					--// The prefix the command will use, this is the ':' in ':ff me'
+		Commands = {"setRank"};	--// A table containing the command strings (the things you chat in-game to run the command, the 'ff' in ':ff me')
+		Args = {"playerToSetRank", "newRank"};						--// Command arguments, these will be available in order as args[1], args[2], args[3], etc; This is the 'me' in ':ff me'
+		Description = "Sets the rank of a player.";					--// The description of the command
+		AdminLevel = 100; -- Moderators						--// The command's minimum admin level; This can also be a table containing specific levels rather than a minimum level: {124, 152, "HeadAdmins", etc};
+		--// Alternative option: AdminLevel = "Moderators";
+		Filter = true;								--// Should user supplied text passed to this command be filtered automatically? Use this if you plan to display a user-defined message to other players
+		Fun = false;								--// Is this command considered as fun?
+		Hidden = false;								--// Should this command be hidden from the command list?
+		Disabled = false;							--// Should this command be unusable?
+		NoStudio = false;							--// Should this command be blocked from being executed in a Studio environment?
+		NonChattable = false;							--// Should this command be blocked from being executed via chat?
+		CrossServerDenied = false;						--// If true, this command will not be usable via :crossserver
+		Function = function(plr: Player, args: {string}, data: {})		--// The command's function; This is the actual code of the command which runs when you run the command
+			local vibezApi = nil
+
+            while vibezApi == nil do
+                vibezApi = _G["VibezApi"]
+                task.wait(.25)
+            end
+
+            vibezApi.Ranking:SetRank(args[1], args[2], { userName = plr.Name, userId = plr.UserId })
+		end
+	}
+end
+```
+
+</details>

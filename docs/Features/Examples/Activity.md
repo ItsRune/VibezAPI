@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-If you haven't read about how to use the [Activity Tracker](/docs/APIs/Activity%20Tracking) yet, we'd recommend reading that first.
+If you haven't read about how to use the [Activity Tracker](/docs/Features/Activity%20Tracking) yet, we'd recommend reading that first.
 
 ### Creating a backup of a player's activity
 ```lua

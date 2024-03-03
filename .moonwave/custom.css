@@ -6,6 +6,8 @@
     --ifm-color-primary-light: #f841c7;
     --ifm-color-primary-lighter: #f94fcb;
     --ifm-color-primary-lightest: #fa78d7;
+
+    --ifm-footer-background-color: #1a1a1a;
 }
 
 [data-theme='light'] {
@@ -17,4 +19,11 @@
     --ifm-color-primary-lighter: #ce80c8;
     --ifm-color-primary-lightest: #daa0d6;
     --ifm-background-color: #fff4fe;
+}
+
+.footer--dark {
+    --ifm-footer-background-color: #2e2c2e;
+    --ifm-footer-color: var(--ifm-footer-link-color);
+    --ifm-footer-link-color: var(--ifm-color-secondary);
+    --ifm-footer-title-color: var(--ifm-color-white);
 }

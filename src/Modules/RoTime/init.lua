@@ -1,4 +1,5 @@
 --- @class RoTime
+--- @ignore
 
 --[=[
 	@prop Timer (start: number, finish: number, increment: number?) -> Timer

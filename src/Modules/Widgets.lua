@@ -11,6 +11,7 @@
 
 --[=[
 	@class Widgets
+	@ignore
 ]=]
 --// Services \\--
 local HttpService = game:GetService("HttpService")

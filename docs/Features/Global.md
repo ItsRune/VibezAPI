@@ -19,28 +19,36 @@ We have a variety of global APIs available for you to use, each method returns f
 
 | Method Name | Arguments | Description | Example |
 | :---: | :---: | :---: | :---: |
-| `Promote` | `userId:number` | Increments a player's rank by 1. | `_G.VibezApi.Ranking:Promote(1)` |
-| `Demote` | `userId:number` | Decrements a player's rank by 1. | `_G.VibezApi.Ranking:Demote(1)` |
-| `setRank` | `userId:number`,<br />`rank:number` | Sets a player's rank to a specific rank. | `_G.VibezApi.Ranking:setRank(1, 0)` |
+| `Promote` | `userId: number` | Increments a player's rank by 1. | `_G.VibezApi.Ranking:Promote(1)` |
+| `Demote` | `userId: number` | Decrements a player's rank by 1. | `_G.VibezApi.Ranking:Demote(1)` |
+| `setRank` | `userId: number`,<br />`rank: number` | Sets a player's rank to a specific rank. | `_G.VibezApi.Ranking:setRank(1, 0)` |
 
 <h2>Activity</h2>
 
 | Method Name | Arguments | Description | Example |
 | :---: | :---: | :---: | :---: |
-| `getActivity` | `userId:number` | Gets the activity of a player. | `_G.VibezApi.Activity:getActivity(1)` |
-| `saveActivity` | `userId:number`,<br />`userRank:number`,<br />`seconds:number`,<br />`messages:number`,<br />`forceFetchRank:boolean` | Saves the activity of a player. | `_G.VibezApi.Activity:saveActivity(1, 0, 20, 0, false)` |
+| `getActivity` | `userId: number` | Gets the activity of a player. | `_G.VibezApi.Activity:getActivity(1)` |
+| `saveActivity` | `userId: number`,<br />`userRank: number`,<br />`seconds: number`,<br />`messages: number`,<br />`forceFetchRank: boolean` | Saves the activity of a player. | `_G.VibezApi.Activity:saveActivity(1, 0, 20, 0, false)` |
 
 <h2>Hooks</h2>
 
 | Method Name | Arguments | Description | Example |
 | :---: | :---: | :---: | :---: |
-| `new` | `webhook:string` | Creates a new webhook. | `_G.VibezApi.Hooks:new("https://discord.com/api/webhooks/")` |
+| `new` | `webhook: string` | Creates a new webhook. | `_G.VibezApi.Hooks:new("https://discord.com/api/webhooks/")` |
 
 <h2>Notifications</h2>
 
 | Method Name | Arguments | Description | Example |
 | :---: | :---: | :---: | :---: |
-| `new` | `player:Player`,<br />`message:string` | Creates a notification for a player. | `_G.VibezApi.Notifications:new(game.Players.LocalPlayer, "Hello World!")` |
+| `new` | `player: Player`,<br />`message:string` | Creates a notification for a player. | `_G.VibezApi.Notifications:new(game.Players.ltsRune, "Hello World!")` |
+
+<h2>General</h2>
+
+| Method Name | Arguments | Description | Example |
+| :---: | :---: | :---: | :---: |
+| `getGroups` | `player: Player` | Gets a group from the player's perspective. | `_G.VibezApi.General:getGroup(game.Players.ltsRune)` |
+| `getGroupRank` | `player: Player`,<br />`groupId:number` | Gets a player's group rank. | `_G.VibezApi.General:getGroupRank(game.Players.ltsRune, 0)` |
+| `getGroupRole` | `player: Player`,<br />`groupId:number` | Gets a player's group role. | `_G.VibezApi.General:getGroupRole(game.Players.ltsRune, 0)` |
 
 --------------------
 

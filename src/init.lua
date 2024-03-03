@@ -140,84 +140,83 @@ local RoTime = require(script.Modules.RoTime)
 
 --// Constants \\--
 local api = {}
-local legacySettings, baseSettings =
-	require(script.Modules.legacySettings), {
-		Commands = {
-			Enabled = false,
-			useDefaultNames = true,
+local baseSettings = {
+	Commands = {
+		Enabled = false,
+		useDefaultNames = true,
 
-			MinRank = 255,
-			MaxRank = 255,
+		MinRank = 255,
+		MaxRank = 255,
 
-			Prefix = "!",
-			Alias = {},
+		Prefix = "!",
+		Alias = {},
+	},
+
+	RankSticks = {
+		Enabled = false,
+		MinRank = 255,
+		MaxRank = 255,
+
+		sticksModel = nil, -- Uses default
+	},
+
+	Notifications = {
+		Enabled = true,
+
+		Font = Enum.Font.Gotham,
+		FontSize = 16,
+		keyboardFontSizeMultiplier = 1.25, -- Multiplier for fontsize keyboard users
+		delayUntilRemoval = 20, -- Seconds
+
+		entranceTweenInfo = {
+			Style = Enum.EasingStyle.Quint,
+			Direction = Enum.EasingDirection.InOut,
+			timeItTakes = 1, -- Seconds
 		},
 
-		RankSticks = {
-			Enabled = false,
-			MinRank = 255,
-			MaxRank = 255,
-
-			sticksModel = nil, -- Uses default
+		exitTweenInfo = {
+			Style = Enum.EasingStyle.Quint,
+			Direction = Enum.EasingDirection.InOut,
+			timeItTakes = 1, -- Seconds
 		},
+	},
 
-		Notifications = {
-			Enabled = true,
+	Interface = {
+		Enabled = false,
+		MinRank = 255,
+		MaxRank = 255,
+	},
 
-			Font = Enum.Font.Gotham,
-			FontSize = 16,
-			keyboardFontSizeMultiplier = 1.25, -- Multiplier for fontsize keyboard users
-			delayUntilRemoval = 20, -- Seconds
+	ActivityTracker = {
+		Enabled = false,
+		MinRank = 255,
 
-			entranceTweenInfo = {
-				Style = Enum.EasingStyle.Quint,
-				Direction = Enum.EasingDirection.InOut,
-				timeItTakes = 1, -- Seconds
-			},
+		disableWhenInStudio = true,
+		disableWhenAFK = false,
+		delayBeforeMarkedAFK = 30,
+		kickIfFails = false,
+		failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
+	},
 
-			exitTweenInfo = {
-				Style = Enum.EasingStyle.Quint,
-				Direction = Enum.EasingDirection.InOut,
-				timeItTakes = 1, -- Seconds
-			},
-		},
+	Widgets = {
+		Enabled = false,
+	},
 
-		Interface = {
-			Enabled = false,
-			MinRank = 255,
-			MaxRank = 255,
-		},
+	Blacklists = {
+		Enabled = true,
+		userIsBlacklistedMessage = "You have been blacklisted from the game for: <BLACKLIST_REASON>",
+	},
 
-		ActivityTracker = {
-			Enabled = false,
-			MinRank = 255,
-
-			disableWhenInStudio = true,
-			disableWhenAFK = false,
-			delayBeforeMarkedAFK = 30,
-			kickIfFails = false,
-			failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
-		},
-
-		Widgets = {
-			Enabled = false,
-		},
-
-		Blacklists = {
-			Enabled = true,
-			userIsBlacklistedMessage = "You have been blacklisted from the game for: <BLACKLIST_REASON>",
-		},
-
-		Misc = {
-			originLoggerText = game.Name,
-			ignoreWarnings = false,
-			overrideGroupCheckForStudio = false,
-			createGlobalVariables = false,
-			isAsync = false,
-			rankingCooldown = 30, -- 30 Seconds
-			usePromises = false, -- Broken
-		},
-	}
+	Misc = {
+		originLoggerText = game.Name,
+		ignoreWarnings = false,
+		overrideGroupCheckForStudio = false,
+		createGlobalVariables = false,
+		isAsync = false,
+		rankingCooldown = 30, -- 30 Seconds
+		usePromises = false, -- Broken
+	},
+}
 
 --// Local Functions \\--
 local function getTemporaryStorage(): Folder
@@ -429,6 +428,15 @@ local function onServerInvoke(
 			return true
 		end
 
+		if
+			self._private.Binds[string.lower(actionFunc)] ~= nil
+			and Table.Count(self._private.Binds[string.lower(actionFunc)]) > 0
+		then
+			for _, callback in pairs(self._private.Binds[string.lower(actionFunc)]) do
+				coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
+			end
+		end
+
 		return true
 	elseif Action == "Afk" then
 		local override = Data[1]
@@ -582,6 +590,7 @@ end
 	@tag Unavailable
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_checkVersion(): ()
@@ -618,6 +627,7 @@ end
 	@yields
 	@ignore
 	@within VibezAPI
+	@since 1.10.1
 ]=]
 ---
 function api:_onInternalErrorLog(message: string, stack: string): ()
@@ -626,6 +636,7 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 	-- - Check methods within the module and check based on stack trace? [✔]
 	-- - Create a fake HTTP method to make sure we don't increment their rate limit? [❌]
 	--  - Ignore this one, it's already incremented on the back-end.
+	-- ⌊tan(cos(sin⌈(8–√)[d/dx(−9x)]⌉))⌋+⌊6!−−√−2⌋
 
 	if string.find(stack, "ServerScriptService.MainModule") == nil then
 		return
@@ -692,6 +703,7 @@ end
 	@tag Unavailable
 	@private
 	@within VibezAPI
+	@since 1.8.0
 ]=]
 ---
 function api:_promisify(functionToBind: (...any) -> ...any, ...: any): any
@@ -714,9 +726,10 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.0.0
 ]=]
 ---
-function api:Http(
+function api:_http(
 	Route: string,
 	Method: string?,
 	Headers: { [string]: any }?,
@@ -799,6 +812,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_getGroupRankFromName(groupRoleName: string): number?
@@ -830,6 +844,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?): any?
@@ -892,6 +907,7 @@ end
 
 	@private
 	@within VibezAPI
+	@since 1.5.0
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
@@ -956,6 +972,7 @@ end
 
 	@private
 	@within VibezAPI
+	@since 1.5.0
 ]=]
 ---
 function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
@@ -1004,6 +1021,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_getUserIdByName(username: string): number
@@ -1019,6 +1037,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_getNameById(userId: number): string?
@@ -1036,6 +1055,7 @@ end
 
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_createRemote()
@@ -1086,6 +1106,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.2.1
 ]=]
 ---
 function api:_getRoleIdFromRank(rank: number | string): number?
@@ -1129,6 +1150,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.10.0
 ]=]
 ---
 function api:_notifyPlayer(Player: Player, Message: string): ()
@@ -1147,6 +1169,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.4.0
 ]=]
 ---
 function api:_getPlayers(playerWhoCalled: Player, usernames: { string | number }): { Player? }
@@ -1195,7 +1218,7 @@ function api:_getPlayers(playerWhoCalled: Player, usernames: { string | number }
 						end,
 
 						Http = function(...)
-							return self:Http(...)
+							return self:_http(...)
 						end,
 					}
 				)
@@ -1241,6 +1264,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.9.0
 ]=]
 ---
 function api:_giveSticks(Player: Player)
@@ -1272,6 +1296,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.9.0
 ]=]
 ---
 function api:_removeSticks(Player: Player)
@@ -1304,6 +1329,7 @@ end
 	@yields
 	@tag Chainable
 	@within VibezAPI
+	@since 1.9.1
 ]=]
 ---
 function api:giveRankSticks(User: Player | string | number, shouldCheckPermissions: boolean?): Types.vibezApi
@@ -1335,6 +1361,7 @@ end
 	@yields
 	@tag Chainable
 	@within VibezAPI
+	@since 1.9.1
 ]=]
 ---
 function api:setRankStickTool(tool: Tool | Model): Types.vibezApi
@@ -1399,6 +1426,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
@@ -1454,6 +1482,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:_checkHttp()
@@ -1469,6 +1498,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.8.0
 ]=]
 ---
 function api:_checkPlayerForRankChange(userId: number)
@@ -1492,6 +1522,7 @@ end
 
 	@private
 	@within VibezAPI
+	@since 1.0.2
 ]=]
 ---
 function api:_warn(...: string)
@@ -1512,6 +1543,7 @@ end
 
 	@private
 	@within VibezAPI
+	@since 1.7.0
 ]=]
 ---
 function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any)
@@ -1533,6 +1565,7 @@ end
 
 	@within VibezAPI
 	@private
+	@since 1.9.0
 ]=]
 ---
 function api:_buildAttributes()
@@ -1585,6 +1618,7 @@ end
 
 	@private
 	@within VibezAPI
+	@since 1.3.0
 ]=]
 function api:_playerIsValidStaff(Player: Player | number | string)
 	local userId = 0
@@ -1599,6 +1633,34 @@ function api:_playerIsValidStaff(Player: Player | number | string)
 	return self._private.requestCaches.validStaff[userId]
 end
 
+--[=[
+	Ensures that the parameter returns the proper type associated to the `typeToReturn`
+	@param userId Player | number | string
+	@param typeToReturn "UserId" | "Player" | "Name"
+	@return number | string | Player
+
+	@private
+	@within VibezAPI
+	@since 1.9.2
+]=]
+function api:_verifyUser(userId: Player | number | string, typeToReturn: "UserId" | "Player" | "Name")
+	if typeof(userId) == "Instance" and userId:IsA("Player") then
+		return (typeToReturn == "UserId") and userId.UserId
+			or (typeToReturn == "string") and userId.Name
+			or (typeToReturn == "Player") and userId
+	elseif typeof(userId) == "string" then
+		return (typeToReturn == "UserId") and (tonumber(userId) or self:_getUserIdByName(userId))
+			or (typeToReturn == "Player") and Players:FindFirstChild(tostring(userId))
+			or (typeToReturn == "Name") and userId
+	elseif typeof(userId) == "number" then
+		return (typeToReturn == "UserId") and userId
+			or (typeToReturn == "Player") and Players:GetPlayerByUserId(userId)
+			or (typeToReturn == "Name") and self:_getNameById(userId)
+	end
+
+	return userId
+end
+
 --// Public Functions \\--
 --[=[
 	Fetches the group associated with the api key.
@@ -1606,6 +1668,7 @@ end
 
 	@yields
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:getGroupId()
@@ -1614,7 +1677,7 @@ function api:getGroupId()
 	end
 
 	self._private.recentlyChangedKey = false
-	local isOk, res = self:Http("/ranking/groupid", "post", nil, nil)
+	local isOk, res = self:_http("/ranking/groupid", "post", nil, nil)
 	local Body: groupIdResponse = res.Body
 
 	-- Make this a new thread, in case there's a failure we don't return nothing.
@@ -1648,6 +1711,7 @@ end
 
 	@yields
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:setRank(
@@ -1655,6 +1719,8 @@ function api:setRank(
 	rankId: string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse
+	userId = self:_verifyUser(userId, "UserId")
+
 	local userName = self:_getNameById(userId)
 	local roleId = self:_getRoleIdFromRank(rankId)
 
@@ -1689,16 +1755,10 @@ function api:setRank(
 		rankId = tonumber(roleId),
 	}
 
-	local _, response = self:Http("/ranking/changerank", "post", nil, body)
+	local _, response = self:_http("/ranking/changerank", "post", nil, body)
 
 	if response.Success and response.Body and response.Body["success"] == true then
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	if self._private.Binds["setrank"] ~= nil and Table.Count(self._private.Binds["setrank"]) > 0 then
-		for _, callback in pairs(self._private.Binds["setrank"]) do
-			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
-		end
 	end
 
 	return response.Body
@@ -1712,9 +1772,12 @@ end
 
 	@yields
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+	userId = self:_verifyUser(userId, "UserId")
+
 	local userName = self:_getNameById(userId)
 
 	if not whoCalled then
@@ -1731,7 +1794,7 @@ function api:Promote(userId: string | number, whoCalled: { userName: string, use
 		} :: Types.errorResponse
 	end
 
-	local _, response = self:Http("/ranking/promote", "post", nil, {
+	local _, response = self:_http("/ranking/promote", "post", nil, {
 		userToRank = {
 			userId = tostring(userId),
 			userName = userName,
@@ -1742,12 +1805,6 @@ function api:Promote(userId: string | number, whoCalled: { userName: string, use
 
 	if response.Success and response.Body and response.Body["success"] == true then
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	if self._private.Binds["promote"] ~= nil and Table.Count(self._private.Binds["promote"]) > 0 then
-		for _, callback in pairs(self._private.Binds["promote"]) do
-			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
-		end
 	end
 
 	return response
@@ -1761,9 +1818,12 @@ end
 
 	@yields
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+	userId = self:_verifyUser(userId, "UserId")
+
 	local userName = self:_getNameById(userId)
 
 	if not whoCalled then
@@ -1780,7 +1840,7 @@ function api:Demote(userId: string | number, whoCalled: { userName: string, user
 		} :: Types.errorResponse
 	end
 
-	local _, response = self:Http("/ranking/demote", "post", nil, {
+	local _, response = self:_http("/ranking/demote", "post", nil, {
 		userToRank = {
 			userId = tostring(userId),
 			userName = userName,
@@ -1791,12 +1851,6 @@ function api:Demote(userId: string | number, whoCalled: { userName: string, user
 
 	if response.Success and response.Body and response.Body["success"] == true then
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	if self._private.Binds["demote"] ~= nil and Table.Count(self._private.Binds["demote"]) > 0 then
-		for _, callback in pairs(self._private.Binds["demote"]) do
-			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
-		end
 	end
 
 	return response
@@ -1810,9 +1864,12 @@ end
 
 	@yields
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+	userId = self:_verifyUser(userId, "UserId")
+
 	local userName = self:_getNameById(userId)
 
 	if not whoCalled then
@@ -1829,7 +1886,7 @@ function api:Fire(userId: string | number, whoCalled: { userName: string, userId
 		} :: Types.errorResponse
 	end
 
-	local _, response = self:Http("/ranking/fire", "post", nil, {
+	local _, response = self:_http("/ranking/fire", "post", nil, {
 		userToRank = {
 			userId = tostring(userId),
 			userName = userName,
@@ -1840,12 +1897,6 @@ function api:Fire(userId: string | number, whoCalled: { userName: string, userId
 
 	if response.Success and response.Body and response.Body["success"] == true then
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
-	end
-
-	if self._private.Binds["fire"] ~= nil and Table.Count(self._private.Binds["fire"]) > 0 then
-		for _, callback in pairs(self._private.Binds["fire"]) do
-			coroutine.wrap(callback)((response["Body"] ~= nil) and response.Body or response)
-		end
 	end
 
 	return response
@@ -1859,6 +1910,7 @@ end
 	@return VibezAPI
 
 	@within VibezAPI
+	@since 1.3.1
 ]=]
 function api:addCommand(
 	commandName: string,
@@ -1928,6 +1980,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
+	@since 1.3.1
 ]=]
 function api:addCommandOperation(
 	operationName: string,
@@ -1967,7 +2020,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
-	
+	@since 1.3.1
 ]=]
 ---
 function api:removeCommandOperation(operationName: string): Types.vibezApi
@@ -1980,7 +2033,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
-	
+	@since 1.1.0
 ]=]
 ---
 function api:updateLoggerName(newTitle: string): nil
@@ -1995,6 +2048,7 @@ end
 
 	@yields
 	@within VibezAPI
+	@since 1.2.0
 ]=]
 ---
 function api:updateKey(newApiKey: string): boolean
@@ -2031,6 +2085,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
+	@since 1.1.1
 ]=]
 ---
 function api:isPlayerBoostingDiscord(User: number | string | Player): boolean
@@ -2060,7 +2115,7 @@ function api:isPlayerBoostingDiscord(User: number | string | Player): boolean
 		end
 	end
 
-	local isOk, response = self:Http(`/is-booster/{userId}`)
+	local isOk, response = self:_http(`/is-booster/{userId}`)
 	if not isOk or (response.StatusCode == 200 and response.Body ~= nil and response.Body.success == false) then
 		return false
 	end
@@ -2078,6 +2133,7 @@ end
 	Destroys the VibezAPI class.
 
 	@within VibezAPI
+	@since 1.1.0
 ]=]
 ---
 function api:Destroy()
@@ -2092,6 +2148,7 @@ end
 	@return VibezHooks
 
 	@within VibezAPI
+	@since 1.5.0
 ]=]
 ---
 function api:getWebhookBuilder(webhook: string): Types.vibezHooks
@@ -2107,6 +2164,7 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
+	@since 1.6.0
 ]=]
 ---
 function api:addBlacklist(
@@ -2138,7 +2196,7 @@ function api:addBlacklist(
 			or blacklistExecutedBy
 	end
 
-	local isOk, response = self:Http(`/blacklists/{userId}`, "put", nil, {
+	local isOk, response = self:_http(`/blacklists/{userId}`, "put", nil, {
 		reason = reason,
 		blacklistedBy = blacklistedBy,
 	})
@@ -2159,6 +2217,7 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
+	@since 1.6.0
 ]=]
 ---
 function api:deleteBlacklist(userToDelete: Player | string | number)
@@ -2176,7 +2235,7 @@ function api:deleteBlacklist(userToDelete: Player | string | number)
 			or userToDelete
 	end
 
-	local isOk, response = self:Http(`/blacklists/{userId}`, "delete")
+	local isOk, response = self:_http(`/blacklists/{userId}`, "delete")
 
 	if not isOk then
 		return {
@@ -2194,6 +2253,7 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
+	@since 1.6.0
 ]=]
 ---
 function api:getBlacklists(userId: (string | number)?): Types.blacklistResponse
@@ -2203,7 +2263,7 @@ function api:getBlacklists(userId: (string | number)?): Types.blacklistResponse
 		userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
 	end
 
-	local isOk, response = self:Http(`/blacklists/{userId}`)
+	local isOk, response = self:_http(`/blacklists/{userId}`)
 
 	if not isOk or not response.Success then
 		return { success = false, message = response.Body.message or "Internal server error." }
@@ -2246,6 +2306,7 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
+	@since 1.6.0
 ]=]
 ---
 function api:isUserBlacklisted(userId: (string | number)?): (boolean, string?, number?)
@@ -2270,6 +2331,7 @@ end
 
 	@tag Chainable
 	@within VibezAPI
+	@since 1.8.0
 ]=]
 ---
 function api:waitUntilLoaded(): Types.vibezApi?
@@ -2295,15 +2357,23 @@ end
 	@return activityResponse
 
 	@within VibezAPI
+	@since 1.3.0
 ]=]
 ---
 function api:getActivity(userId: (string | number)?): Types.activityResponse
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
 
-	local _, result = self:Http("/activity/fetch2", "post", nil, {
-		userId = userId,
-	})
+	local route = "/activity/fetch2"
+	local method = "post"
+	local body = { userId = userId }
 
+	if not userId then
+		route = "/activity/leaderboard"
+		method = "get"
+		body = nil
+	end
+
+	local _, result = self:_http(route, method, nil, body)
 	return result.Body
 end
 
@@ -2317,6 +2387,7 @@ end
 	@return httpResponse
 
 	@within VibezAPI
+	@since 1.3.0
 ]=]
 ---
 function api:saveActivity(
@@ -2353,7 +2424,7 @@ function api:saveActivity(
 
 	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
 
-	local _, response = self:Http("/activity/save2", "post", nil, {
+	local _, response = self:_http("/activity/save2", "post", nil, {
 		userId = userId,
 		userRank = userRank,
 		secondsUserHasSpent = secondsSpent,
@@ -2375,6 +2446,7 @@ end
 	:::
 
 	@within VibezAPI
+	@since 1.9.0
 ]=]
 ---
 function api:bindToAction(
@@ -2407,6 +2479,7 @@ end
 	@return VibezAPI
 
 	@within VibezAPI
+	@since 1.9.0
 ]=]
 ---
 function api:unbindFromAction(name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist"): Types.vibezApi
@@ -2435,6 +2508,7 @@ end
 
 	@private
 	@within VibezAPI
+	@since 1.0.1
 ]=]
 function api:_initialize(apiKey: string): ()
 	if self._private._initialized then
@@ -2599,6 +2673,7 @@ end
 	```
 
 	@tag Constructor
+	@since 1.0.1
 ]=]
 ---
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
@@ -2770,50 +2845,16 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		},
 	}
 
-	extraOptions = extraOptions or {}
-	local fixedSettings = { {}, {} }
+	local wereOptionsAttempted = not (extraOptions == nil)
+	extraOptions = (typeof(extraOptions) == "table") and extraOptions or {}
+
+	if Table.Count(extraOptions) == 0 and wereOptionsAttempted then
+		self:_warn("Extra options have an error associated with them, reverting to default options...")
+	end
+
 	for settingSubCategory, value in pairs(extraOptions) do
 		if self.Settings[settingSubCategory] == nil then
-			if legacySettings[settingSubCategory] == nil then
-				self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
-				continue
-			end
-
-			local data = Table.Copy(legacySettings[settingSubCategory])
-
-			for _, strPath: string in pairs(data) do
-				local strPathSplit = string.split(strPath, ".")
-
-				if not fixedSettings[strPathSplit[1]] then
-					fixedSettings[strPathSplit[1]] = {}
-				end
-
-				fixedSettings[strPathSplit[1]][strPathSplit[2]] = value
-				table.insert(fixedSettings[2], settingSubCategory)
-
-				local split = string.split(strPath, ".")
-				for i = 2, #split do
-					local tbl = self.Settings[split[1]]
-					if not tbl then
-						break
-					end
-
-					local toCheck = deepFetch(tbl, split[i])
-					if typeof(toCheck) ~= typeof(value) then
-						self:_warn(
-							string.format(
-								"Optional key '%s' is not the same as it's default value of '%s'!",
-								settingSubCategory,
-								typeof(toCheck)
-							)
-						)
-						break
-					end
-
-					local newTbl = deepChange(tbl, split[i], value)
-					self.Settings[split[1]] = newTbl
-				end
-			end
+			self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
 			continue
 		end
 
@@ -3047,7 +3088,39 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	return self :: Types.vibezApi
 end
 
+--[=[
+	@function awaitGlobals
+	
+	Awaits for the Global API to be loaded.
+	@return VibezAPI
+
+	```lua
+	local globals = VibezAPI.awaitGlobals()
+	```
+
+	@yields
+	@within VibezAPI
+	@since 1.1.0
+]=]
+---
 return setmetatable({
+	awaitGlobals = function()
+		local mod = nil
+		local counter = 0
+
+		while mod == nil do
+			mod = _G["vibezApi"]
+			counter += 1
+
+			if counter >= 1000 then
+				break
+			end
+
+			task.wait()
+		end
+
+		return mod
+	end,
 	new = Constructor,
 }, {
 	__call = function(t, ...)
