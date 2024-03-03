@@ -46,7 +46,7 @@ We have a variety of global APIs available for you to use, each method returns f
 
 | Method Name | Arguments | Description | Example |
 | :---: | :---: | :---: | :---: |
-| `getGroups` | `player: Player` | Gets a group from the player's perspective. | `_G.VibezApi.General:getGroup(game.Players.ltsRune)` |
+| `getGroup` | `player: Player`,<br />`groupId: number` | Gets a group from the player's perspective. | `_G.VibezApi.General:getGroup(game.Players.ltsRune)` |
 | `getGroupRank` | `player: Player`,<br />`groupId:number` | Gets a player's group rank. | `_G.VibezApi.General:getGroupRank(game.Players.ltsRune, 0)` |
 | `getGroupRole` | `player: Player`,<br />`groupId:number` | Gets a player's group role. | `_G.VibezApi.General:getGroupRole(game.Players.ltsRune, 0)` |
 

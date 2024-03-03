@@ -570,11 +570,29 @@ function api:_setupGlobals(): ()
 		end,
 	}
 
+	local General = {
+		-- _getGroupFromUser(groupId: number, userId: number, force: boolean?)
+		getGroup = function(_: { any }, Player: Player, groupId: number, force: boolean?): { any }?
+			return self:_getGroupFromUser(groupId, Player.UserId, force)
+		end,
+
+		getGroupRank = function(_: { any }, Player: Player, groupId: number, force: boolean?): number?
+			local data = self:_getGroupFromUser(groupId, Player.UserId, force)
+			return data["Rank"]
+		end,
+
+		getGroupRole = function(_: { any }, Player: Player, groupId: number, force: boolean?): string?
+			local data = self:_getGroupFromUser(groupId, Player.UserId, force)
+			return data["Role"]
+		end,
+	}
+
 	_G.VibezApi = {
 		Ranking = Ranking,
 		Activity = Activity,
 		Webhooks = webHooks,
 		Notifications = Notifications,
+		General = General,
 	}
 
 	ScriptContext.Error:Connect(function(...)
@@ -866,6 +884,7 @@ function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?)
 		return {
 			Id = groupId,
 			Rank = 0,
+			Role = "Guest",
 			errMessage = data,
 		}
 	end
@@ -884,10 +903,12 @@ function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?)
 
 	if possiblePlayer ~= nil then
 		isOk, data = pcall(possiblePlayer.GetRankInGroup, possiblePlayer, groupId)
+		local isOk2, role = pcall(possiblePlayer.GetRoleInGroup, possiblePlayer, groupId)
 
-		if isOk then
+		if isOk and isOk2 then
 			return {
 				Id = groupId,
+				Role = role,
 				Rank = data,
 			}
 		end
@@ -897,6 +918,7 @@ function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?)
 
 	return {
 		Id = self.GroupId,
+		Role = "Guest",
 		Rank = 0,
 	}
 end
@@ -3109,7 +3131,7 @@ return setmetatable({
 		local counter = 0
 
 		while mod == nil do
-			mod = _G["vibezApi"]
+			mod = _G["VibezApi"]
 			counter += 1
 
 			if counter >= 1000 then
