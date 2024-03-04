@@ -211,7 +211,7 @@ local baseSettings = {
 		originLoggerText = game.Name,
 		ignoreWarnings = false,
 		overrideGroupCheckForStudio = false,
-		createGlobalVariables = false,
+		createGlobalVariables = true,
 		isAsync = false,
 		rankingCooldown = 30, -- 30 Seconds
 		usePromises = false, -- Broken
@@ -497,6 +497,116 @@ local function onServerInvoke(
 end
 
 --// Private Functions \\--
+--[=[
+	Sets up the in-game commands.
+	@return ()
+
+	@private
+	@within VibezAPI
+]=]
+---
+function api:_setupCommands()
+	self:addCommand("promote", {}, function(Player: Player, Args: { string })
+		local affectedUsers = {}
+		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		table.remove(Args, 1)
+
+		for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
+			onServerInvoke(self, Player, "Promote", "Commands", Target)
+		end
+
+		self:_addLog(Player, "Promote", affectedUsers)
+	end)
+
+	self:addCommand("demote", {}, function(Player: Player, Args: { string })
+		local affectedUsers = {}
+		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		table.remove(Args, 1)
+
+		for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
+			onServerInvoke(self, Player, "Demote", "Commands", Target)
+		end
+
+		self:_addLog(Player, "Demote", affectedUsers)
+	end)
+
+	self:addCommand("fire", {}, function(Player: Player, Args: { string })
+		local affectedUsers = {}
+		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		table.remove(Args, 1)
+
+		for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
+			onServerInvoke(self, Player, "Fire", "Commands", Target)
+		end
+
+		self:_addLog(Player, "Fire", affectedUsers)
+	end)
+
+	self:addCommand("blacklist", {}, function(Player: Player, Args: { string })
+		local affectedUsers = {}
+		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		table.remove(Args, 1)
+
+		local reason = table.concat(Args, " ")
+
+		for _, Target: Player in pairs(users) do
+			local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
+
+			if not res.success then
+				self:_warn("Blacklist resulted in an error, please try again later.")
+				return
+			end
+
+			table.insert(affectedUsers, Target)
+			self:_warn(res.message)
+		end
+
+		self:_addLog(Player, "Blacklist", affectedUsers, reason)
+	end)
+
+	self:addCommand("unblacklist", {}, function(Player: Player, Args: { string })
+		local affectedUsers = {}
+		local targetData = table.remove(Args[1])
+		local Targets
+
+		Targets = Table.Map(string.split(targetData, ","), function(value)
+			if tonumber(value) ~= nil then
+				local nameIsOk, targetName = pcall(Players.GetNameFromUserIdAsync, Players, value)
+				if not nameIsOk then
+					return
+				end
+
+				return { Name = targetName, UserId = tonumber(value) }
+			else
+				local idIsOk, targetUserId = pcall(Players.GetUserIdFromNameAsync, Players, value)
+				if not idIsOk then
+					return
+				end
+
+				return { Name = value, UserId = targetUserId }
+			end
+		end)
+
+		for _, Target: { Name: string, UserId: number } in pairs(Targets) do
+			if not Target then
+				return
+			end
+
+			local res = self:deleteBlacklist(Target.UserId)
+
+			if not res.success then
+				self:_notifyPlayer(Player, "Error: " .. res.errorMessage)
+				continue
+			end
+
+			table.insert(affectedUsers, Target)
+			self:_warn(res.message)
+		end
+
+		self:_addLog(Player, "Unblacklist", affectedUsers)
+	end)
+end
+
 --[=[
 	Sets up the _G API.
 	@return ()
@@ -1569,7 +1679,7 @@ end
 ]=]
 ---
 function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any)
-	table.insert(self._private.inGameLogs, {
+	table.insert(self._private.commandStorage.Logs, {
 		calledBy = calledBy,
 		affectedCount = (affectedUsers == nil) and 0 or #affectedUsers,
 		affectedUsers = affectedUsers,
@@ -1579,7 +1689,7 @@ function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: 
 		Timestamp = DateTime.now().UnixTimestamp,
 	})
 
-	self._private.inGameLogs = Table.Truncate(self._private.inGameLogs, 100)
+	self._private.commandStorage.Logs = Table.Truncate(self._private.commandStorage.Logs, 100)
 end
 
 --[=[
@@ -1922,6 +2032,67 @@ function api:Fire(userId: string | number, whoCalled: { userName: string, userId
 	end
 
 	return response
+end
+
+--[=[
+	Changes the rank of bulk selection of users.
+	@param Type "Fire" | "Promote" | "Demote" | "SetRank"
+	@param Users {Player}
+	@param ... any
+	@return ({Player},{Player?})
+
+	@yields
+	@within VibezAPI
+	@since 1.4.0
+]=]
+---
+function api:bulkRank(
+	Type: "Fire" | "Promote" | "Demote" | "SetRank",
+	Users: { Player },
+	...: any
+): ({ Player }, { Player? })
+	Type = typeof(Type) == "string" and string.sub(string.lower(Type)) or Type
+
+	if not Type then
+		self:_warn("'Type' expected to be a string, got " .. typeof(Type) .. "'!")
+		return
+	end
+
+	if typeof(Users) ~= "table" or #Users == 0 then
+		self:_warn("No users for 'bulkRank' to use. Please specify 1 or more players to rank.")
+		return
+	end
+
+	local resolved, rejected = {}, {}
+	local Data = { ... }
+
+	--stylua: ignore
+	local realType = (Type == "s") and "SetRank" or
+		(Type == "f") and "Fire" or
+		(Type == "d") and "Demote" or
+		"Promote"
+
+	Table.ForEach(Users, function(user: Player)
+		local userId = user.UserId
+
+		Promise.new(function(resolve, reject)
+			local response = self[realType](self, userId, table.unpack(Data))
+
+			if response.Success and response.Body and response.Body.success then
+				return resolve(response.Body)
+			end
+
+			return reject(response)
+		end)
+			:andThen(function()
+				table.insert(resolved, user)
+			end)
+			:catch(function()
+				table.insert(rejected, user)
+			end)
+	end)
+
+	return resolved, rejected
 end
 
 --[=[
@@ -2738,7 +2909,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 
 	--[=[
-		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, inGameLogs: { any }, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
+		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
 		@private
 		@within VibezAPI
 		From caches to simple booleans/instances/numbers, this table holds all the information necessary for this API to work. 
@@ -2760,7 +2931,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		externalConfigCheckDelay = 600, -- 600 = 10 minutes | Change below if changed
 		lastLoadedExternalConfig = DateTime.now().UnixTimestamp - 600,
 
-		inGameLogs = {},
 		Maid = {},
 		rankingCooldowns = {},
 
@@ -2781,6 +2951,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			["addblacklist"] = {},
 		},
 
+		commandStorage = {
+			Bans = {},
+			Logs = {},
+		},
 		commandOperations = {},
 		commandOperationCodes = {
 			["Team"] = {
@@ -2918,105 +3092,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- Add rest of the commands when "Commands" is enabled.
 	if self.Settings.Commands.Enabled == true then
-		self:addCommand("promote", {}, function(Player: Player, Args: { string })
-			local affectedUsers = {}
-			local users = self:_getPlayers(Player, string.split(Args[1], ","))
-			table.remove(Args, 1)
-
-			for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
-				onServerInvoke(self, Player, "Promote", "Commands", Target)
-			end
-
-			self:_addLog(Player, "Promote", affectedUsers)
-		end)
-
-		self:addCommand("demote", {}, function(Player: Player, Args: { string })
-			local affectedUsers = {}
-			local users = self:_getPlayers(Player, string.split(Args[1], ","))
-			table.remove(Args, 1)
-
-			for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
-				onServerInvoke(self, Player, "Demote", "Commands", Target)
-			end
-
-			self:_addLog(Player, "Demote", affectedUsers)
-		end)
-
-		self:addCommand("fire", {}, function(Player: Player, Args: { string })
-			local affectedUsers = {}
-			local users = self:_getPlayers(Player, string.split(Args[1], ","))
-			table.remove(Args, 1)
-
-			for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
-				onServerInvoke(self, Player, "Fire", "Commands", Target)
-			end
-
-			self:_addLog(Player, "Fire", affectedUsers)
-		end)
-
-		self:addCommand("blacklist", {}, function(Player: Player, Args: { string })
-			local affectedUsers = {}
-			local users = self:_getPlayers(Player, string.split(Args[1], ","))
-			table.remove(Args, 1)
-
-			local reason = table.concat(Args, " ")
-
-			for _, Target: Player in pairs(users) do
-				local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
-
-				if not res.success then
-					self:_warn("Blacklist resulted in an error, please try again later.")
-					return
-				end
-
-				table.insert(affectedUsers, Target)
-				self:_warn(res.message)
-			end
-
-			self:_addLog(Player, "Blacklist", affectedUsers, reason)
-		end)
-
-		self:addCommand("unblacklist", {}, function(Player: Player, Args: { string })
-			local affectedUsers = {}
-			local targetData = table.remove(Args[1])
-			local Targets
-
-			Targets = Table.Map(string.split(targetData, ","), function(value)
-				if tonumber(value) ~= nil then
-					local nameIsOk, targetName = pcall(Players.GetNameFromUserIdAsync, Players, value)
-					if not nameIsOk then
-						return
-					end
-
-					return { Name = targetName, UserId = tonumber(value) }
-				else
-					local idIsOk, targetUserId = pcall(Players.GetUserIdFromNameAsync, Players, value)
-					if not idIsOk then
-						return
-					end
-
-					return { Name = value, UserId = targetUserId }
-				end
-			end)
-
-			for _, Target: { Name: string, UserId: number } in pairs(Targets) do
-				if not Target then
-					return
-				end
-
-				local res = self:deleteBlacklist(Target.UserId)
-
-				if not res.success then
-					self:_notifyPlayer(Player, "Error: " .. res.errorMessage)
-					continue
-				end
-
-				table.insert(affectedUsers, Target)
-				self:_warn(res.message)
-			end
-
-			self:_addLog(Player, "Unblacklist", affectedUsers)
-		end)
+		self:_setupCommands()
 	end
 
 	-- Only add "sticks" command when rank sticks is enabled.

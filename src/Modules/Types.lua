@@ -113,8 +113,10 @@ export type vibezSettings = {
 	Commands: {
 		Enabled: boolean,
 		useDefaultNames: boolean,
+
 		MinRank: number,
 		MaxRank: number,
+
 		Prefix: string,
 		Alias: { { any } },
 	},
@@ -128,7 +130,23 @@ export type vibezSettings = {
 
 	Notifications: {
 		Enabled: boolean,
-		Position: string,
+
+		Font: Enum.Font | string,
+		FontSize: number,
+		keyboardFontSizeMultiplier: number,
+		delayUntilRemoval: number,
+
+		entranceTweenInfo: {
+			Style: Enum.EasingStyle | string,
+			Direction: Enum.EasingDirection | string,
+			timeItTakes: number,
+		},
+
+		exitTweenInfo: {
+			Style: Enum.EasingStyle | string,
+			Direction: Enum.EasingDirection | string,
+			timeItTakes: number,
+		},
 	},
 
 	Interface: {
@@ -152,11 +170,18 @@ export type vibezSettings = {
 		Enabled: boolean,
 	},
 
+	Blacklists: {
+		Enabled: boolean,
+		userIsBlacklistedMessage: string,
+	},
+
 	Misc: {
 		originLoggerText: string,
 		ignoreWarnings: boolean,
 		overrideGroupCheckForStudio: boolean,
+		createGlobalVariables: boolean,
 		isAsync: boolean,
+		rankingCooldown: number,
 		usePromises: boolean,
 	},
 }
