@@ -11,6 +11,7 @@
 
     "RankSticks": {
         "Enabled": { "type": "boolean", "default": false },
+        "Mode": { "type": "string", "default": "DetectionInFront", "options": ["DetectionInFront", "ClickOnPlayer"] },
         "MinRank": { "type": "number", "default": 255 },
         "MaxRank": { "type": "number", "default": 255 }
     },
@@ -54,7 +55,7 @@
     },
 
     "Widgets": {
-        "Enabled": { "type": "boolean", "default": false }
+        "Enabled": { "type": "boolean", "default": false, "hidden": true }
     },
 
     "Misc": {

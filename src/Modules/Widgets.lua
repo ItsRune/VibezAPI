@@ -1,5 +1,5 @@
 --[[
-	TODO:
+	REVIEW:
     - Developers can specify a Folder/SurfaceGui that add to the cache.
     - Client will update on its own with different widgets specified by the dev.
     - RepStorage will hold information about widget information.

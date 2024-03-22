@@ -32,11 +32,21 @@
 ]=]
 
 --[=[
+	@interface simplifiedAPI
+	.Ranking { Set: (Player: Player | string | number, newRank: string | number) -> rankResponse, Promote: (Player: Player | string | number) -> rankResponse, Demote: (Player: Player | string | number) -> rankResponse, Fire: (Player: Player | string | number) -> rankResponse }
+	.Activity { Get: (Player: Player | string | number) -> activityResponse, Save: (Player: Player | string | number, playerRank: number, secondsSpent: number, messagesSent: (number | {string})?, shouldFetchRank: boolean) -> httpResponse }
+	.Commands { Add: (commandName: string, commandAlias: {string?}, commandFunction: (Player: Player, Args: {string?}, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: {Player}?, affectedCount: number, Metadata: any })) -> VibezAPI, AddOperation: (operationName: string, operationCode: string, operationFunction: (playerWhoCalled: Player, playerToCheck: Player, incomingArgument: string) -> boolean) -> VibezAPI }
+	.Notifications { Create: (Player: Player, notificationMessage: string) -> () }
+	.Webhooks { Create: (webhookLink: string) -> Webhooks }
+	A simplified version of our API.
+	@within VibezAPI
+]=]
+
+--[=[
 	@interface groupIdResponse
 	.success boolean
 	.groupId number?
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
@@ -44,7 +54,6 @@
 	.success boolean
 	.errorMessage string
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
@@ -53,7 +62,6 @@
 	.message string
 	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
@@ -61,7 +69,6 @@
 	.success boolean
 	.data { blacklisted: boolean, reason: string }
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
@@ -69,7 +76,6 @@
 	.success boolean
 	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
@@ -83,11 +89,21 @@
 ]=]
 
 --[=[
+	@interface httpResponse
+	.Body { any }
+	.Headers { [string]: any }
+	.StatusCode number
+	.StatusMessage string?
+	.Success boolean
+	.rawBody string
+	@within VibezAPI
+]=]
+
+--[=[
 	@interface infoResponse
 	.success boolean
 	.message string
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
@@ -96,13 +112,11 @@
 	.messagesUserHasSent number
 	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
 	@type responseBody groupIdResponse | errorResponse | rankResponse
 	@within VibezAPI
-	@private
 ]=]
 
 --[=[
@@ -154,6 +168,8 @@ local baseSettings = {
 
 	RankSticks = {
 		Enabled = false,
+		Mode = "Default",
+
 		MinRank = 255,
 		MaxRank = 255,
 
@@ -198,9 +214,10 @@ local baseSettings = {
 		failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
 	},
 
-	Widgets = {
-		Enabled = false,
-	},
+	-- Removed due to being in the works. (Maybe)
+	-- Widgets = {
+	-- 	Enabled = false,
+	-- },
 
 	Blacklists = {
 		Enabled = true,
@@ -414,7 +431,6 @@ local function onServerInvoke(
 		self._private.rankingCooldowns[userId] = DateTime.now().UnixTimestamp
 
 		if actionFunc ~= "blacklist" then
-			-- DO NOT TOUCH TABBING IT RUINS THE WARNING
 			self:_notifyPlayer(
 				Player,
 				string.format(
@@ -704,10 +720,6 @@ function api:_setupGlobals(): ()
 		Notifications = Notifications,
 		General = General,
 	}
-
-	ScriptContext.Error:Connect(function(...)
-		self:_onInternalErrorLog(...)
-	end)
 end
 
 --[=[
@@ -762,11 +774,15 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 	-- REVIEW: Add a better way of checking errors are from this module.
 	-- - Check to make sure it's from a script called "MainModule"? [✔]
 	-- - Check methods within the module and check based on stack trace? [✔]
+	-- - Check to make sure any errors within this method do not send [✔]
 	-- - Create a fake HTTP method to make sure we don't increment their rate limit? [❌]
 	--  - Ignore this one, it's already incremented on the back-end.
 	-- ⌊tan(cos(sin⌈(8–√)[d/dx(−9x)]⌉))⌋+⌊6!−−√−2⌋
 
-	if string.find(stack, "ServerScriptService.MainModule") == nil then
+	if
+		string.find(stack, "ServerScriptService.MainModule") == nil
+		or string.find(stack, "_onInternalErrorLog") ~= nil
+	then
 		return
 	end
 
@@ -1287,6 +1303,7 @@ end
 ---
 function api:_notifyPlayer(Player: Player, Message: string): ()
 	if self.Settings.Notifications.Enabled == false then
+		self:_warn(string.format("Notification for %s (%d) |", Player.Name, Player.UserId), Message)
 		return
 	end
 
@@ -1604,7 +1621,11 @@ function api:_onPlayerChatted(Player: Player, message: string)
 		return
 	end
 
-	commandData[1].Execute(Player, args)
+	commandData[1].Execute(Player, args, function(...)
+		return self:_addLog(...)
+	end, function(...)
+		return self:_getPlayers(...)
+	end)
 end
 
 --[=[
@@ -1733,6 +1754,7 @@ function api:_buildAttributes()
 
 		STICKS = {
 			Status = self.Settings.RankSticks.Enabled,
+			Mode = self.Settings.RankSticks.Mode,
 		},
 
 		MISC = {
@@ -1833,6 +1855,97 @@ function api:getGroupId()
 	end)()
 
 	return isOk and Body.groupId or -1
+end
+
+--[=[
+	Returns a simplified version of this API.
+	@return simplifiedAPI
+
+	@within VibezAPI
+	@since 1.11.0
+]=]
+---
+function api:getSimplified()
+	local newApi = {
+		Ranking = {
+			Set = function(Player: Player | string | number, newRank: string | number)
+				return self:setRank(Player, newRank)
+			end,
+
+			Promote = function(Player: Player | string | number)
+				return self:Promote(Player)
+			end,
+
+			Demote = function(Player: Player | string | number)
+				return self:Demote(Player)
+			end,
+
+			Fire = function(Player: Player | string | number)
+				return self:Fire(Player)
+			end,
+		},
+
+		Activity = {
+			Get = function(Player: Player | string | number)
+				return self:getActivity(Player)
+			end,
+
+			Save = function(
+				Player: Player | string | number,
+				playerRank: number,
+				secondsSpent: number,
+				messagesSent: (number | { string })?,
+				shouldFetchRank: boolean?
+			)
+				return self:saveActivity(Player, playerRank, secondsSpent, messagesSent, shouldFetchRank)
+			end,
+		},
+
+		Commands = {
+			Add = function(
+				commandName: string,
+				commandAlias: { string? },
+				commandFunction: (
+					Player: Player,
+					Args: { string? },
+					addLog: (
+						calledBy: Player,
+						Action: string,
+						affectedUsers: { Player }?,
+						...any
+					) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number, Metadata: any }
+				) -> ()
+			)
+				return self:addCommand(commandName, commandAlias, commandFunction)
+			end,
+
+			AddOperation = function(
+				operationName: string,
+				operationCode: string,
+				operationFunction: (
+					playerWhoCalled: Player,
+					playerToCheck: Player,
+					incomingArgument: string
+				) -> boolean
+			)
+				return self:addCommandOperation(operationName, operationCode, operationFunction)
+			end,
+		},
+
+		Notifications = {
+			Create = function(Player: Player, notificationMessage: string)
+				return self:_notifyPlayer(Player, notificationMessage)
+			end,
+		},
+
+		Webhooks = {
+			Create = function(webhookLink: string)
+				return Hooks.new(self, webhookLink)
+			end,
+		},
+	}
+
+	return newApi
 end
 
 --[=[
@@ -2179,6 +2292,7 @@ function api:addCommandOperation(
 	operationName: string,
 	operationCode: string,
 	operationFunction: (
+		playerWhoExecuted: Player,
 		playerToCheck: Player,
 		incomingArgument: string,
 		internalFunctions: Types.vibezCommandFunctions
@@ -2330,6 +2444,46 @@ end
 ]=]
 ---
 function api:Destroy()
+	local fullMaid = Table.FlatMap(self._private.Maid, function(d)
+		return d
+	end)
+
+	for _, connection: RBXScriptConnection in ipairs(fullMaid) do
+		if typeof(connection) ~= "RBXScriptConnection" then
+			continue
+		end
+
+		connection:Disconnect()
+	end
+
+	self._private.Function:Destroy()
+	self._private.Event:Destroy()
+
+	for _, v in pairs(self._private.usersWithSticks) do
+		local user = Players:GetPlayerByUserId(v)
+
+		if not user then
+			continue
+		end
+
+		if not user.Character then
+			user.CharacterAdded:Wait()
+		end
+
+		for _, item in pairs(user.Character) do
+			if item:IsA("Tool") and item:GetAttribute(self._private.clientScriptName) == "RankSticks" then
+				item:Destroy()
+			end
+		end
+	end
+
+	-- This line tells the client script to undo everything it has done.
+	Workspace:SetAttribute(HttpService:JSONEncode({
+		MISC = {
+			Destroyed = true,
+		},
+	}))
+
 	table.clear(self)
 	setmetatable(self, nil)
 	self = nil
@@ -2556,17 +2710,12 @@ end
 function api:getActivity(userId: (string | number)?): Types.activityResponse
 	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
 
-	local route = "/activity/fetch2"
-	local method = "post"
 	local body = { userId = userId }
-
 	if not userId then
-		route = "/activity/leaderboard"
-		method = "get"
 		body = nil
 	end
 
-	local _, result = self:_http(route, method, nil, body)
+	local _, result = self:_http("/activity/fetch2", "post", nil, body)
 	return result.Body
 end
 
@@ -2751,37 +2900,53 @@ function api:_initialize(apiKey: string): ()
 	end
 
 	-- Chat command connections
-	Players.PlayerAdded:Connect(function(Player)
-		self:_onPlayerAdded(Player)
-	end)
+	table.insert(
+		self._private.Maid,
+		Players.PlayerAdded:Connect(function(Player)
+			self:_onPlayerAdded(Player)
+		end)
+	)
 
 	for _, Player in pairs(Players:GetPlayers()) do
 		coroutine.wrap(self._onPlayerAdded)(self, Player)
 	end
 
 	-- Connect the player's maid cleanup function.
-	Players.PlayerRemoving:Connect(function(Player)
-		self:_onPlayerRemoved(Player)
-	end)
+	table.insert(
+		self._private.Maid,
+		Players.PlayerRemoving:Connect(function(Player)
+			self:_onPlayerRemoved(Player)
+		end)
+	)
 
 	-- Initialize the workspace attribute
 	self:_buildAttributes()
 
-	RunService.Heartbeat:Connect(function()
-		-- Track activity
-		if self.Settings.ActivityTracker.Enabled == true then
-			for _, data in pairs(self._private.requestCaches.validStaff) do
-				if data[3] == nil then
-					continue
+	table.insert(
+		self._private.Maid,
+		RunService.Heartbeat:Connect(function()
+			-- Track activity
+			if self.Settings.ActivityTracker.Enabled == true then
+				for _, data in pairs(self._private.requestCaches.validStaff) do
+					if data[3] == nil then
+						continue
+					end
+
+					data[3]:Increment()
 				end
-
-				data[3]:Increment()
 			end
-		end
 
-		-- Version check | Temporarily disabled until testing is completed.
-		-- self:_checkVersion()
-	end)
+			-- Version check | Temporarily disabled until testing is completed.
+			-- self:_checkVersion()
+		end)
+	)
+
+	table.insert(
+		self._private.Maid,
+		ScriptContext.Error:Connect(function(message: string, stack: string)
+			self:_onInternalErrorLog(message, stack)
+		end)
+	)
 end
 
 --// Constructor \\--
@@ -2951,6 +3116,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			["addblacklist"] = {},
 		},
 
+		validModes = {
+			RankSticks = {
+				["detectioninfront"] = "DetectionInFront",
+				["clickonplayer"] = "ClickOnPlayer",
+			},
+		},
+
 		commandStorage = {
 			Bans = {},
 			Logs = {},
@@ -3067,6 +3239,34 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 						)
 					)
 					continue
+				elseif
+					-- Custom logic to validate feature modes.
+					self.Settings[settingSubCategory] ~= nil
+					and self.Settings[settingSubCategory][settingToChange] ~= nil
+					and settingToChange == "Mode"
+					and typeof(newSetting) == "string"
+				then
+					if not self._private.validModes[settingSubCategory] then
+						self:_warn(
+							string.format(
+								"The 'Mode' setting within '%s' is not correctly validated! Please screenshot this message and send it to @ltsRune!",
+								settingSubCategory
+							)
+						)
+						continue
+					end
+
+					if self._private.validModes[settingSubCategory][string.lower(tostring(newSetting))] == nil then
+						self:_warn(
+							string.format(
+								"Optional mode '%s' for 'Settings.%s' is not a valid, it's been overwritten to the default of '%s'.",
+								newSetting,
+								settingSubCategory,
+								self.Settings[settingSubCategory][settingToChange]
+							)
+						)
+						continue
+					end
 				elseif
 					-- Write in custom logic for 'Instance' types.
 					typeof(self.Settings[settingSubCategory][settingToChange]) ~= typeof(newSetting)

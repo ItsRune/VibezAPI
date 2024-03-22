@@ -123,7 +123,10 @@ export type vibezSettings = {
 
 	RankSticks: {
 		Enabled: boolean,
+		Mode: "DetectionInFront" | "ClickOnPlayer",
+
 		MinRank: number,
+		MaxRank: number,
 
 		sticksModel: Model?,
 	},
@@ -166,9 +169,9 @@ export type vibezSettings = {
 		failMessage: string,
 	},
 
-	Widgets: {
-		Enabled: boolean,
-	},
+	-- Widgets: {
+	-- 	Enabled: boolean,
+	-- },
 
 	Blacklists: {
 		Enabled: boolean,
@@ -324,6 +327,26 @@ export type vibezApi = {
 	getActivity: (self: vibezApi, userId: (string | number)?) -> activityResponse,
 
 	-- Commands
+	addCommand: (
+		self: vibezApi,
+		commandName: string,
+		commandAlias: { string }?,
+		commandOperation: (
+			Player: Player,
+			Args: { string },
+			addLog: (
+				calledBy: Player,
+				Action: string,
+				affectedUsers: { Player }?,
+				...any
+			) -> {
+				calledBy: Player,
+				affectedusers: { Player }?,
+				affectedCount: number?,
+				Metadata: any,
+			}
+		) -> ()
+	) -> boolean,
 	addCommandOperation: (
 		self: vibezApi,
 		operationName: string,

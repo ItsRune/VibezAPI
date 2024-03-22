@@ -15,7 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = Players.LocalPlayer
 local remoteFunction, remoteEvent
 local eventHolder, Maid, onClientEventBinds = {}, {}, {}
-local afkDelayOffset = 5
+local afkDelayOffset, rankStickMode = 5, "Default"
 local isUIContextEnabled, isWarningsAllowed = false, true
 
 --// Modules \\--
@@ -99,12 +99,7 @@ local function onNotification(Message: string)
 	local Settings = HttpService:JSONDecode(Workspace:GetAttribute(script.Name))
 	local notificationSettings = Settings.UI.Notifications
 	local playerGui = Player:FindFirstChild("PlayerGui")
-	if not playerGui then
-		warn("Notification failed, message content: " .. Message)
-		return
-	end
-
-	local notifGui = playerGui:FindFirstChild(script.Name .. "_NOTIF")
+	local notifGui = (playerGui ~= nil) and playerGui:FindFirstChild(script.Name .. "_NOTIF") or nil
 	if not notifGui then
 		warn("Notification failed, message content: " .. Message)
 		return
@@ -213,121 +208,157 @@ end
 local function onSetupRankSticks()
 	local custScriptName = string.split(script.Name, "-")[1]
 	local Character = Player.Character or Player.CharacterAdded:Wait()
+	local deb = false
 
 	undoRankSticks()
 	Maid["RankSticks"] = {}
+
+	local function handleStickMode(actionName: string, child: Tool)
+		if rankStickMode == "DetectionInFront" then -- Default
+			if deb then
+				return
+			end
+			deb = true
+
+			local cf, size = Character:GetBoundingBox()
+			local newPart = Instance.new("Part")
+			local Weld = Instance.new("WeldConstraint")
+
+			newPart.Name = actionName .. "_Checker"
+			newPart.Transparency = 1
+			newPart.CFrame = cf * CFrame.new(0, 0, -size.Z)
+			newPart.Anchored = false
+			newPart.Size = size + Vector3.new(size.X / 2, 0, size.Z)
+			newPart.BrickColor = BrickColor.Red()
+			newPart.Massless = true
+			newPart.CanCollide = false
+			newPart.Parent = getTempFolder()
+
+			Weld.Name = newPart.Name
+			Weld.Part0 = newPart
+			Weld.Part1 = Character.PrimaryPart
+			Weld.Parent = newPart
+
+			local closestTargets, closestTarget = {}, nil
+			local hasReceived, secondsSpent, connection = false, 0, nil
+
+			connection = newPart.Touched:Connect(function()
+				hasReceived = true
+				local partsWithinPart = Workspace:GetPartsInPart(newPart)
+
+				for _, part in ipairs(partsWithinPart) do
+					local ancestorModel = part:FindFirstAncestorWhichIsA("Model")
+					local possiblePlayer = Players:FindFirstChild(ancestorModel.Name)
+					if
+						part:IsDescendantOf(child)
+						or not ancestorModel
+						or possiblePlayer == nil
+						or possiblePlayer == Player
+					then
+						continue
+					end
+
+					table.insert(closestTargets, possiblePlayer)
+				end
+			end)
+
+			while hasReceived == false do
+				if secondsSpent >= 3 then -- max amount of time the part will be active for
+					hasReceived = false
+					break
+				end
+
+				if hasReceived then
+					break
+				end
+
+				if not connection then
+					continue
+				end
+
+				task.wait(1)
+				secondsSpent += 1
+			end
+
+			Debris:AddItem(newPart, 0)
+
+			if not hasReceived or child:IsDescendantOf(Player) then
+				return
+			end
+
+			for _, target: Player in pairs(closestTargets) do
+				local t_char = target.Character
+				local c_char = (closestTarget ~= nil) and closestTarget.Character or nil
+
+				if
+					closestTarget == nil
+					or (
+						closestTarget ~= nil
+						and (Character.PrimaryPart.Position - c_char.PrimaryPart.Position).Magnitude
+							> (Character.PrimaryPart.Position - t_char.PrimaryPart.Position).Magnitude
+					)
+				then
+					closestTarget = target
+				end
+			end
+
+			_warn(
+				"Ranking Sticks",
+				`Rank sticks found {(closestTarget == nil) and "no players" or closestTarget.Name} to {child.Name}`
+			)
+
+			if closestTarget == nil then
+				task.wait(0.25)
+				deb = false
+				return -- No one close enough
+			end
+
+			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
+
+			task.wait(0.25)
+			deb = false
+		elseif rankStickMode == "ClickOnPlayer" then
+			if deb then
+				return
+			end
+			deb = true
+
+			local mouse = Player:GetMouse()
+			local mouseTarget = mouse.Target
+
+			if
+				mouseTarget == nil
+				or (
+					mouseTarget ~= nil
+					and (Player.Character.PrimaryPart.Position - mouseTarget.Position).Magnitude > 20
+				)
+			then
+				deb = false
+				return
+			end
+
+			local player = Players:GetPlayerFromCharacter(mouseTarget.Parent)
+			if not player or player == Player then
+				deb = false
+				return
+			end
+
+			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", player)
+
+			task.wait(0.25)
+			deb = false
+		end
+	end
 
 	table.insert(
 		Maid.RankSticks,
 		Character.ChildAdded:Connect(function(child: Instance)
 			if child:GetAttribute(custScriptName) == "RankSticks" and child:IsA("Tool") then
 				local actionName = child.Name
-				local deb = false
 
 				Maid.RankSticks[actionName] = {
 					child.Activated:Connect(function()
-						if deb then
-							return
-						end
-						deb = true
-
-						local cf, size = Character:GetBoundingBox()
-						local newPart = Instance.new("Part")
-						local Weld = Instance.new("WeldConstraint")
-
-						newPart.Name = actionName .. "_Checker"
-						newPart.Transparency = 1
-						newPart.CFrame = cf * CFrame.new(0, 0, -size.Z)
-						newPart.Anchored = false
-						newPart.Size = size + Vector3.new(size.X / 2, 0, size.Z)
-						newPart.BrickColor = BrickColor.Red()
-						newPart.Massless = true
-						newPart.CanCollide = false
-						newPart.Parent = getTempFolder()
-
-						Weld.Name = newPart.Name
-						Weld.Part0 = newPart
-						Weld.Part1 = Character.PrimaryPart
-						Weld.Parent = newPart
-
-						local closestTargets, closestTarget = {}, nil
-						local hasReceived, secondsSpent, connection = false, 0, nil
-
-						connection = newPart.Touched:Connect(function()
-							hasReceived = true
-							local partsWithinPart = Workspace:GetPartsInPart(newPart)
-
-							for _, part in ipairs(partsWithinPart) do
-								local ancestorModel = part:FindFirstAncestorWhichIsA("Model")
-								local possiblePlayer = Players:FindFirstChild(ancestorModel.Name)
-								if
-									part:IsDescendantOf(child)
-									or not ancestorModel
-									or possiblePlayer == nil
-									or possiblePlayer == Player
-								then
-									continue
-								end
-
-								table.insert(closestTargets, possiblePlayer)
-							end
-						end)
-
-						while hasReceived == false do
-							if secondsSpent >= 3 then -- max amount of time the part will be active for
-								hasReceived = false
-								break
-							end
-
-							if hasReceived then
-								break
-							end
-
-							if not connection then
-								continue
-							end
-
-							task.wait(1)
-							secondsSpent += 1
-						end
-
-						Debris:AddItem(newPart, 0)
-
-						if not hasReceived or child:IsDescendantOf(Player) then
-							return
-						end
-
-						for _, target: Player in pairs(closestTargets) do
-							local t_char = target.Character
-							local c_char = (closestTarget ~= nil) and closestTarget.Character or nil
-
-							if
-								closestTarget == nil
-								or (
-									closestTarget ~= nil
-									and (Character.PrimaryPart.Position - c_char.PrimaryPart.Position).Magnitude
-										> (Character.PrimaryPart.Position - t_char.PrimaryPart.Position).Magnitude
-								)
-							then
-								closestTarget = target
-							end
-						end
-
-						_warn(
-							"Ranking Sticks",
-							`Rank sticks found {(closestTarget == nil) and "no players" or closestTarget.Name} to {child.Name}`
-						)
-
-						if closestTarget == nil then
-							task.wait(0.25)
-							deb = false
-							return -- No one close enough
-						end
-
-						remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
-
-						task.wait(0.25)
-						deb = false
+						handleStickMode(actionName, child)
 					end),
 				}
 			end
@@ -554,6 +585,18 @@ local function onAttributeChanged()
 		return
 	end
 
+	if States.MISC.Destroyed == true then
+		undoNotifications()
+		undoAfkCheck()
+		undoUISetup()
+		undoRankSticks()
+		disconnect(Maid)
+
+		Workspace:SetAttribute(script.Name, nil)
+		script:Destroy()
+		return
+	end
+
 	isWarningsAllowed = States.MISC.ignoreWarnings
 
 	if States.UI.Notifications.Status == true then
@@ -582,6 +625,7 @@ local function onAttributeChanged()
 	end
 
 	if isStaff.RankSticks and States.STICKS.Status == true then
+		rankStickMode = States.STICKS.Mode
 		onSetupRankSticks()
 	else
 		undoRankSticks()

@@ -26,7 +26,7 @@ From there, you can use the API to create a new Vibez instance:
 
 ```lua
 local myApiKey = "my-api-key"
-local Vibez = VibezAPI(myApiKey)("Your API Key")
+local Vibez = VibezAPI(14946453963)("Your API Key")
 ```
 
 Alright, now you have a Vibez instance. You can either customize this by following the other API documentation or you can use the default settings.

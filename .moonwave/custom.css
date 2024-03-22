@@ -27,3 +27,7 @@
     --ifm-footer-link-color: var(--ifm-color-secondary);
     --ifm-footer-title-color: var(--ifm-color-white);
 }
+
+:root {
+    --ifm-global-spacing: 0.5rem;
+}
