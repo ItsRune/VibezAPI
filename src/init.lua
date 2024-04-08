@@ -524,7 +524,7 @@ end
 function api:_setupCommands()
 	self:addCommand("promote", {}, function(Player: Player, Args: { string })
 		local affectedUsers = {}
-		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
 
 		for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
@@ -536,7 +536,7 @@ function api:_setupCommands()
 
 	self:addCommand("demote", {}, function(Player: Player, Args: { string })
 		local affectedUsers = {}
-		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
 
 		for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
@@ -548,7 +548,7 @@ function api:_setupCommands()
 
 	self:addCommand("fire", {}, function(Player: Player, Args: { string })
 		local affectedUsers = {}
-		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
 
 		for _, Target: Player | { Name: string, UserId: number } | { any } in pairs(users) do
@@ -560,7 +560,7 @@ function api:_setupCommands()
 
 	self:addCommand("blacklist", {}, function(Player: Player, Args: { string })
 		local affectedUsers = {}
-		local users = self:_getPlayers(Player, string.split(Args[1], ","))
+		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
 
 		local reason = table.concat(Args, " ")
@@ -1316,14 +1316,12 @@ end
 	@return {Player?}
 
 	@yields
-	@private
 	@within VibezAPI
 	@since 1.4.0
 ]=]
 ---
-function api:_getPlayers(playerWhoCalled: Player, usernames: { string | number }): { Player? }
+function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | number }): { Player? }
 	local found = {}
-
 	local externalCodes = {}
 	local foundIndices = {}
 
@@ -1624,7 +1622,7 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	commandData[1].Execute(Player, args, function(...)
 		return self:_addLog(...)
 	end, function(...)
-		return self:_getPlayers(...)
+		return self:getUsersForCommands(...)
 	end)
 end
 
@@ -3044,7 +3042,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@class VibezAPI
 		:::important
-		When using this module, we recommend using the number-based format rather than importing the scripts into the game.
+		Hey there! We recommend beginning at the introduction page! [Click Here](/docs/intro)
 		:::
 	]=]
 

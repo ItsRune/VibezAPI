@@ -1,10 +1,293 @@
 ## Implementation
 First things first, you'll need to [download it here.](https://vibez.dev/) Once you've done that, you'll need to open the file and publish to your group as a new game. Afterwards you're ready to customize it to your liking.
 
-## Customization
 ### Important
-To use the rank center, you need to ensure you publish the game and that you have `Allow Third Party Teleports` enabled.
+To use the application center, you need to ensure you publish the game and that you have `Allow Third Party Teleports` enabled.
 <img src="/VibezAPI/allowThirdPartyTeleports.png"></img>
 
-### Configuration
-Coming soon...
+<br />
+<br />
+
+Question types with a **\*** are unavailable to auto ranking!
+
+## General Customization
+There's a few general custimization options that you can change to make the application center more unique to your group.
+First the necessary option is your Vibez API key, you can generate this by running the command `/keys create group-id:0`.
+The other options are optional and can be customized to your liking.
+
+```lua
+{
+    apiKey = "YOUR_API_KEY", -- Your Vibez API key
+    autoSaveInterval = 45 -- The interval in seconds that the application will auto save the user's progress.
+    allowBackToApplicationSelection = true, -- Whether or not to allow the user to go back to the application selection screen.
+
+    timezoneToUse = "EDT", -- The timezone to use for the application center.
+    -- The timezone to use for the application center can be found here:
+    -- https://itsrune.github.io/RoTime/docs/Timezones#defaults
+}
+```
+
+## UI Customization
+**NOTE:** All UI Customization is done within the `UI` table.
+
+### Colors
+At the time of writing this there are currently 4 colors that can be customized.
+These colors are the primary, secondary, background, and text colors.
+
+```lua
+{
+    backgroundColor = Color3.fromRGB(224, 141, 186),
+    foregroundColor = Color3.fromRGB(48, 48, 48),
+    textColor = Color3.fromRGB(255, 255, 255),
+    strokeColor = Color3.fromRGB(255, 147, 246)
+}
+```
+
+### Text
+You can customize the text that is displayed on the application center.
+This includes the application center's title and when an application hasn't been started's text.
+
+```lua
+{
+    Header = "My Application Center!", -- Warning: This text gets filtered, if it detects a hashtagged word: it'll be disabled.
+    appSelectionNotStartedText = "Not Started", -- The text displayed when the player hasn't started an application yet.
+}
+```
+
+## Application Customization
+This category is where you'll be able to make each application unique.
+
+```lua
+{
+    Title = "My Application", -- The title of the application
+
+    -- Webhooks are primarily used for logging applications when auto ranking is disabled,
+    -- however they also will be used for notifying HR+ members when an application fails
+    -- to rank.
+    webhookToUse = "https://discord.com/api/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz",
+
+    --[[
+        These webhook settings include a few formatting codes for customizing the webhook embed.
+        Formatting Codes:
+        <PLAYER_NAME> 			| A player's username
+        
+        <PLAYER_ID> 			| A player's user id
+        
+        <PLAYER_DISPLAY_NAME> 	| A player's display name
+
+        <APP_NAME>              | The name of the application
+        
+        <TIME_TAKEN> 			| The amount of time taken, ex: 24m 16s
+        
+        <BEGAN_TIME> 			| A clock time using 'timezoneToUse' and RoTime formatted HH:MM:SS
+                                which represents when a player started an application, ex: 07:11:52
+        <BEGAN_DATE> 			| A date formatted in MM/DD/YYYY which represents when a player
+                                started an application, ex: 01/08/2024
+        <END_TIME> 				| A clock time using 'timezoneToUse' and RoTime formatted HH:MM:SS
+                                which represents when a player ended the application.
+        <END_DATE> 				| A date formatted in MM/DD/YYYY which represents when a player ended an
+                                application, ex: 01/08/2024
+    ]]--
+    webhookEmbedTitle = "<PLAYER_NAME> <APP_NAME> Results", -- The title of the webhook embed
+    webhookEmbedDescription = [[
+        Application Name: <APP_NAME>
+        Time Taken: <TIME_TAKEN>
+        Began Time: <BEGAN_TIME> <BEGAN_DATE>
+        End Time: <END_TIME> <END_DATE>
+    ]],
+
+    durationsAndAmounts = {
+        --[[
+            How long until a player can apply again.
+            To figure this out:
+            60 | 1 minute
+            3600 | 1 hour
+            86400 | 1 day
+            86400 * 30 | 1 month
+            86400 * 365 | 1 year
+            -1 | Disable, meaning they can rejoin and apply instantly
+        ]]--
+        sendApplcationDuration = -1,
+
+        -- Amount of applications a player can send. (-1 means disabled)
+        amountOfApplicationsFromPlayer = -1,
+    },
+
+    AutoRank = {
+        Enabled = true, -- Whether or not to enable auto ranking
+        toRankTo = 3, -- The rank to auto-rank to
+        MinimumScore = 5, -- The minimum score required to auto rank
+        --[[
+            Technical Information:
+
+            Each question is worth 1 point unless it's a 'Multi Select'.
+            If a player selects all the answers no matter what, the server
+            will remove points for every answer that's not correct.
+
+            Example:
+            -- Setup
+            Buttons = {
+                {
+                    Text = "Blah",
+                    isCorrect = true,
+                },
+                {
+                    Text = "Blah2",
+                    isCorrect = false,
+                }
+            }
+
+            -- Selected:
+            - Blah
+            - Blah2
+            Result: 0 (cuz 1 + -1 = 0)
+
+            -- Selected:
+            - Blah2
+            Result: -1
+        ]]
+        --
+    }
+}
+```
+
+## Question Types
+### Short Answer **\***
+Short answer questions allow you to ask a question and have the user type in their answer into a small box.
+
+```lua
+{
+    Question = "What is the capital of the United States?", -- The question you want to ask
+    Type = "Short Answer", -- The type of question
+    Meta = {
+        Placeholder = "Type your answer here...", -- The placeholder text that will be displayed in the text box
+    }
+}
+```
+
+### Long Answer **\***
+Long answer questions are similar to short answer questions, but allow the user to type in a longer response.
+
+```lua
+{
+    Question = "What is the capital of the United States?", -- The question you want to ask
+    Type = "Long Answer", -- The type of question
+    Meta = {
+        Placeholder = "Type your answer here...", -- The placeholder text that will be displayed in the text box
+    }
+}
+```
+
+### Multiple Choice
+Multiple choice questions are the most common type of question.
+They allow you to provide a question and multiple answers for the user to choose from.
+You can also specify the correct answer.
+
+```lua
+{
+    Question = "How many states does the United States have?", -- The question you want to ask
+    Type = "Multiple Choice", -- The type of question
+    Meta = {
+        Buttons = {
+            {
+                Text = "20", -- The text that will be displayed on the button
+                isCorrect = false, -- Whether or not this is the correct answer
+            },
+            {
+                Text = "50", -- The text that will be displayed on the button
+                isCorrect = true, -- Whether or not this is the correct answer
+            },
+            {
+                Text = "70", -- The text that will be displayed on the button
+                isCorrect = false, -- Whether or not this is the correct answer
+            },
+            {
+                Text = "20", -- The text that will be displayed on the button
+                isCorrect = false, -- Whether or not this is the correct answer
+            }
+        }
+    }
+}
+```
+
+#### Yes or No
+Behind the scenes, yes or no questions are just multiple choice questions with only two options.
+You can use the same format as multiple choice questions to create a yes or no question.
+
+```lua
+{
+    Question = "Is the sky blue?",
+    Type = "Multiple Choice",
+    Meta = {
+        Buttons = {
+            {
+                Text = "Yes",
+                isCorrect = true,
+            },
+
+            {
+                Text = "No",
+                isCorrect = false,
+            },
+        },
+    },
+},
+```
+
+### Multiple Select
+Multiple select questions are similar to multiple choice questions, but allow the user to select multiple answers.
+
+```lua
+{
+    Question = "Which of the following are colors?", -- The question you want to ask
+    Type = "Multiple Select", -- The type of question
+    Meta = {
+        Max = 4, -- The max amount of random questions that will be shown. (The app center can only support a max of 4 for right now.)
+        Buttons = {
+            {
+                Text = "Red", -- The text that will be displayed on the button
+                isCorrect = true, -- Whether or not this is the correct answer
+            },
+            {
+                Text = "Ceiling", -- The text that will be displayed on the button
+                isCorrect = false, -- Whether or not this is the correct answer
+            },
+            {
+                Text = "Floor", -- The text that will be displayed on the button
+                isCorrect = false, -- Whether or not this is the correct answer
+            },
+            {
+                Text = "Red", -- The text that will be displayed on the button
+                isCorrect = true, -- Whether or not this is the correct answer
+            },
+        }
+    }
+}
+```
+
+### Scale
+Scale questions allow you to ask a question and have the user select a value between a minimum and maximum value.
+
+```lua
+{
+    Question = "On a scale of 1 to 10, how much do you like the color red?", -- The question you want to ask
+    Type = "Scale", -- The type of question
+    Min = 1, -- The minimum value the user can select
+    Max = 10, -- The maximum value the user can select
+    Meta = {
+        minimumRequired = 4, -- The minimum required value the user must select
+        Tolerance = ">=" -- The tolerance of the minimum required value. (>=, <=, ==, >, <)
+    }
+}
+```
+
+### Submit
+This isn't a question type, but if you'd like to customize the submit text you can do so by adding your own at the end of your application.
+If none is supplied, the default text is shown below and will be added automatically.
+
+```lua
+{
+    Question = "Are you ready to submit your application for review?", -- The question you want to ask
+    Type = "Submit", -- The type of question
+}
+```
