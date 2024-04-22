@@ -6,7 +6,6 @@ classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
 onBrokenLinks = "warn"
 onBrokenMarkdownLinks = "warn"
 favicon = "https://github.com/ItsRune/VibezAPI/blob/903c060edf6b7982f6c04bc68626f07c2a653255/.moonwave/static/favicon.png?raw=true"
-# scripts = [{"src": "./.moonwave/scripts/test.js", "async": true}]
 
 # Home page settings
 [home]
@@ -43,10 +42,10 @@ height = 64
 
 # Footer
 [footer]
-style = "dark"
+style = "light"
 copyright = "Copyright © 2023 ItsRune."
 
-# Footer Items
+# Footer Docs
 [[footer.links]]
 title = "Docs"
 
@@ -58,6 +57,7 @@ href = "/VibezAPI/docs/intro"
 label = "API Reference"
 href = "/VibezAPI/api/VibezAPI"
 
+# Footer Community
 [[footer.links]]
 title = "Community"
 
@@ -69,11 +69,12 @@ href = "https://www.roblox.com/groups/4604891/Vibez-Development#!/about"
 label = "Discord"
 href = "https://discord.gg/vdev"
 
+# Footer More
 [[footer.links]]
 title = "More"
 
 [[footer.links.items]]
-label = "Roblox"
+label = "Developer's Profile"
 href = "https://www.roblox.com/users/107392833/profile"
 
 [[footer.links.items]]

@@ -7,14 +7,16 @@ type token = {
 	indexEnd: number,
 }
 
-type Return = {
+local function Parse(
+	input: string,
+	returnUnknownCharacters: boolean?,
+	tokens: { token }
+): {
 	{
 		value: (number | string)?,
 		code: string,
 	}?
 }
-
-local function Parse(input: string, returnUnknownCharacters: boolean?, tokens: { token }): Return
 	local parsed = {}
 
 	local inputIndex = 0

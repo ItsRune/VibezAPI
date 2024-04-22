@@ -53,8 +53,71 @@ myWebhook:addEmbed({
 
 ### Why isn't my message sending?
 If your message isn't sending, it's possibly 2 issues.
-1. You didn't call `:Send()` at the end of your message.
+1. You didn't call `:Send()` at the end of your code.
 2. If you're using embeds, you didn't set the title/description of your embed.
 
 ### Limitations
 There are some limitations to webhooks. For example, you can only send 10 embeds per message. You can find more information about these limitations [here](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks).
+
+### Example Usage
+<details>
+<summary>Join/Leave Logger</summary>
+<br />
+
+```lua
+--// Services \\--
+local Players = game:GetService("Players")
+
+--// Variables \\--
+local myWebhook = "Webhook_Link_Here"
+local Vibez = require(14946453963)("API Key", { Misc = { isAsync = true } })
+
+--// Functions \\--
+local function sendWebhook(Player: Player, state: "joined" | "left")
+    local webhook = Vibez:getWebhookBuilder(myWebhook)
+    webhook:setContent(
+        string.format(
+            "**%s** has %s [the game.](https://roblox.com/games/%d/~)",
+            Player.Name,
+            state,
+            game.PlaceId
+        )
+    ):Send()
+end
+
+local function onPlayerAdded(Player: Player)
+    Vibez:waitUntilLoaded() -- Await it due to it being async.
+    sendWebhook(Player, "joined")
+end
+
+local function onPlayerRemoving(Player: Player)
+    Vibez:waitUntilLoaded() -- Await it due to it being async.
+    sendWebhook(Player, "left")
+end
+
+--// Connections \\--
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+```
+
+</details>
+
+<details>
+<summary>Sending an Embed using Color3</summary>
+<br />
+
+```lua
+local Vibez = require(14946453963)("API Key", {
+    nameOfGameForLogging = "Colors Example"
+})
+
+local webhook = Vibez:getWebhookBuilder("https://discord.com/api/webhooks/")
+webhook:addEmbedWithBuilder(function(embed)
+    return embed
+        :setColor(Color3.fromRGB(255, 125, 255)) -- Light pink
+        :setTitle("Color3 Example")
+        :setDescription("This is an example of using a Color3 value for the color parameter.")
+end):Send()
+```
+
+</details>

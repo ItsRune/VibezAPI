@@ -82,18 +82,17 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	self.isLeaving = false
 	self.isAfk = false
 
-	self._api = VibezAPI
-	self._player = forPlayer
-	self._seconds = 0
-	self._messages = 0
-	self._afkCounter = 0
-	self._increment = 1
+	self._api, self._player = VibezAPI, forPlayer
+	self._seconds, self._messages, self._afkCounter, self._increment = 0, 0, 0, 1
 	self._lastCheck = DateTime.now().UnixTimestamp
 	self._groupData = self._api:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
 
 	if not self._groupData then
 		self._api:_warn(
-			`Activity tracker failed to load group rank for {tostring(forPlayer)}! This has resulted in activity not tracking this user!`
+			string.format(
+				"Activity tracker failed to load group rank for %s! This has resulted in activity not tracking this user!",
+				tostring(forPlayer)
+			)
 		)
 
 		if self._api.Settings.shouldKickPlayerIfActivityTrackerFails == true then
@@ -104,12 +103,13 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 		return nil
 	end
 
-	self._api:_warn(`Setting up activity tracking for {tostring(forPlayer)}`)
-
+	self._api:_warn(string.format("Setting up activity tracking for %s.", tostring(forPlayer)))
 	Activity.Users[self._player.UserId] = self
+
 	return self
 end
 
+--// Public Methods \\--
 --[=[
     Increments the player's seconds.
     @return nil
@@ -179,32 +179,24 @@ function Class:Left()
 	end
 
 	self._api:saveActivity(self._player.UserId, self._groupData.Rank, self._seconds, self._messages)
-	self._api:_warn(`User left and sent activity data for {tostring(self._player)}`)
+	self._api:_warn(string.format("User left and sent activity data for %s.", tostring(self._player)))
 	self:Destroy()
 end
 
 --[=[
-    Toggles if the player is afk or not.
-    @param override boolean?
+    Destroys the class.
     @return nil
 
     @within ActivityTracker
     @since 1.0.0
 ]=]
 ---
-function Class:changeAfkState(override: boolean?): Types.ActivityTracker
-	override = override or false
+function Class:Destroy()
+	Activity.Users[self._player.UserId] = nil
 
-	self._api:_warn(
-		self._player.Name
-			.. " ("
-			.. self._player.UserId
-			.. ") has been "
-			.. (not override and "marked" or "unmarked")
-			.. " as AFK."
-	)
-
-	self.isAfk = not override
+	table.clear(self)
+	setmetatable(self, nil)
+	self = nil
 end
 
 --[=[

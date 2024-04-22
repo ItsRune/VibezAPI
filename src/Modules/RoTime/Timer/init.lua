@@ -60,7 +60,7 @@ function Timer.new(start: number, finish: number, increment: number?)
 				return
 			end
 
-			local now = DateTime.now().UnixTimestamp
+			local now = DateTime.now().UnixTimestampMillis / 1000
 
 			if self._lastCheck - now < 0 then
 				self._lastCheck = now + self._increment
@@ -91,7 +91,7 @@ end
 ]=]
 --
 function Class:Start()
-	self._lastCheck = DateTime.now().UnixTimestamp + self._increment
+	self._lastCheck = DateTime.now().UnixTimestampMillis + self._increment
 	self._running = true
 end
 

@@ -6,30 +6,35 @@
     --ifm-color-primary-light: #f841c7;
     --ifm-color-primary-lighter: #f94fcb;
     --ifm-color-primary-lightest: #fa78d7;
+    
+    --darkreader-text--ifm-menu-color: #fff;
 
-    --ifm-footer-background-color: #1a1a1a;
-}
-
-[data-theme='light'] {
-    --ifm-color-primary: #c261ba;
-    --ifm-color-primary-dark: #ba4cb1;
-    --ifm-color-primary-darker: #b245a9;
-    --ifm-color-primary-darkest: #93398c;
-    --ifm-color-primary-light: #ca76c3;
-    --ifm-color-primary-lighter: #ce80c8;
-    --ifm-color-primary-lightest: #daa0d6;
-    --ifm-background-color: #fff;
-}
-
-.footer--dark {
     --ifm-footer-background-color: #2e2c2e;
     --ifm-footer-color: var(--ifm-footer-link-color);
     --ifm-footer-link-color: var(--ifm-color-secondary);
     --ifm-footer-title-color: var(--ifm-color-white);
 }
 
-:root {
-    /* --darkreader-bg--ifm-code-background: #969696; */
+[data-theme='light'] {
+    --ifm-color-primary: #f726bf;
+    --ifm-color-primary-dark: #f60bb7;
+    --ifm-color-primary-darker: #ea09ad;
+    --ifm-color-primary-darkest: #c0078f;
+    --ifm-color-primary-light: #f841c7;
+    --ifm-color-primary-lighter: #f94fcb;
+    --ifm-color-primary-lightest: #fa78d7;
+    
+    --ifm-footer-background-color: #f1f1f1;
+    --ifm-footer-color: var(--ifm-footer-link-color);
+    --ifm-footer-title-color: #000;
+    --ifm-footer-link-color: #202020;
 
+}
+
+:root {
     --ifm-global-spacing: 0.5rem;
+}
+
+.purple_node_modules-docusaurus-plugin-moonwave-src-components-styles-module {
+    color: #000;
 }

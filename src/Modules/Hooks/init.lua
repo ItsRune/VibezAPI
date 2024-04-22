@@ -299,7 +299,7 @@ end
 function Class:Send(): Types.httpResponse
 	local webhookData = self:_parseWebhook()
 	local isOk, response =
-		self.Api:Http(string.format("/hooks/%s/%s", webhookData.ID, webhookData.Token), "post", nil, self.toSend)
+		self.Api:_http(string.format("/hooks/%s/%s", webhookData.ID, webhookData.Token), "post", nil, self.toSend)
 
 	if not isOk or response.StatusCode ~= 200 then
 		self.Api:_warn(response.Body.message)

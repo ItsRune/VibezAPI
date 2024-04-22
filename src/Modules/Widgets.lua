@@ -1,12 +1,19 @@
+-- REMOVE WHEN CONFIRMED --
+--# selene: allow(empty_if)
+--# selene: allow(unused_variable)
+
 --[[
 	REVIEW:
-    - Developers can specify a Folder/SurfaceGui that add to the cache.
+    - Developers can specify a Folder/SurfaceGui that adds to the cache.
     - Client will update on its own with different widgets specified by the dev.
-    - RepStorage will hold information about widget information.
+    - RepStorage will hold information about each widget.
     - Widget Info:
 	- "VERIFIED ONLINE MEMBERS" | List of top 20 players online (verified with vibez | usernames, userids, thumbnails, etc)
 	- guildName | Name of guild
-	- 
+	- guildCount | Member count of guild
+	- guildOwner | Table of guild owner
+	- guildThumbnail | Defined in settings
+	- guildBanner | Defined in settings
 ]]
 
 --[=[
@@ -68,7 +75,6 @@ function Widgets.new(api: Types.vibezApi, Type: Types.widgetTypes)
 end
 
 --// Local Functions \\--
---selene: allow(unused_variable)
 local function create(instanceName: string, props: { [string]: any })
 	local new = Instance.new(instanceName)
 
@@ -101,64 +107,64 @@ function Class:addWidget(base: Part | MeshPart | UnionOperation): boolean
 	assert(typeof(base) == "Instance", "'Instance' expected for widget base, got '" .. typeof(base) .. "'!")
 	assert(base:IsA("Part") or base:IsA("MeshPart") or base:IsA("UnionOperation"), "Invalid type for base widget part!")
 
-	-- local newWidget = create("SurfaceGui", {
-	-- 	Parent = base,
-	-- 	Name = self.widgetName,
-	-- 	Attributes = {
-	-- 		isLoaded = false,
-	-- 	},
-	-- })
+	local newWidget = create("SurfaceGui", {
+		Parent = base,
+		Name = self.widgetName,
+		Attributes = {
+			isLoaded = false,
+		},
+	})
 
-	-- local mainFrame = create("Frame", {
-	-- 	Parent = newWidget,
-	-- 	Name = "MainFrame",
-	-- 	BackgroundTransparency = 1,
-	-- 	Size = UDim2.fromScale(1, 1),
-	-- })
+	local mainFrame = create("Frame", {
+		Parent = newWidget,
+		Name = "MainFrame",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+	})
 
-	-- local headerFrame = create("Frame", {
-	-- 	Parent = mainFrame,
-	-- 	Name = "Header",
-	-- 	BackgroundColor3 = Color3.fromRGB(155, 55, 255),
-	-- 	Size = UDim2.fromScale(1, 0.1),
-	-- })
+	local headerFrame = create("Frame", {
+		Parent = mainFrame,
+		Name = "Header",
+		BackgroundColor3 = Color3.fromRGB(155, 55, 255),
+		Size = UDim2.fromScale(1, 0.1),
+	})
 
-	-- local headerText = create("TextLabel", {
-	-- 	Parent = headerFrame,
-	-- 	Name = "Title",
-	-- 	BackgroundTransparency = 1,
-	-- 	Size = UDim2.fromScale(0.9, 0.5),
-	-- 	AnchorPoint = Vector2.new(0, 0.5),
-	-- 	Position = UDim2.fromScale(0, 0.5) + UDim2.fromOffset(5, 0),
-	-- 	Text = "Loading...",
-	-- 	TextColor3 = Color3.new(1, 1, 1),
-	-- })
+	local headerText = create("TextLabel", {
+		Parent = headerFrame,
+		Name = "Title",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(0.9, 0.5),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.fromScale(0, 0.5) + UDim2.fromOffset(5, 0),
+		Text = "Loading...",
+		TextColor3 = Color3.new(1, 1, 1),
+	})
 
-	-- local bodyFrame = create("Frame", {
-	-- 	Parent = newWidget,
-	-- 	Name = "Body",
-	-- 	BackgroundTransparency = 1,
-	-- 	Size = UDim2.fromScale(1, 0.9),
-	-- 	Position = UDim2.fromScale(0, 0.1),
-	-- })
+	local bodyFrame = create("Frame", {
+		Parent = newWidget,
+		Name = "Body",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 0.9),
+		Position = UDim2.fromScale(0, 0.1),
+	})
 
-	-- local memberList = create("ScrollingFrame", {
-	-- 	Parent = bodyFrame,
-	-- 	Size = UDim2.fromScale(0.95, 0.5),
-	-- 	AnchorPoint = Vector2.new(0.5, 0.5),
-	-- 	Position = UDim2.fromScale(0.5, 0.5),
-	-- 	BackgroundTransparency = 1,
-	-- })
+	local memberList = create("ScrollingFrame", {
+		Parent = bodyFrame,
+		Size = UDim2.fromScale(0.95, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		BackgroundTransparency = 1,
+	})
 
-	-- local memberCount = create("TextLabel", {
-	-- 	Parent = bodyFrame,
-	-- 	Size = UDim2.new(0.975, 0, 0, 18),
-	-- 	BackgroundTransparency = 1,
-	-- 	TextScaled = true,
-	-- 	TextColor3 = Color3.fromRGB(55, 55, 55),
-	-- })
+	local memberCount = create("TextLabel", {
+		Parent = bodyFrame,
+		Size = UDim2.new(0.975, 0, 0, 18),
+		BackgroundTransparency = 1,
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(55, 55, 55),
+	})
 
-	-- table.insert(self._cache.widgetUIs, newWidget)
+	table.insert(self._cache.widgetUIs, newWidget)
 end
 
 --[=[

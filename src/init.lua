@@ -11,125 +11,13 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 11/13/2023 16:24 EST
-	Version: 1.0.23
+	Updated: 4/21/2024 17:56 EST
+	Version: 1.11.4
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
 ]]
 --
-
---// Documentation \\--
---[=[
-	@interface extraOptionsType
-	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
-	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
-	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
-	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
-	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
-	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface simplifiedAPI
-	.Ranking { Set: (Player: Player | string | number, newRank: string | number) -> rankResponse, Promote: (Player: Player | string | number) -> rankResponse, Demote: (Player: Player | string | number) -> rankResponse, Fire: (Player: Player | string | number) -> rankResponse }
-	.Activity { Get: (Player: Player | string | number) -> activityResponse, Save: (Player: Player | string | number, playerRank: number, secondsSpent: number, messagesSent: (number | {string})?, shouldFetchRank: boolean) -> httpResponse }
-	.Commands { Add: (commandName: string, commandAlias: {string?}, commandFunction: (Player: Player, Args: {string?}, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: {Player}?, affectedCount: number, Metadata: any })) -> VibezAPI, AddOperation: (operationName: string, operationCode: string, operationFunction: (playerWhoCalled: Player, playerToCheck: Player, incomingArgument: string) -> boolean) -> VibezAPI }
-	.Notifications { Create: (Player: Player, notificationMessage: string) -> () }
-	.Webhooks { Create: (webhookLink: string) -> Webhooks }
-	A simplified version of our API.
-	@within VibezAPI
-]=]
-
---[=[
-	@interface groupIdResponse
-	.success boolean
-	.groupId number?
-	@within VibezAPI
-]=]
-
---[=[
-	@interface errorResponse
-	.success boolean
-	.errorMessage string
-	@within VibezAPI
-]=]
-
---[=[
-	@interface rankResponse
-	.success boolean
-	.message string
-	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface userBlacklistResponse
-	.success boolean
-	.data { blacklisted: boolean, reason: string }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface fullBlacklists
-	.success boolean
-	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface vibezCommandFunctions
-	.getGroupRankFromName (groupRoleName: string) -> number?
-	.getGroupFromUser (groupId: number, userId: number) -> { any }?
-	.Http (Route: string, Method: string?, Headers: { [string]: any }, Body: { any }) -> httpResponse
-	.addLog (calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any) -> ()
-	@within VibezAPI
-	@private
-]=]
-
---[=[
-	@interface httpResponse
-	.Body { any }
-	.Headers { [string]: any }
-	.StatusCode number
-	.StatusMessage string?
-	.Success boolean
-	.rawBody string
-	@within VibezAPI
-]=]
-
---[=[
-	@interface infoResponse
-	.success boolean
-	.message string
-	@within VibezAPI
-]=]
-
---[=[
-	@interface activityResponse
-	.secondsUserHasSpent number
-	.messagesUserHasSent number
-	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
-	@within VibezAPI
-]=]
-
---[=[
-	@type responseBody groupIdResponse | errorResponse | rankResponse
-	@within VibezAPI
-]=]
-
---[=[
-	@interface httpResponse
-	.Body responseBody
-	.Headers { [string]: any }
-	.StatusCode number
-	.StatusMessage string?
-	.Success boolean
-	.rawBody string
-	@within VibezAPI
-	@private
-]=]
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -140,7 +28,6 @@ local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ScriptContext = game:GetService("ScriptContext")
-local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 --// Modules \\--
@@ -151,6 +38,8 @@ local RateLimit = require(script.Modules.RateLimit)
 local Promise = require(script.Modules.Promise)
 local Table = require(script.Modules.Table)
 local RoTime = require(script.Modules.RoTime)
+local Loadstring = require(script.Modules.Loadstring)
+local Utils = require(script.Modules.Utils)
 
 --// Constants \\--
 local api = {}
@@ -217,6 +106,8 @@ local baseSettings = {
 	-- Removed due to being in the works. (Maybe)
 	-- Widgets = {
 	-- 	Enabled = false,
+	-- 	useBannerImage = "",
+	-- 	useThumbnailImage = ""
 	-- },
 
 	Blacklists = {
@@ -236,32 +127,6 @@ local baseSettings = {
 }
 
 --// Local Functions \\--
-local function getTemporaryStorage(): Folder
-	local folder = ServerStorage:FindFirstChild("Vibez_Storage")
-
-	if not folder then
-		folder = Instance.new("Folder")
-		folder.Name = "Vibez_Storage"
-		folder.Parent = ServerStorage
-	end
-
-	return folder
-end
-
-local function rotateCharacters(Input: string, Key: number, splitter: string, shouldDecode: boolean)
-	local bytes = shouldDecode and string.split(Input, splitter) or string.split(Input, "")
-
-	for i, v in ipairs(bytes) do
-		if shouldDecode and not tonumber(v) then
-			continue
-		end
-
-		bytes[i] = shouldDecode and string.char(tonumber(v) - Key) or string.byte(v) + Key .. splitter
-	end
-
-	return table.concat(bytes, "")
-end
-
 local function onServerInvoke(
 	self: Types.vibezApi,
 	Player: Player,
@@ -624,6 +489,21 @@ function api:_setupCommands()
 end
 
 --[=[
+	Executes lua code from a string.
+	@param luaCode string
+	@return (any, any)
+
+	@private
+	@within VibezAPI
+]=]
+---
+function api:_Loadstring(luaCode: string): (any, any)
+	return pcall(function()
+		return Loadstring(luaCode)()
+	end)
+end
+
+--[=[
 	Sets up the _G API.
 	@return ()
 
@@ -771,17 +651,29 @@ end
 ]=]
 ---
 function api:_onInternalErrorLog(message: string, stack: string): ()
-	-- REVIEW: Add a better way of checking errors are from this module.
+	-- REVIEW: Add a better way of checking errors that are from this module.
 	-- - Check to make sure it's from a script called "MainModule"? [✔]
 	-- - Check methods within the module and check based on stack trace? [✔]
 	-- - Check to make sure any errors within this method do not send [✔]
 	-- - Create a fake HTTP method to make sure we don't increment their rate limit? [❌]
 	--  - Ignore this one, it's already incremented on the back-end.
-	-- ⌊tan(cos(sin⌈(8–√)[d/dx(−9x)]⌉))⌋+⌊6!−−√−2⌋
+
+	local filteredResult = {}
+
+	Table.ForEach(
+		Table.Filter(getmetatable(self), function(_, key: string)
+			return (string.sub(key, 1, 1) == "_") and string.find(stack, key) ~= nil or false
+		end),
+		function(_, key: string)
+			table.insert(filteredResult, key)
+		end
+	)
 
 	if
-		string.find(stack, "ServerScriptService.MainModule") == nil
+		RunService:IsStudio()
+		or string.find(stack, "ServerScriptService.MainModule") == nil
 		or string.find(stack, "_onInternalErrorLog") ~= nil
+		or #filteredResult == 0
 	then
 		return
 	end
@@ -802,9 +694,19 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 		return
 	end
 
+	-- Gotta love math sometimes
+	local exp =
+		math.floor((-4 * math.exp(math.pi / 2)) ^ 4 - ((-7 * math.exp(math.pi / 2)) - (math.exp(math.pi / 2) + 1)))
+	local base = (73 - (math.cos(exp) ^ 2 + math.sin(exp) ^ 2)) / (3 * (math.cos(exp) ^ 2 + math.sin(exp) ^ 2))
+
 	local webhookLink = table.concat(
 		string.split(
-			rotateCharacters(string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey), 24, "|", true),
+			Utils.rotateCharacters(
+				string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey),
+				base,
+				"|",
+				true
+			),
 			"|"
 		),
 		"/"
@@ -1064,12 +966,15 @@ function api:_onPlayerAdded(Player: Player)
 		local isBlacklisted, blacklistReason, blacklistedBy = self:isUserBlacklisted(Player)
 
 		if isBlacklisted then
-			local formattedString =
-				string.gsub(self.Settings.Blacklists.userIsBlacklistedMessage, "<BLACKLIST_REASON>", blacklistReason)
-			formattedString =
-				string.gsub(self.Settings.Blacklists.userIsBlacklistedMessage, "<BLACKLIST_BY>", blacklistedBy)
+			local kickReason = self:_fixFormattedString(self.Settings.Blacklists.userIsBlacklistedMessage, Player, {
+				onlyApplyCustom = true,
+				Codes = {
+					{ code = "<BLACKLIST_REASON>", equates = blacklistReason },
+					{ code = "<BLACKLIST_BY>", equates = blacklistedBy },
+				},
+			})
 
-			Player:Kick(formattedString)
+			Player:Kick(kickReason)
 			return
 		end
 	end
@@ -1178,6 +1083,58 @@ function api:_getUserIdByName(username: string): number
 end
 
 --[=[
+	Fixes a string that requires formatting.
+	@param String string
+	@param Player Player | { Name: string, UserId: number }?
+	@param Custom { onlyApplyCustom: boolean, Codes: { { code: string, equates: string }? } }?
+	@return string
+
+	@yields
+	@private
+	@within VibezAPI
+	@since 1.11.4
+]=]
+---
+function api:_fixFormattedString(
+	String: string,
+	Player: { Name: string, UserId: number } | Player?,
+	Custom: { onlyApplyCustom: boolean?, Codes: { { code: string, equates: string }? } }?
+): string
+	Custom = Custom or { onlyApplyCustom = false, Codes = {} }
+	Custom["onlyApplyCustom"] = Custom["onlyApplyCustom"] or false
+
+	local playerService = 'game:GetService("Players")'
+	local repStorage = 'game:GetService("ReplicatedStorage")'
+	local repFirst = 'game:GetService("ReplicatedFirst")'
+	local serStorage = 'game:GetService("ServerStorage")'
+	local serScript = 'game:GetService("ServerScriptService")'
+	local workSpace = 'game:GetService("Workspace")'
+
+	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+	local formattingCodes = Custom.onlyApplyCustom and Custom.Codes
+		or Table.Assign(Custom.Codes, {
+			{ code = "%(username%)", equates = tostring(Player.Name) },
+			{ code = "%(rank%)", equates = tostring(theirGroupData.Rank) },
+			{ code = "%(rankname%)", equates = tostring(theirGroupData.Role) },
+			{ code = "%(groupid%)", equates = tostring(self.GroupId) },
+			{ code = "%(player%)", equates = playerService .. "." .. Player.Name },
+			{ code = "%(userid%)", equates = tostring(Player.UserId) },
+			{ code = "%(replicatedstorage%)", equates = repStorage },
+			{ code = "%(replicatedfirst%)", equates = repFirst },
+			{ code = "%(serverstorage%)", equates = serStorage },
+			{ code = "%(serverscriptservice%)", equates = serScript },
+			{ code = "%(workspace%)", equates = workSpace },
+			{ code = "%(players%)", equates = playerService },
+		})
+
+	for _, data: { code: string, equates: string } in formattingCodes do
+		String = string.gsub(String, data.code, data.equates)
+	end
+
+	return String
+end
+
+--[=[
 	Gets a player's username by their userId
 	@param userId number
 	@return string?
@@ -1230,7 +1187,6 @@ function api:_createRemote()
 	end
 
 	local currentRemoteFunc, currentRemoteEvent = findRemotes()
-
 	if not currentRemoteFunc then
 		currentRemoteFunc = Instance.new("RemoteFunction")
 		currentRemoteFunc.Name = remoteName
@@ -1557,7 +1513,7 @@ function api:setRankStickTool(tool: Tool | Model): Types.vibezApi
 
 	tool.CanBeDropped = false
 	tool.Name = "RankingSticks"
-	tool.Parent = getTemporaryStorage()
+	tool.Parent = Utils.getTemporaryStorage()
 
 	Debris:AddItem(self.Settings.RankSticks["sticksModel"], 0)
 	self.Settings.RankSticks["sticksModel"] = tool
@@ -1917,7 +1873,7 @@ function api:getSimplified()
 				return self:addCommand(commandName, commandAlias, commandFunction)
 			end,
 
-			AddOperation = function(
+			AddArgPrefix = function(
 				operationName: string,
 				operationCode: string,
 				operationFunction: (
@@ -1926,7 +1882,11 @@ function api:getSimplified()
 					incomingArgument: string
 				) -> boolean
 			)
-				return self:addCommandOperation(operationName, operationCode, operationFunction)
+				return self:addArgumentPrefix(operationName, operationCode, operationFunction)
+			end,
+
+			RemoveArgPrefix = function(operationName: string)
+				return self:removeArgumentPrefix(operationName)
 			end,
 		},
 
@@ -2275,7 +2235,7 @@ end
 	Adds a command operation code.
 	@param operationName string
 	@param operationCode string
-	@param operationFunction (playerToCheck: Player, incomingArgument: string, internalFunctions: vibezCommandFunctions) -> boolean
+	@param operationFunction (playerToCheck: Player, incomingArgument: string, internalFunctions: { getGroupRankFromName: (groupRoleName: string) -> number?, getGroupFromUser: (groupId: number, userId: number) -> {any}?, Http: (Route: string, Method: string?, Headers: {[string]: any}, Body: {any}) -> httpResponse, addLog: ( calledBy: Player, Action: string, affectedUsers: {{ Name: string, UserId: number }}?, ...: any) -> () }) -> boolean
 	@return VibezAPI
 
 	:::caution
@@ -2286,7 +2246,7 @@ end
 	@tag Chainable
 	@since 1.3.1
 ]=]
-function api:addCommandOperation(
+function api:addArgumentPrefix(
 	operationName: string,
 	operationCode: string,
 	operationFunction: (
@@ -2320,7 +2280,7 @@ end
 	@return VibezAPI
 
 	```lua
-	Vibez:removeCommandOperation("Team")
+	Vibez:removeArgumentPrefix("Team")
 	```
 
 	@within VibezAPI
@@ -2328,7 +2288,7 @@ end
 	@since 1.3.1
 ]=]
 ---
-function api:removeCommandOperation(operationName: string): Types.vibezApi
+function api:removeArgumentPrefix(operationName: string): Types.vibezApi
 	self._private.commandOperationCodes[operationName] = nil
 	return self
 end
@@ -2947,66 +2907,25 @@ function api:_initialize(apiKey: string): ()
 	)
 end
 
+--[[
+	REVIEW:
+	Soon to be deprecated:
+]]
+function api:addCommandOperation(...)
+	self:_warn(
+		"Hey! ':addCommandOperation' is eventually going to become ':addArgumentPrefix', please update your scripts as soon as capable."
+	)
+	return self:addArgumentPrefix(...)
+end
+
+function api:removeCommandOperation(...)
+	self:_warn(
+		"Hey! ':removeCommandOperation' is eventually going to become ':removeArgumentPrefix', please update your scripts as soon as capable."
+	)
+	return self:removeArgumentPrefix(...)
+end
+
 --// Constructor \\--
-local function deepFetch(tbl: { any }, index: string | number)
-	for k, v in pairs(tbl) do
-		if k == index then
-			return v
-		elseif typeof(v) == "table" then
-			return deepFetch(v)
-		end
-	end
-end
-
-local function deepChange(tbl: { any }, index: string | number, value: any)
-	for k, v in pairs(tbl) do
-		if k == index then
-			tbl[k] = value
-			break
-		elseif typeof(v) == "table" then
-			tbl[k] = deepChange(v, index, value)
-		end
-	end
-
-	return tbl
-end
-
-local function stringifyTableDeep(tbl: { any }, tabbing: number?): string
-	tabbing = tabbing or 1
-	local str = "{\n"
-
-	local function applyTabbing()
-		if tabbing == 0 then
-			return
-		end
-
-		for _ = 1, tabbing do
-			str ..= "    "
-		end
-	end
-
-	for index, value in pairs(tbl) do
-		applyTabbing()
-
-		if typeof(index) == "string" then
-			str ..= string.format('["%s"] = ', index)
-		end
-
-		if typeof(value) == "table" then
-			str ..= stringifyTableDeep(value, tabbing + 1) .. ","
-		else
-			str ..= (typeof(value) == "string" and `"{value}"` or tostring(value)) .. ","
-		end
-
-		str ..= "\n"
-	end
-
-	tabbing -= 1
-	applyTabbing()
-
-	return str .. "}"
-end
-
 --[=[
 	@function new
 	@within VibezAPI
@@ -3028,7 +2947,7 @@ end
 	local Vibez = VibezAPI(myKey)
 	```
 
-	@tag Constructor
+	@server
 	@since 1.0.1
 ]=]
 ---
@@ -3126,91 +3045,87 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			Logs = {},
 		},
 		commandOperations = {},
-		commandOperationCodes = {
-			["Team"] = {
-				Code = "%", -- Operation Code
-				Execute = function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
-					return playerToCheck.Team ~= nil
-						and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
-							== string.lower(incomingArgument)
-				end,
-			},
-
-			["Rank"] = {
-				Code = "r:",
-				Execute = function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
-					local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
-
-					if not tonumber(rank) then
-						return false
-					end
-
-					tolerance = tolerance or "<="
-
-					local isOk, currentPlayerRank = pcall(playerToCheck.GetRankInGroup, playerToCheck, tonumber(rank))
-					if not isOk or currentPlayerRank == 0 then
-						return false
-					end
-
-					if tolerance == "<=" then
-						return currentPlayerRank <= tonumber(rank)
-					elseif tolerance == ">=" then
-						return currentPlayerRank >= tonumber(rank)
-					elseif tolerance == "<" then
-						return currentPlayerRank < tonumber(rank)
-					elseif tolerance == ">" then
-						return currentPlayerRank > tonumber(rank)
-					elseif tolerance == "==" then
-						return currentPlayerRank == tonumber(rank)
-					end
-
-					return false
-				end,
-			},
-
-			["shortenedUsername"] = {
-				Code = "", -- Operation Code (Empty on purpose)
-				Execute = function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
-					return string.sub(string.lower(playerToCheck.Name), 0, string.len(incomingArgument))
-						== string.lower(incomingArgument)
-				end,
-			},
-
-			["externalUser"] = {
-				Code = "e:",
-				isExternal = true,
-				Execute = function(incomingArgument: string): { Name: string, UserId: number } | { any }
-					local name, id
-					if tonumber(incomingArgument) ~= nil then
-						local isOk, userName =
-							pcall(Players.GetNameFromUserIdAsync, Players, tonumber(incomingArgument))
-
-						if isOk then
-							name = userName
-							id = tonumber(incomingArgument)
-						end
-					else -- String
-						local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, incomingArgument)
-
-						if isOk then
-							name = incomingArgument
-							id = userId
-						end
-					end
-
-					if not name or not id then
-						return nil
-					end
-
-					return {
-						Name = name,
-						UserId = id,
-					}
-				end,
-			},
-		},
+		commandOperationCodes = {},
 	}
 
+	--/ Command Operation Codes \--
+	self:addArgumentPrefix(
+		"shortenedUsername",
+		"",
+		function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
+			return string.sub(string.lower(playerToCheck.Name), 0, string.len(incomingArgument))
+				== string.lower(incomingArgument)
+		end
+	)
+
+	self:addArgumentPrefix(
+		"externalUser",
+		"e:",
+		function(incomingArgument: string): { Name: string, UserId: number } | { any }
+			local name, id
+			if tonumber(incomingArgument) ~= nil then
+				local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, tonumber(incomingArgument))
+
+				if isOk then
+					name = userName
+					id = tonumber(incomingArgument)
+				end
+			else -- String
+				local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, incomingArgument)
+
+				if isOk then
+					name = incomingArgument
+					id = userId
+				end
+			end
+
+			if not name or not id then
+				return nil
+			end
+
+			return {
+				Name = name,
+				UserId = id,
+			}
+		end
+	)
+
+	self:addArgumentPrefix("Rank", "r:", function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
+		local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
+
+		if not tonumber(rank) then
+			return false
+		end
+
+		tolerance = tolerance or "<="
+
+		local isOk, currentPlayerRank = pcall(playerToCheck.GetRankInGroup, playerToCheck, tonumber(rank))
+		if not isOk or currentPlayerRank == 0 then
+			return false
+		end
+
+		if tolerance == "<=" then
+			return currentPlayerRank <= tonumber(rank)
+		elseif tolerance == ">=" then
+			return currentPlayerRank >= tonumber(rank)
+		elseif tolerance == "<" then
+			return currentPlayerRank < tonumber(rank)
+		elseif tolerance == ">" then
+			return currentPlayerRank > tonumber(rank)
+		elseif tolerance == "==" then
+			return currentPlayerRank == tonumber(rank)
+		end
+
+		return false
+	end)
+
+	self:addArgumentPrefix("Team", "%", function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
+		return playerToCheck.Team ~= nil
+			and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
+				== string.lower(incomingArgument)
+	end)
+
+	--/ Configuration Fixing \--
 	local wereOptionsAttempted = not (extraOptions == nil)
 	extraOptions = (typeof(extraOptions) == "table") and extraOptions or {}
 
@@ -3288,6 +3203,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 	end
 
+	--/ Configuration Setup \--
 	-- Add rest of the commands when "Commands" is enabled.
 	if self.Settings.Commands.Enabled == true then
 		self:_setupCommands()
@@ -3377,10 +3293,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_initialize(apiKey)
 	end
 
+	-- Setup the global variables for use.
 	if self.Settings.Misc.createGlobalVariables then
 		self:_setupGlobals()
 	end
 
+	-- Cast to the Vibez API Type.
 	return self :: Types.vibezApi
 end
 
@@ -3423,3 +3341,105 @@ return setmetatable({
 		return rawget(t, "new")(...)
 	end,
 }) :: Types.vibezConstructor
+
+--// Documentation \\--
+--[=[
+	@interface extraOptionsType
+	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
+	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
+	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
+	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
+	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
+	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface simplifiedAPI
+	.Ranking { Set: (Player: Player | string | number, newRank: string | number) -> rankResponse, Promote: (Player: Player | string | number) -> rankResponse, Demote: (Player: Player | string | number) -> rankResponse, Fire: (Player: Player | string | number) -> rankResponse }
+	.Activity { Get: (Player: Player | string | number) -> activityResponse, Save: (Player: Player | string | number, playerRank: number, secondsSpent: number, messagesSent: (number | {string})?, shouldFetchRank: boolean) -> httpResponse }
+	.Commands { Add: (commandName: string, commandAlias: {string?}, commandFunction: (Player: Player, Args: {string?}, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: {Player}?, affectedCount: number, Metadata: any })) -> VibezAPI, AddArgPrefix: (operationName: string, operationCode: string, operationFunction: (playerWhoCalled: Player, playerToCheck: Player, incomingArgument: string) -> boolean) -> VibezAPI, RemoveArgePrefix: (operationName: string) -> VibezAPI }
+	.Notifications { Create: (Player: Player, notificationMessage: string) -> () }
+	.Webhooks { Create: (webhookLink: string) -> Webhooks }
+	A simplified version of our API.
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface groupIdResponse
+	.success boolean
+	.groupId number?
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface errorResponse
+	.success boolean
+	.errorMessage string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface rankResponse
+	.success boolean
+	.message string
+	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface userBlacklistResponse
+	.success boolean
+	.data { blacklisted: boolean, reason: string }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface fullBlacklists
+	.success boolean
+	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface httpResponse
+	.Body { any }
+	.Headers { [string]: any }
+	.StatusCode number
+	.StatusMessage string?
+	.Success boolean
+	.rawBody string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface infoResponse
+	.success boolean
+	.message string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface activityResponse
+	.secondsUserHasSpent number
+	.messagesUserHasSent number
+	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
+	@within VibezAPI
+]=]
+
+--[=[
+	@type responseBody groupIdResponse | errorResponse | rankResponse
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface httpResponse
+	.Body responseBody
+	.Headers { [string]: any }
+	.StatusCode number
+	.StatusMessage string?
+	.Success boolean
+	.rawBody string
+	@within VibezAPI
+	@private
+]=]

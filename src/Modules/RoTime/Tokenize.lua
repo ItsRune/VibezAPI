@@ -1,18 +1,19 @@
 --!strict
---// Types \\--
-type token = {
-	code: string,
-	expected: string,
-	tokenType: string,
-	indexStart: number,
-	indexEnd: number,
-}
-
 --// Variables \\--
 local Settings = require(script.Parent.Settings)
 
 --// Functions \\--
-local function tokenize(input: string): { { token }? }
+local function tokenize(input: string): {
+	{
+		{
+			code: string,
+			expected: string,
+			tokenType: string,
+			indexStart: number,
+			indexEnd: number,
+		}
+	}?
+}
 	input = tostring(input)
 
 	local isCapturing = false

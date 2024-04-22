@@ -1,10 +1,15 @@
---- @class RoTime
---- @ignore
+--[=[
+	@ignore
+	@class RoTime
+]=]
 
 --[=[
 	@prop Timer (start: number, finish: number, increment: number?) -> Timer
 	@within RoTime
 ]=]
+
+--// Services \\--
+local RunService = game:GetService("RunService")
 
 --// Variables \\--
 local Settings = require(script.Settings)
@@ -73,7 +78,7 @@ function RoTime.new(): Types.RoTime
 		__call = function(tbl, ...)
 			local timer = Timer.new(...)
 			rawset(tbl, timer._id, timer)
-			return timer
+			return timer :: Types.Timer
 		end,
 	})
 
@@ -84,44 +89,80 @@ end
 	Gets the amount of time between two numbers. (Seconds)
 	@param firstUnix number
 	@param secondUnix number
+	@param Options { formattingType: "default" | "full", removeZeros: boolean }?
 	@return string
 
 	@since 2.0.0
 	@within RoTime
 ]=]
-function RoTime.getHumanTimestamp(firstUnix: number, secondUnix: number)
+function RoTime.getHumanTimestamp(
+	firstUnix: number,
+	secondUnix: number,
+	Options: {
+		formattingType: "default" | "full"?,
+		removeZeros: boolean?,
+	}?
+)
+	Options = Options or {}
+
+	if not Options["formattingType"] then
+		Options.formattingType = "default"
+	end
+
+	if not Options["removeZeros"] then
+		Options["removeZeros"] = false
+	end
+
+	if not Options["In"] then
+		Options["In"] = "all"
+	end
+
+	local formattingType, removeZeros = Options["formattingType"], Options["removeZeros"]
 	local diff = math.abs(firstUnix - secondUnix)
 	local finalStr = {}
 
-	-- 16m 52s
-	local keys = Table.Reverse(Table.Keys(Settings.timesTable))
-	for i = 1, #keys do
-		local key = keys[i]
-		local data = Settings.timesTable[key]
-		local format = string.sub(string.lower(data), 1, 1)
-		local div = math.floor(diff / data)
+	-- Default version: 1h 16m 52s
+	-- Full version: 1 hour 16 minutes 52 seconds
+	for i = 1, #Settings.timesTable do
+		local longWording, shortWording, timeInterval = table.unpack(Settings.timesTable[i])
 
-		diff -= data * div
+		local div = math.floor(diff / timeInterval)
+		local format
+
+		if removeZeros and div == 0 then
+			continue
+		end
+
+		if formattingType == "default" then
+			format = shortWording
+		elseif formattingType == "full" then
+			format = string.format(" %s%s", string.lower(longWording), (div > 1) and "s" or "")
+		end
+
+		diff -= timeInterval * div
 		table.insert(finalStr, div .. format)
 	end
 
 	return table.concat(finalStr, " ")
 end
 
+Class.getHumanTimestamp = RoTime.getHumanTimestamp
+
 --// Private Functions \\--
 --[=[
-	Warns to the console with a prefix.
+	Warns to the console with a the script name as the prefix.
 
 	@private
 	@since 2.0.0
 	@within RoTime
 ]=]
-function Class:_warn() --...: string) | Removed for Vibez
-	-- warn("[RoTime]:", ...)
+function Class:_warn(...: string)
+	warn("[RoTime]:", ...)
 end
 
 --[=[
 	Gets the current day out of a full year. ex: 100/365
+	@return { currentDay: number, fullYear: 365 | 366 }
 
 	@private
 	@since 2.0.0
@@ -130,20 +171,38 @@ end
 function Class:_getDayOfTheYear(): { currentCount: number, fullYear: number }
 	local formatted = self:format("#mm #dd")
 	local split = string.split(formatted, " ")
-	local currentMonthNum, currentDayNum = table.unpack(split)
-	currentMonthNum, currentDayNum = tonumber(currentMonthNum), tonumber(currentDayNum)
-
-	local toSubtract = (currentMonthNum > 2) and 2 or 1
+	local currentMonthNum, currentDayNum = tonumber(split[1]), tonumber(split[2])
 	local isLeapYear = self:isLeapYear()
+	local dayNum = 0
+	local monthsAndTheirTotalDays = {
+		[1] = 31,
+		[2] = 28,
+		[3] = 31,
+		[4] = 30,
+		[5] = 31,
+		[6] = 30,
+		[7] = 31,
+		[8] = 31,
+		[9] = 30,
+		[10] = 31,
+		[11] = 30,
+		[12] = 31,
+	}
 
-	local monthNum = currentMonthNum - toSubtract
-	local dayNum = monthNum * 31
+	for definedMonthNumber = 1, currentMonthNum do
+		if definedMonthNumber == currentMonthNum then
+			dayNum += currentDayNum
+			break
+		end
 
-	if toSubtract == 2 then
-		dayNum += isLeapYear and 22 or 21
+		local fetchedDays = monthsAndTheirTotalDays[definedMonthNumber]
+		if definedMonthNumber == 2 and isLeapYear then
+			fetchedDays += 1
+		end
+
+		dayNum += fetchedDays
 	end
 
-	dayNum += currentDayNum
 	return {
 		currentCount = dayNum,
 		fullYear = isLeapYear and 366 or 365,
@@ -152,6 +211,7 @@ end
 
 --[=[
 	Adds a zero in front of a number. (Used for formatting)
+	@return string
 
 	@private
 	@since 2.0.0
@@ -171,6 +231,7 @@ end
 
 --[=[
 	Gets a token's information.
+	@return { [string]: string }
 
 	@private
 	@since 2.0.0
@@ -196,7 +257,7 @@ function Class:_getTokenInformation(tokenExpected: { string }): { [string]: stri
 			local result = (timeValueTable.Hour + 1) % 12
 			insert(token, tostring((result == 0) and 12 or result))
 		elseif token == "hour_24" then
-			insert(token, tostring(timeValueTable.Hour + 1))
+			insert(token, tostring(timeValueTable.Hour))
 		elseif token == "minute" then
 			insert(token, tostring(timeValueTable.Minute))
 		elseif token == "second" then
@@ -297,6 +358,39 @@ function Class:removeTimezone(timezoneName: string)
 end
 
 --[=[
+	Gets the local timezone, if ran from the server, you'll get the server's timezone and vice versa for the client.
+	@return string | "Unknown"
+
+	```lua
+	warn(RoTime:getLocalTimezone()) --> 'EDT'
+	```
+
+	@since 2.1.0
+	@within RoTime
+]=]
+function Class:getLocalTimezone(): string
+	assert(RunService:IsClient(), "'getLocalTimezone' can only be ran on the client!")
+
+	local rawUniverse = DateTime.now():ToUniversalTime()
+	local rawUserTime = DateTime.now():ToLocalTime()
+
+	-- Since timezones are just offsets of minutes & hours, we can do the difference to find theirs.
+	local theirTimezoneOffset = tonumber(
+		string.format("%d.%d", rawUserTime.Hour - rawUniverse.Hour, (rawUniverse.Minute - rawUserTime.Minute) / 60)
+	)
+
+	for timezoneName: string, timezoneOffset: number in pairs(Settings.Timezones) do
+		if theirTimezoneOffset ~= timezoneOffset then
+			continue
+		end
+
+		return timezoneName
+	end
+
+	return "Unknown"
+end
+
+--[=[
 	Checks if the current time is a leap year.
 	@return boolean
 
@@ -306,33 +400,6 @@ end
 function Class:isLeapYear(): boolean
 	local year = self:getDateTime():ToUniversalTime().Year
 	return ((year % 4 == 0 and year % 100 ~= 0) or (year % 400 == 0))
-end
-
---[=[
-	Sets the format if none is provided in methods.
-	@return RoTime
-
-	@tag Chainable
-	@since 2.0.0
-	@within RoTime
-]=]
-function Class:setFormat(formattingString: string)
-	self._format = formattingString
-	return self
-end
-
---[=[
-	Takes a future time and calculates the difference, returning time duration.
-	@param unix number
-	@param isMillisecond boolean?
-	@return number
-
-	@since 2.0.0
-	@within RoTime
-]=]
-function Class:fromUnix(unix: number, isMillisecond: boolean?): Types.RoTime
-	local methodToUse = isMillisecond and "fromUnixTimestamp" or "fromUnixTimestampMillis"
-	self._dt = DateTime[methodToUse](unix)
 end
 
 --[=[
@@ -466,7 +533,7 @@ end
 
 --[=[
 	Gets the calender for the month.
-	@return { amountOfDays: number, year: number, isLeapYear: boolean, days: { { dayName: string, isToday: boolean } } }
+	@return { amountOfDays: number, year: number, isLeapYear: boolean, month: { Name: string, Number: number }, days: { { Name: string, isToday: boolean } } }
 
 	@since 2.0.1
 	@within RoTime
@@ -492,6 +559,10 @@ function Class:getCalender(): {
 		amountOfDays = daysCount,
 		year = universal.Year,
 		isLeapYear = self:isLeapYear(),
+		month = {
+			Name = Settings.Names.Months[currentMonth],
+			Number = currentMonth,
+		},
 		days = {},
 	}
 
@@ -503,7 +574,7 @@ function Class:getCalender(): {
 		).wday]
 
 		calender.days[i] = {
-			dayName = dayName,
+			Name = dayName,
 			isToday = (i == universal.Day),
 		}
 	end
@@ -569,22 +640,20 @@ Class.sub = Class.subtract
 --[=[
 	Sets the time to the specified input and format.
 	@param input string
-	@param format string?
+	@param format string? Defaults to '#mm/#dd/#yyyy #hh:#m:#s'
 	@return RoTime
 
 	@tag Chainable
 	@since 2.0.0
 	@within RoTime
 ]=]
-function Class:set(input: string, format: string)
+function Class:set(input: string, format: string?)
 	assert(
 		typeof(input) == "string",
 		string.format("Input string for ':set' expected 'string', got '%s'", typeof(input))
 	)
-	assert(
-		typeof(format) == "string",
-		string.format("Format string for ':set' expected 'string', got '%s'", typeof(format))
-	)
+
+	format = format or "#mm/#dd/#yyyy #hh:#m:#s"
 
 	local tokens = Tokenizer(format)
 	local parsed = Parser(input, false, tokens)
@@ -604,7 +673,6 @@ function Class:set(input: string, format: string)
 		"hour_12",
 		"month_long",
 		"month_short",
-		"millis",
 		"ampm",
 		"timezone",
 		"week_year", -- Not implemented
@@ -639,6 +707,8 @@ function Class:set(input: string, format: string)
 			tbl.year = data.value
 		elseif token == "month" then
 			tbl.month = math.clamp(data.value, 1, 12)
+		elseif token == "millis" then
+			tbl.millisecond = math.clamp(data.value, 1, 999)
 		end
 	end
 

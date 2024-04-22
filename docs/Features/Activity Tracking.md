@@ -74,4 +74,51 @@ addSecondsToPlayerWithoutRank(107392833, 10, 5)
 ```
 
 ### How do I get everyone's activity?
-Currently you cannot, but in the future we hope to add this as a feature.
+Getting everyone's activity is very simple. All you need to do is call the `getActivity` function on the Vibez object without any arguments.
+
+```lua
+local allPlayerActivity = Vibez:getActivity()
+```
+
+### Example Usage
+
+<details>
+<summary>Creating a backup of all player activity</summary>
+<br />
+
+```lua "ServerScriptService/ActivityBackup.lua"
+--// Services \\--
+local DataStoreService = game:GetService("DataStoreService")
+
+--// Variables \\--
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
+local backupDataStore = DataStoreService:GetDataStore("PlayerActivity")
+
+--// Functions \\--
+local function onGameShutdown()
+    local allActivity = Vibez:getActivity() -- Leaving this blank will invoke all player's activity.
+    pcall(backupDataStore.SetAsync, backupDataStore, "Backup", allActivity)
+end
+
+--// Connections \\--
+game.OnClose:Connect(onGameShutdown)
+```
+
+</details>
+
+<details>
+
+<summary>Adding seconds to a player's activity</summary>
+<br />
+
+```lua
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
+
+local function addActivity(playerUserId: number, secondsSpent: number, messagesSent: number)
+    Vibez:saveActivity(playerUserId, secondsSpent, messagesSent)
+end
+
+addActivity(107392833, 10, 5) -- 107392833 is the user id of the staff member
+```
+
+</details>

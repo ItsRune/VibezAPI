@@ -208,17 +208,17 @@ end
 local function onSetupRankSticks()
 	local custScriptName = string.split(script.Name, "-")[1]
 	local Character = Player.Character or Player.CharacterAdded:Wait()
-	local deb = false
+	local stickDebounce = false
 
 	undoRankSticks()
 	Maid["RankSticks"] = {}
 
 	local function handleStickMode(actionName: string, child: Tool)
 		if rankStickMode == "DetectionInFront" then -- Default
-			if deb then
+			if stickDebounce then
 				return
 			end
-			deb = true
+			stickDebounce = true
 
 			local cf, size = Character:GetBoundingBox()
 			local newPart = Instance.new("Part")
@@ -309,19 +309,19 @@ local function onSetupRankSticks()
 
 			if closestTarget == nil then
 				task.wait(0.25)
-				deb = false
+				stickDebounce = false
 				return -- No one close enough
 			end
 
 			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
 
 			task.wait(0.25)
-			deb = false
+			stickDebounce = false
 		elseif rankStickMode == "ClickOnPlayer" then
-			if deb then
+			if stickDebounce then
 				return
 			end
-			deb = true
+			stickDebounce = true
 
 			local mouse = Player:GetMouse()
 			local mouseTarget = mouse.Target
@@ -333,20 +333,20 @@ local function onSetupRankSticks()
 					and (Player.Character.PrimaryPart.Position - mouseTarget.Position).Magnitude > 20
 				)
 			then
-				deb = false
+				stickDebounce = false
 				return
 			end
 
 			local player = Players:GetPlayerFromCharacter(mouseTarget.Parent)
 			if not player or player == Player then
-				deb = false
+				stickDebounce = false
 				return
 			end
 
 			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", player)
 
 			task.wait(0.25)
-			deb = false
+			stickDebounce = false
 		end
 	end
 

@@ -51,41 +51,59 @@ export type Timer = {
 	Destroy: (self: Timer) -> (),
 }
 
+export type Timer = {
+	Start: (self: Timer) -> (),
+	Pause: (self: Timer) -> (),
+	Resume: (self: Timer) -> (),
+	Cancel: (self: Timer) -> (),
+	Destroy: (self: Timer) -> (),
+
+	Changed: RBXScriptSignal,
+	Completed: RBXScriptSignal,
+}
+
 export type RoTime = {
-	Timer: (start: number, finish: number, increment: number?) -> Timer,
-
-	isLeapYear: (self: RoTime) -> boolean,
-
-	_getTokenInformation: (tokenExpected: { string }) -> { [string]: string | number },
-	getCalender: (
-	) -> {
-		amountOfDays: number,
-		year: number,
-		isLeapYear: boolean,
-		days: {
-			{
-				dayName: string,
-				isToday: boolean,
-			}
-		},
+	Timer: {
+		new: (start: number, finish: number, increment: number?) -> Timer,
 	},
 
+	_warn: (self: RoTime, ...any) -> (),
+	_getDayOfTheYear: (self: RoTime) -> { currentCount: number, fullYear: number },
+	_addZeroInFront: (self: RoTime, value: any) -> string,
+	_getTokenInformation: (self: RoTime, tokenExpected: { string }) -> { [string]: string | number },
+
+	getHumanTimestamp: (
+		self: RoTime,
+		firstUnix: number,
+		secondUnix: number,
+		Options: { formattingType: "default" | "full"?, removeZeros: boolean? }?
+	) -> string,
+	getLocalTimezone: (self: RoTime) -> string,
+	isLeapYear: (self: RoTime) -> boolean,
+	fromNow: (self: RoTime, input: string, format: string) -> number,
+	toNow: (self: RoTime, input: string, format: string) -> number,
+	getDateTime: (self: RoTime) -> DateTime,
+	getDate: (self: RoTime) -> string,
+	getTime: (self: RoTime) -> string,
+	get: (self: RoTime, ...string) -> ...string,
+	getTimestamp: (self: RoTime) -> string,
+	getCalender: (
+		self: RoTime
+	) -> {
+		amountOfDays: number,
+		isLeapYear: boolean,
+		days: { { dayName: string, Day: number, isToday: boolean } },
+		year: number,
+	},
+	format: (self: RoTime, input: string) -> string,
+
+	Destroy: (self: RoTime) -> nil,
+
+	set: (self: RoTime, input: string, format: string?) -> RoTime,
 	addition: (self: RoTime, amount: number, Type: addOrRemoveType) -> RoTime,
-	add: (self: RoTime, amount: number, Type: addOrRemoveType) -> RoTime,
 	subtract: (self: RoTime, amount: number, Type: addOrRemoveType) -> RoTime,
-	sub: (self: RoTime, amount: number, Type: addOrRemoveType) -> RoTime,
-	set: (self: RoTime, input: string, format: string) -> RoTime,
+	timezone: (self: RoTime, newTimezone: string) -> RoTime,
 	addTimezone: (self: RoTime, timezoneName: string, timezoneOffset: number) -> RoTime,
 	removeTimezone: (self: RoTime, timezoneName: string) -> RoTime,
-	timezone: (self: RoTime, timezoneName: string) -> RoTime,
-	setFormat: (self: RoTime, formattingString: string) -> RoTime,
-
-	toNow: (self: RoTime, input: string, format: string) -> number,
-	fromNow: (self: RoTime, input: string, format: string) -> number,
-
-	format: (self: RoTime, format: string) -> string,
-	getTime: (self: RoTime) -> string,
-	getDate: (self: RoTime) -> string,
-	getTimestamp: (self: RoTime) -> string,
 }
 return nil

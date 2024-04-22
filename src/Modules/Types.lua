@@ -186,6 +186,17 @@ export type vibezSettings = {
 		isAsync: boolean,
 		rankingCooldown: number,
 		usePromises: boolean,
+		pointBasedRanking: {
+			Enabled: boolean,
+			statLocation: string,
+			Mode: "whenUpdated",
+			requirements: {
+				{
+					Points: number,
+					newRank: number,
+				}?
+			},
+		},
 	},
 }
 
@@ -347,13 +358,13 @@ export type vibezApi = {
 			}
 		) -> ()
 	) -> boolean,
-	addCommandOperation: (
+	addArgumentPrefix: (
 		self: vibezApi,
 		operationName: string,
 		operationCode: string,
 		operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
 	) -> vibezApi,
-	removeCommandOperation: (self: vibezApi, operationName: string) -> vibezApi,
+	removeArgumentPrefix: (self: vibezApi, operationName: string) -> vibezApi,
 }
 
 export type vibezHooks = {

@@ -2,13 +2,13 @@
 sidebar_position: 5
 ---
 
-## What are notifications?
+### What are notifications?
 Notifications are a way to tell the user if their request went through successfully or not. Their main purpose is to inform the user of the status of their request, however you can trigger a notification yourself using our [Global API](/VibezAPI/docs/Features/Global).
 
-## When are notifications used?
+### When are notifications used?
 Notifications are mainly used when using the: UI, [Commands](/VibezAPI/docs/Features/Commands/About/), or RankSticks. Notifications are intended to tell the user if their request went throught successfully or not.
 
-## Notification Settings
+### Notification Settings
 ```lua
 Enabled = true, -- Determines whether or not notifications are enabled.
 
