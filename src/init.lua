@@ -98,7 +98,10 @@ local baseSettings = {
 
 		disableWhenInStudio = true,
 		disableWhenAFK = false,
+		disableWhenInPrivateServer = false,
+
 		delayBeforeMarkedAFK = 30,
+
 		kickIfFails = false,
 		failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
 	},
@@ -119,7 +122,7 @@ local baseSettings = {
 		originLoggerText = game.Name,
 		ignoreWarnings = false,
 		overrideGroupCheckForStudio = false,
-		createGlobalVariables = true,
+		createGlobalVariables = false,
 		isAsync = false,
 		rankingCooldown = 30, -- 30 Seconds
 		usePromises = false, -- Broken
@@ -1156,7 +1159,7 @@ end
 
 --[=[
 	Creates / Fetches a remote function in replicated storage for client communication.
-	@return Remote RemoteFunction
+	@return RemoteFunction
 
 	@private
 	@within VibezAPI
@@ -3349,7 +3352,7 @@ return setmetatable({
 	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
 	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
 	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
-	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
+	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
 	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
 	@within VibezAPI
 ]=]

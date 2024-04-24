@@ -41,8 +41,3 @@ local Vibez = VibezAPI(14946453963)(myApiKey)
 ```
 
 Alright, now you have a Vibez instance. You can either customize this by following the other API documentation or you can use the default settings.
-
----
-
-### API Settings
-Our api wrapper supports extra options for when creating the class. [These options can be found here](/VibezAPI/docs/Settings).

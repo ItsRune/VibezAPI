@@ -15,22 +15,16 @@ local Vibez = require(14946453963)("API Key", {
     ActivityTracker = {
         Enabled = true, -- Enabled the tracker for players.
         MinRank = 255, -- The minimum rank that a staff member must be to be tracked.
+        disableWhenInStudio = true, -- Disables when studio play testing.
+        disableWhenAFK = true, -- Disables when player is detected as AFK.
+        disableWhenInPrivateServer = true, -- Disables when player is in a private server.
+        delayBeforeMarkedAFK = 15, -- The amount of seconds to wait before the player is marked AFK.
+
+        kickIfFails = true, -- Used to kick the player if the activity tracker fails to initialize, below is the message for this occurrence.
+        failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
     }
 })
 ```
-
-In addition to this setting is a couple of other settings that you can change to your liking. These settings are as follows:
-
-| Setting | Type | Description |
-| :---: | :---: | :---: |
-| `Enabled` | `boolean` | Whether or not the activity tracker is enabled. |
-| `MinRank` | `number` | The minimum rank that a staff member must be to be tracked. |
-| `disableWhenInStudio` | `boolean` | Disables when studio play testing. |
-| `disableWhenAFK` | `boolean` | Disables when player is detected as AFK. |
-| `disableWhenInPrivateServer` | `boolean` | Disables when player is in a private server. |
-| `delayBeforeMarkedAFK` | `number` | The amount of seconds to wait before the player is marked AFK. |
-| `kickIfFails` | `boolean` | Sometimes ROBLOX can mess up player initialization, when this occurs it can cause the activity tracker to not setup with the player. Would you like to kick the player when this happens? |
-| `failMessage` | `string` | The message to kick the player with when `kickIfFails` is enabled. |
 
 ### How do I get the activity of a staff member?
 Getting the activity of a staff member is very simple. All you need to do is call the `getActivity` function on the Vibez object.

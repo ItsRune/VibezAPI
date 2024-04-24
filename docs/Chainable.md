@@ -36,6 +36,7 @@ local VibezAPI = require(14946453963)("myApiKey")
 local playerToRank = game.Players:GetPlayers()[1]
 
 VibezAPI:updateLoggerName("Custom Rank"):setRank(playerToRank, 1)
+VibezAPI:updateLoggerName("Custom Rank2"):setRank(playerToRank, 2)
 ```
 
 ---

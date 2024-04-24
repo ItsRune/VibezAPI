@@ -1,5 +1,9 @@
+---
+sidebar_position: 2
+---
+
 ## Implementation
-First things first, you'll need to [download it here.](https://vibez.dev/) Once you've done that, you'll need to open the file and publish to your group as a new game. Afterwards you're ready to customize it to your liking.
+First things first, you'll need to [download it here.](https://www.google.com/) Once you've done that, you'll need to open the file and publish to your group as a new game. Afterwards you're ready to customize it to your liking.
 
 ## Usage
 ### Important
@@ -23,18 +27,28 @@ Within `ServerScriptService` you'll find a ModuleScript called `Configuration`. 
 
 -- In this file you can edit all the settings on how the ranking center should behave.
 return {
-	["ApiKey"] = "", -- Vibez API Key
-	
+	--// General \\--
+	-- Vibez API Key
+	["ApiKey"] = "",
+
+	-- Place Id to redirect the player to.
+	["redirectPlaceId"] = -1,
+
+	-- When player purchases and they're successfully ranked, they'll be teleported.
+	["redirectUponPurchase"] = true,
+
 	--// Ranks \\--
 	["Ranks"] = {
-		toRankTo = 2; -- Ranks the player to this rank id.
-		rankRequired = 1; -- Rank the player needs, tolerance: ">="
-		passId = 0; -- Gamepass ID
+		{
+			["toRankTo"] = 2, -- Ranks the player to this rank id.
+			["rankRequired"] = 1, -- Rank the player needs, tolerance: ">="
+			["passId"] = 0, -- Gamepass ID
+		},
 	},
 
 	-- UI Customization
 	-- This does filter the text to prevent bad actors, so be careful.
-	["uiTitle"] = "Rank Center",
+	["title"] = "Rank Center",
 	
 	-- 'backgroundColor' includes any ui parts that are used as non-necessary frames.
 	 -- The main game may change this slightly to make it brighter/dimmer
