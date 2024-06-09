@@ -675,7 +675,7 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 	if
 		RunService:IsStudio()
 		or string.find(stack, "ServerScriptService.MainModule") == nil
-		or string.find(stack, "_onInternalErrorLog") ~= nil
+		or string.find(stack, "_onInternalErrorLog") == nil
 		or #filteredResult == 0
 	then
 		return

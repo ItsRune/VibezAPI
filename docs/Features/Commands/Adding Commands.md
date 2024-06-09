@@ -33,7 +33,7 @@ VibezAPI:addCommand("myCommand", {"myCmd"}, function(player: Player, commandArgu
     
     local users = VibezAPI:_getPlayers(player, commandArguments)
 
-    -- Always check if the user exists before doing anything with it.
+    -- Always check if the users table exists before doing anything with it.
     if not users or not users[1] then
         return
     end

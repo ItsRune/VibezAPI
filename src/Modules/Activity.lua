@@ -199,20 +199,4 @@ function Class:Destroy()
 	self = nil
 end
 
---[=[
-    Destroys the class.
-    @return nil
-
-    @within ActivityTracker
-    @since 1.0.0
-]=]
----
-function Class:Destroy()
-	Activity.Users[self._player.UserId] = nil
-
-	table.clear(self)
-	setmetatable(self, nil)
-	self = nil
-end
-
 return Activity
