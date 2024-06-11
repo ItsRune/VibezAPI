@@ -11,16 +11,6 @@ local embedTypes = require(script.Parent.Parent.Types)
 local RoTime = require(script.Parent.Parent.RoTime)
 
 --// Local Functions \\--
---[=[
-	Checks if a string is within the character limit.
-	@param value string
-	@param charLimit number
-	@return boolean
-
-	@within EmbedBuilder
-	@ignore
-]=]
----
 local function checkCharLimit(value: string, charLimit: number): boolean
 	return (string.len(tostring(value)) <= charLimit)
 end
@@ -31,7 +21,6 @@ end
 	Creates the embed class
 	@return EmbedBuilder
 
-	@ignore
 	@within EmbedBuilder
 	@since 1.1.0
 ]=]

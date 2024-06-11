@@ -1,4 +1,3 @@
---!native
 --[[
 		 _   _ ___________ _____ ______
 		| | | |_   _| ___ \  ___|___  /
@@ -2453,7 +2452,7 @@ end
 --[=[
 	Initializes the Hooks class with the specified webhook.
 	@param webhook string
-	@return VibezHooks
+	@return Webhooks
 
 	@within VibezAPI
 	@since 1.5.0
@@ -2611,7 +2610,7 @@ end
 --[=[
 	Gets either a full list of blacklists or checks if a player is currently blacklisted.
 	@param userId (string | number)?
-	@return blacklistResponse
+	@return (boolean, string?)
 
 	@within VibezAPI
 	@since 1.6.0
@@ -2627,10 +2626,10 @@ function api:isUserBlacklisted(userId: (string | number)?): (boolean, string?, n
 			blacklistData.data.blacklistedBy or nil,
 		}
 
-		return table.unpack(data)
+		return true, table.unpack(data)
 	end
 
-	return false
+	return false, nil
 end
 
 --[=[
@@ -3391,9 +3390,9 @@ return setmetatable({
 ]=]
 
 --[=[
-	@interface userBlacklistResponse
+	@interface blacklistResponse
 	.success boolean
-	.data { blacklisted: boolean, reason: string }
+	.message string
 	@within VibezAPI
 ]=]
 
@@ -3401,17 +3400,6 @@ return setmetatable({
 	@interface fullBlacklists
 	.success boolean
 	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface httpResponse
-	.Body { any }
-	.Headers { [string]: any }
-	.StatusCode number
-	.StatusMessage string?
-	.Success boolean
-	.rawBody string
 	@within VibezAPI
 ]=]
 
@@ -3444,5 +3432,4 @@ return setmetatable({
 	.Success boolean
 	.rawBody string
 	@within VibezAPI
-	@private
 ]=]

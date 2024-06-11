@@ -23,49 +23,58 @@ Examples:
 
 [**whoCalled: (See Below)**](/VibezAPI/docs/Features/Ranking#whats-this-whocalled-parameter)
 
-### Promote
+### [Promote](/VibezAPI/api/VibezAPI#Promote)
 Increments a player's rank by 1.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
+Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 ```lua
-VibezApi:Promote(1)
+local userId = 1
+VibezApi:Promote(userId)
 ```
 
-### Demote
+### [Demote](/VibezAPI/api/VibezAPI#Demote)
 Decrements a player's rank by 1.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
+Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 ```lua
-VibezApi:Demote(1)
+local userId = 1
+VibezApi:Demote(userId)
 ```
 
-### Fire
+### [Fire](/VibezAPI/api/VibezAPI#Fire)
 Sets a player's rank to the lowest rank.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
+Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 ```lua
-VibezApi:Fire(1)
+local userId = 1
+local newRankId = 5
+VibezApi:Fire(userId, newRankId)
 ```
 
-### setRank
+### [setRank](/VibezAPI/api/VibezAPI#setRank)
 Sets a player's rank to a specific rank.
 
 `userId: number | string | Player` <br />
 `rank: number | string` <br />
 `whoCalled: { userName: string, userId: number }?`
 
+Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 ```lua
+local userId = 1
 VibezApi:setRank(1, 2)
 ```
 
 ## What's this `whoCalled` parameter?
-Under the hood of the API, we use the `whoCalled` parameter to generate logs within a Discord channel of the action, who did it, and who was affected. This is useful for auditing purposes, and to see who's abusing the API. If you supply nothing, the wrapper will automatically supply **SYSTEM** for the username, and the log generated will look different than with a proper user. If you supply a user's ID and name, the log will look like this:
+Under the hood of the API, we use the `whoCalled` parameter to generate logs within a Discord channel of the action, who did it, and who was affected. **THIS PARAMETER IS OPTIONAL**. This is useful for auditing purposes, and to see who's abusing the API. If you supply nothing, the wrapper will automatically supply **SYSTEM** for the username, and the log generated will look different than with a proper user. If you supply a user's ID and name, the log will look like this:
 
 <img src="/VibezAPI/rankingExampleWithUser.png"></img>
 

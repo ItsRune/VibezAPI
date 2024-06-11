@@ -2,13 +2,13 @@
 sidebar_position: 2
 ---
 
-### How does the activity tracking work?
+## How does the activity tracking work?
 The activity tracker works by using object orientated programming that creates specific functions to call upon each staff member within the game. This allows for a more efficient way of tracking staff members and their activity. The activity tracker is also able to track the amount of time a staff member has been active for, and the amount of time they have been inactive for. This allows for a more accurate representation of how active a staff member is.
 
 **NOTE:** Inactivity is not sent to Vibez API, it is only used for the activity tracker.
 
-### How do I use the activity tracker?
-The activity tracker is very simple to use. All you need to do is require the main module and change an option to `true`.
+## Setup
+All you need to do is require the main module and change an option to `true`. Then you're all set up to use the activity tracker within your game.
 
 ```lua
 local Vibez = require(14946453963)("API Key", {
@@ -26,55 +26,36 @@ local Vibez = require(14946453963)("API Key", {
 })
 ```
 
-### How do I get the activity of a staff member?
-Getting the activity of a staff member is very simple. All you need to do is call the `getActivity` function on the Vibez object.
+## Usage
+### [getActivity](/VibezAPI/api/VibezAPI#getActivity)
+Gets a player's current activity. (Leave blank for everyone's activity)
+
+Parameter(s): <br />
+``userId: (string | number | Player)?`` - The user id of the player you want to get the activity of. **OPTIONAL**<br />
+
+Returns: [activityResponse](/VibezAPI/api/VibezAPI#activityResponse)
 
 ```lua
-local Vibez = require(14946453963)("API Key", {
-    ActivityTracker = {
-        Enabled = true,
-        MinRank = 255,
-    }
-})
-
-local activity = Vibez:getActivity(107392833) -- 107392833 is the user id of the staff member
+local allPlayerActivity = VibezApi:getActivity()
+local myActivity = VibezApi:getActivity(107392833)
 ```
 
-**TIP:** If you'd like to get everyone's activity... Don't put a user id in the `getActivity` function.
+### [saveActivity](/VibezAPI/api/VibezAPI#saveActivity)
+Saves a player's activity.
 
-### How do I add seconds to a specific player?
-Vibez allows for customization when necessary, if you're writing your own activity tracker you can achieve this with the `saveActivity` method that the wrapper provides.
+Parameter(s): <br />
+``userId: (string | number | Player)`` - The user id of the player you want to save the activity of. <br />
+``userRank: number`` - The rank of the player.<br />
+``secondsSpent: number`` - The amount of seconds the player has spent. <br />
+``messagesSent: number`` - The amount of messages the player has sent. <br />
+
+Returns: [httpResponse](/VibezAPI/api/VibezAPI#httpResponse)
 
 ```lua
-local Vibez = require(14946453963)("API Key", {
-    ActivityTracker = {
-        Enabled = true,
-        MinRank = 255,
-    }
-})
-
-local function addSecondsToPlayer(UserId: number, userRank: number, secondsSpent: number, messagesSent: number)
-    Vibez:saveActivity(UserId, userRank, secondsSpent, messagesSent)
-end
-
-local function addSecondsToPlayerWithoutRank(UserId: number, secondsSpent: number, messagesSent: number)
-    Vibez:saveActivity(UserId, nil, secondsSpent, messagesSent, true)
-end
-
--- Example usage
--- adding 10 seconds and 5 messages
-addSecondsToPlayer(107392833, 250, 10, 5)
-addSecondsToPlayerWithoutRank(107392833, 10, 5)
+VibezApi:saveActivity(107392833, 200, 10, 5)
 ```
 
-### How do I get everyone's activity?
-Getting everyone's activity is very simple. All you need to do is call the `getActivity` function on the Vibez object without any arguments.
-
-```lua
-local allPlayerActivity = Vibez:getActivity()
-```
-
-### Example Usage
+## Examples
 
 <details>
 <summary>Creating a backup of all player activity</summary>

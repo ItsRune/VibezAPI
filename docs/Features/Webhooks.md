@@ -7,59 +7,121 @@ Webhooks are a way to send messages to Discord channels without using a bot. The
 
 ### How do I create a webhook?
 
-<h4>You can get a webhook link by going to your Discord server settings.</h4>
-<img src="/VibezAPI/firstStepWebhook.png"></img>
+<div>
+    <h4>You can get a webhook link by going to your Discord server settings.</h4>
+    <img src="/VibezAPI/firstStepWebhook.png"></img>
 
-<h4>Navigate to the "Integrations" page.</h4>
-<img src="/VibezAPI/secondStepWebhook.png"></img>
+    <h4>Navigate to the "Integrations" page.</h4>
+    <img src="/VibezAPI/secondStepWebhook.png"></img>
 
-<h4>Click on "Webhooks" and "New Webhook", customize it however you'd like and copy the webhook link.</h4>
-<img src="/VibezAPI/thirdStepWebhook.png"></img>
+    <h4>Click on "Webhooks" and "New Webhook", customize it however you'd like and copy the webhook link.</h4>
+    <img src="/VibezAPI/thirdStepWebhook.png"></img>
+</div>
 
-### How do I send a message to a webhook?
-Using Vibez's webhook api is very simple. You just need to create a webhook builder using the webhook link you got from the previous step.
+## Usage
+### [getWebhookBuilder](/VibezAPI/api/VibezAPI#getWebhookBuilder)
+Creates a new webhook builder.
 
+Parameter(s): <br />
+``webhookLink: string`` - The webhook link you got from Discord.
+
+Returns: [Webhooks](/VibezAPI/api/Webhooks)
 ```lua
-local VibezAPI = require(14946453963)("My API Key")
-local myWebhook = VibezAPI:getWebhookBuilder("Discord Webhook Link")
+local webhookLink = "https://discord.com/api/webhooks/"
+local myWebhook = VibezAPI:getWebhookBuilder(webhookLink)
 ```
 
-After that you can send a test message!
+### [Webhooks:setContent](/VibezAPI/api/Webhooks#setContent)
+Sets the content of the message.
 
+Parameter(s): <br />
+``content: string`` - The content of the message.
+
+Returns: [Webhooks](/VibezAPI/api/Webhooks)
 ```lua
-myWebhook:setContent("Hello World!"):Send()
+myWebhook:setContent("Hello World!")
 ```
 
-Please look at information about [chaining](/VibezAPI/docs/Chainable) to learn more about how chaining benefits you.
+### [Webhooks:addEmbed](/VibezAPI/api/Webhooks#addEmbed)
+Adds an embed to the message with raw embed data.
 
-### How do I send an embed to a webhook?
-There are 2 ways to create an embed. First, you could use the built in embed builder:
+Parameter(s): <br />
+``embed: table`` - The embed data.
 
-```lua
-myWebhook:addEmbedWithBuilder(function(myEmbed)
-    myEmbed:setTitle("my title")
-    myEmbed:setDescription("my description")
-end):Send()
-```
-
-Or, you could create an embed using a table:
-
+Returns: [Webhooks](/VibezAPI/api/Webhooks)
 ```lua
 myWebhook:addEmbed({
-    title = "my title",
-    description = "my description"
-}):Send()
+    title = "My Title",
+    description = "My Description"
+})
 ```
 
-### Why isn't my message sending?
-If your message isn't sending, it's possibly 2 issues.
-1. You didn't call `:Send()` at the end of your code.
-2. If you're using embeds, you didn't set the title/description of your embed.
+### [Webhooks:addEmbedWithBuilder](/VibezAPI/api/Webhooks#addEmbedWithBuilder)
+Adds an embed to the message with a builder.
 
-### Limitations
-There are some limitations to webhooks. For example, you can only send 10 embeds per message. You can find more information about these limitations [here](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks).
+Parameter(s): <br />
+``...(embedCreator: EmbedBuilder) -> EmbedBuilder`` - The embed builder.
 
-### Example Usage
+Returns: [Webhooks](/VibezAPI/api/Webhooks)
+```lua
+myWebhook:addEmbedWithBuilder(function(embed)
+    return embed
+        :setTitle("My Title")
+        :setDescription("My Description")
+end)
+```
+
+### [Webhooks:Send](/VibezAPI/api/Webhooks#Send)
+Sends the message.
+
+Parameter(s): <br />
+``None``
+```lua
+myWebhook:Send()
+```
+
+### [Webhooks:setData](/VibezAPI/api/Webhooks#setData)
+Sets the data of the message.
+
+Parameter(s): <br />
+``data: table`` - The data of the message.
+
+Returns: [Webhooks](/VibezAPI/api/Webhooks)
+```lua
+myWebhook:setData({
+    content = "Hello World!",
+    embeds = {
+        {
+            title = "My Title",
+            description = "My Description"
+        }
+    }
+})
+```
+
+### [Webhooks:setUsername](/VibezAPI/api/Webhooks#setUsername)
+Sets the username of the webhook.
+
+Parameter(s): <br />
+``username: string`` - The username of the webhook.
+
+Returns: [Webhooks](/VibezAPI/api/Webhooks)
+```lua
+myWebhook:setUsername("My Username")
+```
+
+### [Webhooks:setTTS (BROKEN)](/VibezAPI/api/Webhooks#setTTS)
+Sets the TTS of the webhook.
+
+Parameter(s): <br />
+``tts: boolean`` - The TTS of the webhook.
+
+Returns: [Webhooks](/VibezAPI/api/Webhooks)
+```lua
+myWebhook:setTTS(true)
+```
+
+## Example Usage
 <details>
 <summary>Join/Leave Logger</summary>
 <br />

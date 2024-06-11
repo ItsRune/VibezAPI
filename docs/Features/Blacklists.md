@@ -2,35 +2,54 @@
 sidebar_position: 4
 ---
 
-### What does blacklisting do?
+## What does blacklisting do?
 Blacklisting a user will prevent them from doing anything that uses your API key. This includes the usage of our application center and ranking center. This is useful in case you have a user that is causing havoc in your games. Think of this as a ban system attached to your API key.
 
-### How do I blacklist a user?
-To blacklist a user, you'd just require the module as normal and call the `addBlacklist` method.
+## Usage
+### [addBlacklist](/VibezAPI/api/VibezAPI#addBlacklist)
+Adds a new blacklist.
 
+Parameter(s): <br />
+``userId: number`` - The user id of the player you want to blacklist. <br />
+``reason: string?`` - The reason for blacklisting the user. **OPTIONAL**<br />
+``blacklistedBy: number?`` - The user id of the person who blacklisted the user. **OPTIONAL**<br />
+
+Returns: [blacklistResponse](/VibezAPI/api/VibezAPI#blacklistResponse)
 ```lua
-Vibez:addBlacklist(1234567890) -- Adds a new blacklist with an "Unknown" reason
-Vibez:addBlacklist(1234567890, "My reason.") -- Adds a new blacklist with a provided reason.
-Vibez:addBlacklist(1234567890, "My reason.", 1) -- Adds a new blacklist with a provided reason and says ROBLOX blacklisted them.
+local userId = 107392833
+local reason = "Spamming the group wall."
+local userWhoBlacklisted = 1 -- ROBLOX
+VibezApi:addBlacklist(userId, userWhoBlacklisted)
 ```
 
-### How do I remove a blacklist?
-To remove a blacklist, you'd just call the `deleteBlacklist` method.
+### [deleteBlacklist](/VibezAPI/api/VibezAPI#deleteBlacklist)
+Removes a blacklist.
 
+Parameter(s): <br />
+``userId: number`` - The user id of the player you want to remove the blacklist of. <br />
+
+Returns: [blacklistResponse](/VibezAPI/api/VibezAPI#blacklistResponse)
 ```lua
-Vibez:deleteBlacklist(1234567890) -- Removes a blacklist with the provided user id.
+local userId = 107392833
+VibezApi:deleteBlacklist(userId)
 ```
 
-### How do I check a blacklist?
-To check a blacklist, you'd just call the `isUserBlacklisted` method.
+### [isUserBlacklisted](/VibezAPI/api/VibezAPI#isUserBlacklisted)
+Checks if a user is blacklisted.
 
+Parameter(s): <br />
+``userId: number`` - The user id of the player you want to check if they're blacklisted. <br />
+
+Returns: [(boolean, string?)](/VibezAPI/api/VibezAPI#isUserBlacklisted)
 ```lua
-local isBlacklisted, blacklistReason, blacklistedBy = Vibez:isUserBlacklisted(1234567890)
+local userId = 107392833
+local isBlacklisted, blacklistReason, blacklistedBy = VibezApi:isUserBlacklisted(userId)
 ```
 
-### How do I get all blacklists?
-To get all blacklists, you'd just call the `getBlacklists` method.
+### [getBlacklists](/VibezAPI/api/VibezAPI#getBlacklists)
+Gets all blacklists.
 
+Returns: [fullBlacklists](/VibezAPI/api/VibezAPI#fullBlacklists)
 ```lua
-local blacklists = Vibez:getBlacklists()
+local blacklists = VibezApi:getBlacklists()
 ```
