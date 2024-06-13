@@ -215,11 +215,6 @@ local function onSetupRankSticks()
 
 	local function handleStickMode(actionName: string, child: Tool)
 		if rankStickMode == "DetectionInFront" then -- Default
-			if stickDebounce then
-				return
-			end
-			stickDebounce = true
-
 			local cf, size = Character:GetBoundingBox()
 			local newPart = Instance.new("Part")
 			local Weld = Instance.new("WeldConstraint")
@@ -314,15 +309,7 @@ local function onSetupRankSticks()
 			end
 
 			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
-
-			task.wait(0.25)
-			stickDebounce = false
 		elseif rankStickMode == "ClickOnPlayer" then
-			if stickDebounce then
-				return
-			end
-			stickDebounce = true
-
 			local mouse = Player:GetMouse()
 			local mouseTarget = mouse.Target
 
@@ -344,10 +331,10 @@ local function onSetupRankSticks()
 			end
 
 			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", player)
-
-			task.wait(0.25)
-			stickDebounce = false
 		end
+
+		task.wait(0.25)
+		stickDebounce = false
 	end
 
 	table.insert(
@@ -358,7 +345,16 @@ local function onSetupRankSticks()
 
 				Maid.RankSticks[actionName] = {
 					child.Activated:Connect(function()
+						if stickDebounce then
+							return
+						end
+						stickDebounce = true
+
+						remoteEvent:FireServer("Animate", "Sticks")
 						handleStickMode(actionName, child)
+
+						task.wait(0.25)
+						stickDebounce = false
 					end),
 				}
 			end

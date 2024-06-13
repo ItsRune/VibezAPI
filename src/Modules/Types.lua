@@ -129,6 +129,7 @@ export type vibezSettings = {
 		MaxRank: number,
 
 		sticksModel: Model?,
+		sticksAnimation: number?,
 	},
 
 	Notifications: {

@@ -10,8 +10,8 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 4/21/2024 17:56 EST
-	Version: 1.11.4
+	Updated: 6/13/2024 00:19 EST
+	Version: 1.11.5
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -62,6 +62,7 @@ local baseSettings = {
 		MaxRank = 255,
 
 		sticksModel = nil, -- Uses default
+		sticksAnimation = 17837716782, -- Uses a very horrible default one.
 	},
 
 	Notifications = {
@@ -376,6 +377,48 @@ local function onServerInvoke(
 			"Messing with vibez remotes, this has been logged and repeating offenders will be blacklisted from our services."
 		)
 		return false
+	end
+end
+
+local function onServerEvent(self: Types.vibezApi, Player: Player, Command: string, ...: any)
+	local Data = { ... }
+
+	if Command == "Animate" then
+		if Player.Character == nil or Player.Character:FindFirstChildOfClass("Tool") == nil then
+			return
+		end
+
+		local Tool = Player.Character:FindFirstChildOfClass("Tool")
+		if Tool:GetAttribute(self._private.clientScriptName) == nil then
+			return
+		end
+
+		-- REVIEW:
+		-- Uses Humanoid only due to this Roblox Studio Error:
+		-- Property "Animator.EvaluationThrottled" is not currently enabled. (x14)
+		--
+		-- Update: It appears this issue happens even when using the Humanoid,
+		-- probably because Humanoid:LoadAnimation calls to the Animator within.
+
+		local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+		local animator = humanoid:FindFirstChildOfClass("Animator")
+		local toUse = (animator == nil) and humanoid or animator
+		local animationId = (Data[1] == "Sticks") and self.Settings.RankSticks.sticksAnimation or -1
+
+		if animationId == -1 or not tonumber(animationId) then
+			return
+		end
+
+		local animationInstance = Instance.new("Animation")
+		animationInstance.AnimationId = "rbxassetid://" .. tostring(animationId)
+		animationInstance.Parent = toUse
+
+		local isOk, animationTrack = pcall(toUse.LoadAnimation, toUse, animationInstance)
+		if not isOk then
+			return
+		end
+
+		animationTrack:Play()
 	end
 end
 
@@ -713,24 +756,20 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 		),
 		"/"
 	)
-	local webhook = Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
 
-	webhook
+	Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
 		:setContent("@everyone")
 		:addEmbedWithBuilder(function(embed)
 			return embed
 				:setTitle("Error")
 				:setDescription(
-					"<https://roblox.com/groups/"
-						.. self.GroupId
-						.. "/\n"
-						.. "<https://roblox.com/games/"
-						.. game.PlaceId
-						.. "/>\n\n```\n"
-						.. message
-						.. "\n\n"
-						.. stack
-						.. "\n```"
+					string.format(
+						"%s\n%s\n\n```\n%s\n\n%s\n```",
+						"<https://roblox.com/groups/" .. self.GroupId .. "/>",
+						"<https://roblox.com/games/" .. game.PlaceId .. "/>",
+						message,
+						stack
+					)
 				)
 				:setColor(Color3.new(1, 1, 1))
 		end)
@@ -744,7 +783,7 @@ end
 	@return Promise | any
 
 	:::danger BROKEN
-	This method does nothing at the moment.
+	All though this method can be used, it may not result in proper responses.
 	:::
 
 	@yields
@@ -864,7 +903,7 @@ end
 ]=]
 ---
 function api:_getGroupRankFromName(groupRoleName: string): number?
-	if not groupRoleName or typeof(groupRoleName) ~= "string" then
+	if not groupRoleName or typeof(groupRoleName) ~= "string" or groupRoleName == "" then
 		return nil
 	end
 
@@ -1130,7 +1169,7 @@ function api:_fixFormattedString(
 		})
 
 	for _, data: { code: string, equates: string } in formattingCodes do
-		String = string.gsub(String, data.code, data.equates)
+		String = string.gsub(String, data.code, tostring(data.equates))
 	end
 
 	return String
@@ -1378,13 +1417,13 @@ function api:_giveSticks(Player: Player)
 		or self.Settings.RankSticks["sticksModel"]
 
 	local playerBackpack = Player:WaitForChild("Backpack", 10)
-
 	if not playerBackpack then
 		return
 	end
 
 	for _, operationName: string in ipairs(stickTypes) do
 		local cloned = rankStick:Clone()
+
 		cloned:SetAttribute(self._private.clientScriptName, "RankSticks")
 
 		cloned.Name = operationName
@@ -1639,7 +1678,7 @@ function api:_warn(...: string)
 		return
 	end
 
-	warn("[Vibez]:", table.concat({ ... }, " "))
+	warn("[Vibez]:", ...)
 end
 
 --[=[
@@ -2416,8 +2455,13 @@ function api:Destroy()
 		connection:Disconnect()
 	end
 
-	self._private.Function:Destroy()
-	self._private.Event:Destroy()
+	if self._private["Function"] then
+		self._private.Function:Destroy()
+	end
+
+	if self._private["Event"] then
+		self._private.Event:Destroy()
+	end
 
 	for _, v in pairs(self._private.usersWithSticks) do
 		local user = Players:GetPlayerByUserId(v)
@@ -2528,20 +2572,11 @@ end
 ]=]
 ---
 function api:deleteBlacklist(userToDelete: Player | string | number)
-	local userId
-
 	if not userToDelete then
 		return nil
 	end
 
-	if typeof(userToDelete) == "Instance" then
-		userId = userToDelete.UserId
-	else
-		userId = (typeof(userToDelete) == "string" and not tonumber(userToDelete))
-				and self:_getUserIdByName(userToDelete)
-			or userToDelete
-	end
-
+	local userId = self:_verifyUser(userToDelete, "UserId")
 	local isOk, response = self:_http(`/blacklists/{userId}`, "delete")
 
 	if not isOk then
@@ -2556,20 +2591,15 @@ end
 
 --[=[
 	Gets either a full list of blacklists or checks if a player is currently blacklisted.
-	@param userId (string | number)?
+	@param userId (string | number | Player)?
 	@return blacklistResponse
 
 	@within VibezAPI
 	@since 1.6.0
 ]=]
 ---
-function api:getBlacklists(userId: (string | number)?): Types.blacklistResponse
-	if typeof(userId) == nil then
-		userId = ""
-	else
-		userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
-	end
-
+function api:getBlacklists(userId: (string | number | Player)?): Types.blacklistResponse
+	userId = self:_verifyUser(userId, "UserId")
 	local isOk, response = self:_http(`/blacklists/{userId}`)
 
 	if not isOk or not response.Success then
@@ -2626,10 +2656,10 @@ function api:isUserBlacklisted(userId: (string | number)?): (boolean, string?, n
 			blacklistData.data.blacklistedBy or nil,
 		}
 
-		return true, table.unpack(data)
+		return table.unpack(data)
 	end
 
-	return false, nil
+	return false, nil, nil
 end
 
 --[=[
@@ -2826,15 +2856,17 @@ function api:_initialize(apiKey: string): ()
 	end
 
 	-- Get current wrapper version
-	local versionIsOk, productInfo =
-		pcall(MarketplaceService.GetProductInfo, MarketplaceService, 14946453963, Enum.InfoType.Asset)
-	if versionIsOk and productInfo then
-		self._private["_versionTime"] = RoTime.new():set(productInfo.Updated, "#yyyy-#mm-#ddT#hh:#m:#s.#msZ")
-	else
-		self._private["_versionTime"] = 0
-	end
+	coroutine.wrap(function()
+		local versionIsOk, productInfo =
+			pcall(MarketplaceService.GetProductInfo, MarketplaceService, 14946453963, Enum.InfoType.Asset)
+		if versionIsOk and productInfo then
+			self._private["_versionTime"] = RoTime.new():set(productInfo.Updated, "#yyyy-#mm-#ddT#hh:#m:#s.#msZ")
+		else
+			self._private["_versionTime"] = 0
+		end
 
-	self._private["_allowVersionChecking"] = (versionIsOk == true and productInfo ~= nil)
+		self._private["_allowVersionChecking"] = (versionIsOk == true and productInfo ~= nil)
+	end)()
 
 	-- Update the api key using the public function, in case of errors it'll log them.
 	local isOk = self:updateKey(apiKey)
@@ -2844,7 +2876,7 @@ function api:_initialize(apiKey: string): ()
 		self:Destroy()
 		return setmetatable({}, {
 			__index = function()
-				self:_warn("API Key was not accepted, please make sure there are no special character or spaces.")
+				warn("[Vibez]:", "API Key was not accepted, please make sure there are no special character or spaces.")
 				return function() end
 			end,
 		})
@@ -2858,6 +2890,13 @@ function api:_initialize(apiKey: string): ()
 	self._private.Function.OnServerInvoke = function(Player: Player, ...: any)
 		return onServerInvoke(self, Player, ...)
 	end
+
+	table.insert(
+		self._private.Maid,
+		self._private.Event.OnServerEvent:Connect(function(Player: Player, ...: any)
+			return onServerEvent(self, Player, ...)
+		end)
+	)
 
 	-- Chat command connections
 	table.insert(
@@ -3293,6 +3332,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		coroutine.wrap(self._initialize)(self, apiKey)
 	else
 		self:_initialize(apiKey)
+	end
+
+	if Table.Count(self) == 0 then
+		return
 	end
 
 	-- Setup the global variables for use.

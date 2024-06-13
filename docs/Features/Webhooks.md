@@ -31,7 +31,7 @@ local webhookLink = "https://discord.com/api/webhooks/"
 local myWebhook = VibezAPI:getWebhookBuilder(webhookLink)
 ```
 
-### [Webhooks:setContent](/VibezAPI/api/Webhooks#setContent)
+### [WebhookBuilder:setContent](/VibezAPI/api/Webhooks#setContent)
 Sets the content of the message.
 
 Parameter(s): <br />
@@ -42,7 +42,7 @@ Returns: [Webhooks](/VibezAPI/api/Webhooks)
 myWebhook:setContent("Hello World!")
 ```
 
-### [Webhooks:addEmbed](/VibezAPI/api/Webhooks#addEmbed)
+### [WebhookBuilder:addEmbed](/VibezAPI/api/Webhooks#addEmbed)
 Adds an embed to the message with raw embed data.
 
 Parameter(s): <br />
@@ -56,7 +56,7 @@ myWebhook:addEmbed({
 })
 ```
 
-### [Webhooks:addEmbedWithBuilder](/VibezAPI/api/Webhooks#addEmbedWithBuilder)
+### [WebhookBuilder:addEmbedWithBuilder](/VibezAPI/api/Webhooks#addEmbedWithBuilder)
 Adds an embed to the message with a builder.
 
 Parameter(s): <br />
@@ -71,7 +71,7 @@ myWebhook:addEmbedWithBuilder(function(embed)
 end)
 ```
 
-### [Webhooks:Send](/VibezAPI/api/Webhooks#Send)
+### [WebhookBuilder:Send](/VibezAPI/api/Webhooks#Send)
 Sends the message.
 
 Parameter(s): <br />
@@ -80,7 +80,7 @@ Parameter(s): <br />
 myWebhook:Send()
 ```
 
-### [Webhooks:setData](/VibezAPI/api/Webhooks#setData)
+### [WebhookBuilder:setData](/VibezAPI/api/Webhooks#setData)
 Sets the data of the message.
 
 Parameter(s): <br />
@@ -99,7 +99,7 @@ myWebhook:setData({
 })
 ```
 
-### [Webhooks:setUsername](/VibezAPI/api/Webhooks#setUsername)
+### [WebhookBuilder:setUsername](/VibezAPI/api/Webhooks#setUsername)
 Sets the username of the webhook.
 
 Parameter(s): <br />
@@ -110,7 +110,7 @@ Returns: [Webhooks](/VibezAPI/api/Webhooks)
 myWebhook:setUsername("My Username")
 ```
 
-### [Webhooks:setTTS (BROKEN)](/VibezAPI/api/Webhooks#setTTS)
+### [WebhookBuilder:setTTS](/VibezAPI/api/Webhooks#setTTS) <img src="https://img.shields.io/badge/BROKEN-FF0000"></img>
 Sets the TTS of the webhook.
 
 Parameter(s): <br />
