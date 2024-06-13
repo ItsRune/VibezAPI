@@ -62,7 +62,7 @@ local baseSettings = {
 		MaxRank = 255,
 
 		sticksModel = nil, -- Uses default
-		sticksAnimation = 17837716782, -- Uses a very horrible default one.
+		sticksAnimation = "17837716782|17838391578", -- Uses a very horrible default one.
 	},
 
 	Notifications = {
@@ -404,6 +404,13 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 		local animator = humanoid:FindFirstChildOfClass("Animator")
 		local toUse = (animator == nil) and humanoid or animator
 		local animationId = (Data[1] == "Sticks") and self.Settings.RankSticks.sticksAnimation or -1
+
+		local split = string.split(tostring(animationId), "|")
+		if #split == 1 then
+			animationId = split[1]
+		elseif #split >= 2 then
+			animationId = (humanoid.RigType == Enum.RigType.R15) and split[1] or split[2]
+		end
 
 		if animationId == -1 or not tonumber(animationId) then
 			return

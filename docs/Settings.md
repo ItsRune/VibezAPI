@@ -91,7 +91,7 @@ local Vibez = require(14946453963)("API KEY", {
 | MinRank | Number | 255 | The minimum rank required to use rank sticks. | ✔ |
 | MaxRank | Number | 255 | The maximum rank required to use rank sticks. | ✔ |
 | sticksModel | Model | Tool? | The model/tool to use as the rank sticks. (Optional) | ✔ |
-| sticksAnimation | Number | -1 | The animation id to use when the stick is clicked. (Optional) | ❌ |
+| sticksAnimation | Number OR String | "17837716782\|17838391578" | The animation id to use when the stick is clicked. If you have a game that uses both R15 and R6, use a String with the pipe "\|" character to denote ("R15\|R6") versions (Optional) | ✔ |
 
 </details>
 
