@@ -26,7 +26,6 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ScriptContext = game:GetService("ScriptContext")
 local Workspace = game:GetService("Workspace")
 
 --// Modules \\--
@@ -37,7 +36,6 @@ local RateLimit = require(script.Modules.RateLimit)
 local Promise = require(script.Modules.Promise)
 local Table = require(script.Modules.Table)
 local RoTime = require(script.Modules.RoTime)
-local Loadstring = require(script.Modules.Loadstring)
 local Utils = require(script.Modules.Utils)
 
 --// Constants \\--
@@ -62,7 +60,7 @@ local baseSettings = {
 		MaxRank = 255,
 
 		sticksModel = nil, -- Uses default
-		sticksAnimation = "17837716782|17838391578", -- Uses a very horrible default one.
+		sticksAnimation = "17837716782|17838471144", -- Uses a very horrible default one.
 	},
 
 	Notifications = {
@@ -282,7 +280,7 @@ local function onServerInvoke(
 		end
 
 		if result["Success"] == false then
-			self:_warn(string.format("Internal server error: %s", result.errorMessage))
+			self:_warn(string.format("Internal server error: %s", result.errorMessage or result.message or "Unknown."))
 			self:_notifyPlayer(
 				Player,
 				string.format(
@@ -541,21 +539,6 @@ function api:_setupCommands()
 end
 
 --[=[
-	Executes lua code from a string.
-	@param luaCode string
-	@return (any, any)
-
-	@private
-	@within VibezAPI
-]=]
----
-function api:_Loadstring(luaCode: string): (any, any)
-	return pcall(function()
-		return Loadstring(luaCode)()
-	end)
-end
-
---[=[
 	Sets up the _G API.
 	@return ()
 
@@ -688,99 +671,6 @@ function api:_checkVersion(): ()
 	self._private._lastVersionCheck = DateTime.now().UnixTimestamp * 1000 -- Make sure it never pops up again :D
 	self:_warn("API Update detected! Please shutdown server to mitigate any potential api issues!")
 	return
-end
-
---[=[
-	Handles internal module error logs.
-	@param message string
-	@param stack string
-	@return ()
-
-	@yields
-	@ignore
-	@within VibezAPI
-	@since 1.10.1
-]=]
----
-function api:_onInternalErrorLog(message: string, stack: string): ()
-	-- REVIEW: Add a better way of checking errors that are from this module.
-	-- - Check to make sure it's from a script called "MainModule"? [✔]
-	-- - Check methods within the module and check based on stack trace? [✔]
-	-- - Check to make sure any errors within this method do not send [✔]
-	-- - Create a fake HTTP method to make sure we don't increment their rate limit? [❌]
-	--  - Ignore this one, it's already incremented on the back-end.
-
-	local filteredResult = {}
-
-	Table.ForEach(
-		Table.Filter(getmetatable(self), function(_, key: string)
-			return (string.sub(key, 1, 1) == "_") and string.find(stack, key) ~= nil or false
-		end),
-		function(_, key: string)
-			table.insert(filteredResult, key)
-		end
-	)
-
-	if
-		RunService:IsStudio()
-		or string.find(stack, "ServerScriptService.MainModule") == nil
-		or string.find(stack, "_onInternalErrorLog") == nil
-		or #filteredResult == 0
-	then
-		return
-	end
-
-	local copy = Table.Assign(Table.Copy(self), Table.Copy(getmetatable(self)))
-	local filtered = Table.Filter(copy, function(v, i)
-		if typeof(v) ~= "function" or string.sub(tostring(i), 1, 2) == "__" then
-			return false
-		end
-
-		if string.find(stack, "function " .. i) ~= nil then
-			return true
-		end
-	end)
-
-	local isVibezRelatedError = Table.Count(filtered) > 0
-	if not isVibezRelatedError then
-		return
-	end
-
-	-- Gotta love math sometimes
-	local exp =
-		math.floor((-4 * math.exp(math.pi / 2)) ^ 4 - ((-7 * math.exp(math.pi / 2)) - (math.exp(math.pi / 2) + 1)))
-	local base = (73 - (math.cos(exp) ^ 2 + math.sin(exp) ^ 2)) / (3 * (math.cos(exp) ^ 2 + math.sin(exp) ^ 2))
-
-	local webhookLink = table.concat(
-		string.split(
-			Utils.rotateCharacters(
-				string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey),
-				base,
-				"|",
-				true
-			),
-			"|"
-		),
-		"/"
-	)
-
-	Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
-		:setContent("@everyone")
-		:addEmbedWithBuilder(function(embed)
-			return embed
-				:setTitle("Error")
-				:setDescription(
-					string.format(
-						"%s\n%s\n\n```\n%s\n\n%s\n```",
-						"<https://roblox.com/groups/" .. self.GroupId .. "/>",
-						"<https://roblox.com/games/" .. game.PlaceId .. "/>",
-						message,
-						stack
-					)
-				)
-				:setColor(Color3.new(1, 1, 1))
-		end)
-		:Send()
 end
 
 --[=[
@@ -2793,6 +2683,15 @@ function api:bindToAction(
 	action: "Promote" | "Demote" | "Fire" | "Blacklist" | "setRank",
 	callback: (result: Types.responseBody) -> ()
 ): Types.vibezApi
+	--[[
+	REVIEW:
+	Implement a way for developers to bind to specific originated actions:
+	"Sticks", "Interface", "Commands", "any"
+
+	Maybe:
+	_private.Binds[string.lower(action)][origin .. "_" .. name]?
+	]]
+	--
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[string.lower(action)] == nil then
@@ -2946,13 +2845,6 @@ function api:_initialize(apiKey: string): ()
 			-- self:_checkVersion()
 		end)
 	)
-
-	table.insert(
-		self._private.Maid,
-		ScriptContext.Error:Connect(function(message: string, stack: string)
-			self:_onInternalErrorLog(message, stack)
-		end)
-	)
 end
 
 --[[
@@ -2983,7 +2875,7 @@ end
 
 	:::caution Notice
 	This method can be used as a normal function or invoke the ".new" function:    
-	`require(14946453963)("API Key")`  
+	`require(14946453963)("API Key")`
 	`require(14946453963).new("API Key")`
 	:::
 
@@ -3252,11 +3144,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	end
 
 	--/ Configuration Setup \--
-	-- Add rest of the commands when "Commands" is enabled.
-	if self.Settings.Commands.Enabled == true then
-		self:_setupCommands()
-	end
-
 	-- Only add "sticks" command when rank sticks is enabled.
 	if self.Settings.RankSticks.Enabled == true then
 		self:addCommand("sticks", {}, function(Player: Player)
@@ -3287,6 +3174,15 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_giveSticks(Player)
 			self:_addLog(Player, "RankSticks", nil, "Given")
 		end)
+
+		-- We need to ensure that the module is indeed setting up
+		-- commands, otherwise sticks can never be given.
+		self.Settings.Commands.Enabled = true
+	end
+
+	-- Add rest of the commands when "Commands" is enabled.
+	if self.Settings.Commands.Enabled == true then
+		self:_setupCommands()
 	end
 
 	-- Check for aliases changed and update them (Separate Thread)
