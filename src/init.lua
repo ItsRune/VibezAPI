@@ -10,8 +10,8 @@
 	Link: https://www.roblox.com/users/107392833/profile
 	Discord: ltsrune // 352604785364697091
 	Created: 9/11/2023 15:01 EST
-	Updated: 6/13/2024 00:19 EST
-	Version: 1.11.5
+	Updated: 6/30/2024 8:53 EST
+	Version: 1.11.6
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -26,6 +26,7 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 --// Modules \\--
@@ -37,6 +38,7 @@ local Promise = require(script.Modules.Promise)
 local Table = require(script.Modules.Table)
 local RoTime = require(script.Modules.RoTime)
 local Utils = require(script.Modules.Utils)
+local Debug = require(script.Modules.Debug)
 
 --// Constants \\--
 local api = {}
@@ -112,7 +114,7 @@ local baseSettings = {
 	-- },
 
 	Blacklists = {
-		Enabled = true,
+		Enabled = false,
 		userIsBlacklistedMessage = "You have been blacklisted from the game for: <BLACKLIST_REASON>",
 	},
 
@@ -270,17 +272,25 @@ local function onServerInvoke(
 		if actionFunc == "Blacklist" then
 			result = self[actionFunc](self, userId, "Unspecified. (Interface)", Player)
 
-			if Table.Count(self._private.Binds[actionFunc]) > 0 then
-				for _, callback in pairs(self._private.Binds[actionFunc]) do
-					coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
-				end
-			end
+			-- if Table.Count(self._private.Binds[actionFunc]) > 0 then
+			-- 	for _, callback in pairs(self._private.Binds[actionFunc]) do
+			-- 		coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
+			-- 	end
+			-- end
 		else
 			result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
 		end
 
+		if
+			self._private.Binds[string.lower(actionFunc)] ~= nil
+			and Table.Count(self._private.Binds[string.lower(actionFunc)]) > 0
+		then
+			for _, callback in pairs(self._private.Binds[string.lower(actionFunc)]) do
+				coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
+			end
+		end
+
 		if result["Success"] == false then
-			self:_warn(string.format("Internal server error: %s", result.errorMessage or result.message or "Unknown."))
 			self:_notifyPlayer(
 				Player,
 				string.format(
@@ -290,6 +300,7 @@ local function onServerInvoke(
 					userId
 				)
 			)
+			self:_warn(string.format("Internal server error: %s", result.errorMessage or result.message or "Unknown."))
 			return false
 		end
 
@@ -308,15 +319,6 @@ local function onServerInvoke(
 				)
 			)
 			return true
-		end
-
-		if
-			self._private.Binds[string.lower(actionFunc)] ~= nil
-			and Table.Count(self._private.Binds[string.lower(actionFunc)]) > 0
-		then
-			for _, callback in pairs(self._private.Binds[string.lower(actionFunc)]) do
-				coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
-			end
 		end
 
 		return true
@@ -429,6 +431,16 @@ end
 
 --// Private Functions \\--
 --[=[
+	@prop _debug vibezDebugTools
+	Refrence to a table that holds useful debugging function(s).
+
+	@private
+	@within VibezAPI
+]=]
+---
+api._debug = Debug :: Types.vibezDebugTools
+
+--[=[
 	Sets up the in-game commands.
 	@return ()
 
@@ -438,6 +450,10 @@ end
 ---
 function api:_setupCommands()
 	self:addCommand("promote", {}, function(Player: Player, Args: { string })
+		if not Args[1] then
+			return
+		end
+
 		local affectedUsers = {}
 		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
@@ -450,6 +466,10 @@ function api:_setupCommands()
 	end)
 
 	self:addCommand("demote", {}, function(Player: Player, Args: { string })
+		if not Args[1] then
+			return
+		end
+
 		local affectedUsers = {}
 		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
@@ -462,6 +482,10 @@ function api:_setupCommands()
 	end)
 
 	self:addCommand("fire", {}, function(Player: Player, Args: { string })
+		if not Args[1] then
+			return
+		end
+
 		local affectedUsers = {}
 		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
@@ -474,6 +498,10 @@ function api:_setupCommands()
 	end)
 
 	self:addCommand("blacklist", {}, function(Player: Player, Args: { string })
+		if not Args[1] then
+			return
+		end
+
 		local affectedUsers = {}
 		local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 		table.remove(Args, 1)
@@ -496,6 +524,10 @@ function api:_setupCommands()
 	end)
 
 	self:addCommand("unblacklist", {}, function(Player: Player, Args: { string })
+		if not Args[1] then
+			return
+		end
+
 		local affectedUsers = {}
 		local targetData = table.remove(Args[1])
 		local Targets
@@ -547,9 +579,17 @@ end
 ]=]
 ---
 function api:_setupGlobals(): ()
-	if _G["VibezApi"] ~= nil or self.Settings.Misc.createGlobalVariables == false then
+	if
+		_G["VibezApi"] ~= nil
+		or ServerStorage:FindFirstChild("VibezApi")
+		or self.Settings.Misc.createGlobalVariables == false
+	then
 		return
 	end
+
+	self:_warn(
+		"We are switching from '_G' to using RemoteFunctions within 'ServerStorage', please look at the updated documentation for what this change entails. For now everything using '_G' will work, however in the near future this will no longer be possible. We recommend you update all your scripts to use the new version of Global methods."
+	)
 
 	local Ranking = {
 		Promote = function(
@@ -589,6 +629,7 @@ function api:_setupGlobals(): ()
 
 		saveActivity = function(
 			_: { any },
+			_: { any },
 			userId: string | number,
 			userRank: number,
 			secondsSpent: number?,
@@ -627,6 +668,89 @@ function api:_setupGlobals(): ()
 			return data["Role"]
 		end,
 	}
+
+	local serializedData = {
+		["Ranking"] = {
+			["Promote"] = "RemoteFunction",
+			["Fire"] = "RemoteFunction",
+			["Demote"] = "RemoteFunction",
+			["setRank"] = "RemoteFunction",
+		},
+		["Activity"] = {
+			["Save"] = "RemoteFunction",
+			["Fetch"] = "RemoteFunction",
+		},
+		["General"] = {
+			["getGroup"] = "RemoteFunction",
+			["getGroupRank"] = "RemoteFunction",
+			["getGroupRole"] = "RemoteFunction",
+		},
+		["Notification"] = "RemoteFunction",
+		["Webhook"] = "RemoteFunction",
+	}
+
+	local function deserialize(item: any)
+		if typeof(item) == "table" then
+			local folder = Instance.new("Folder")
+
+			for key: string, value: any in pairs(item) do
+				local newInst = deserialize(value)
+				if not newInst then
+					continue
+				end
+
+				newInst.Name = key
+				newInst.Parent = folder
+			end
+
+			return folder
+		elseif typeof(item) == "string" then
+			local isOk, newInst = pcall(Instance.new, item)
+			if not isOk then
+				return nil
+			end
+
+			return newInst
+		end
+	end
+
+	local globalsFolder = deserialize(serializedData)
+	globalsFolder.Name = "VibezApi"
+	globalsFolder.Parent = ServerStorage
+
+	globalsFolder.Ranking.Promote.OnServerInvoke = function(...: any): any
+		return Ranking:Promote(...)
+	end
+	globalsFolder.Ranking.Demote.OnServerInvoke = function(...: any): any
+		return Ranking:Demote(...)
+	end
+	globalsFolder.Ranking.Fire.OnServerInvoke = function(...: any): any
+		return Ranking:Fire(...)
+	end
+	globalsFolder.Ranking.setRank.OnServerInvoke = function(...: any): any
+		return Ranking:setRank(...)
+	end
+	globalsFolder.Activity.Save.OnServerInvoke = function(...: any): any
+		return Activity:saveActivity(...)
+	end
+	globalsFolder.Activity.Fetch.OnServerInvoke = function(...: any): any
+		return Activity:getActivity(...)
+	end
+	globalsFolder.Notification.OnServerInvoke = function(...: any): any
+		return Notifications:new(...)
+	end
+	globalsFolder.Webhook.OnServerInvoke = function(...: any): any
+		return webHooks:new(...)
+	end
+	globalsFolder.General.getGroup.OnServerInvoke = function(...: any): any
+		return General:getGroup(...)
+	end
+	globalsFolder.General.getGroupRank.OnServerInvoke = function(...: any): any
+		return General:getGroupRank(...)
+	end
+	globalsFolder.General.getGroupRole.OnServerInvoke = function(...: any): any
+		return General:getGroupRole(...)
+	end
 
 	_G.VibezApi = {
 		Ranking = Ranking,
@@ -779,7 +903,8 @@ function api:_http(
 		data.Body = decodedBody
 	end
 
-	return (success or (data.StatusCode >= 200 and data.StatusCode < 300)), data
+	warn(Options)
+	return (success and data.StatusCode >= 200 and data.StatusCode < 300), data
 end
 
 --[=[
@@ -2192,7 +2317,8 @@ function api:addArgumentPrefix(
 		playerToCheck: Player,
 		incomingArgument: string,
 		internalFunctions: Types.vibezCommandFunctions
-	) -> boolean
+	) -> boolean,
+	metaData: { [string]: boolean? }?
 ): Types.vibezApi
 	if self._private.commandOperationCodes[operationName] then
 		self:_warn(`Command operation code '{operationCode}' already exists!`)
@@ -2208,7 +2334,19 @@ function api:addArgumentPrefix(
 		end
 	end
 
-	self._private.commandOperationCodes[operationName] = { Code = operationCode, Execute = operationFunction }
+	local data = { Code = operationCode, Execute = operationFunction }
+
+	if typeof(metaData) == "table" and Table.Count(metaData) > 0 then
+		for key: string, value: boolean in pairs(metaData) do
+			if data[key] ~= nil or typeof(value) ~= "boolean" then
+				continue
+			end
+
+			data[key] = value
+		end
+	end
+
+	self._private.commandOperationCodes[operationName] = data
 	return self
 end
 
@@ -2847,24 +2985,6 @@ function api:_initialize(apiKey: string): ()
 	)
 end
 
---[[
-	REVIEW:
-	Soon to be deprecated:
-]]
-function api:addCommandOperation(...)
-	self:_warn(
-		"Hey! ':addCommandOperation' is eventually going to become ':addArgumentPrefix', please update your scripts as soon as capable."
-	)
-	return self:addArgumentPrefix(...)
-end
-
-function api:removeCommandOperation(...)
-	self:_warn(
-		"Hey! ':removeCommandOperation' is eventually going to become ':removeArgumentPrefix', please update your scripts as soon as capable."
-	)
-	return self:removeArgumentPrefix(...)
-end
-
 --// Constructor \\--
 --[=[
 	@function new
@@ -3027,7 +3147,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				Name = name,
 				UserId = id,
 			}
-		end
+		end,
+		{ isExternal = true }
 	)
 
 	self:addArgumentPrefix("Rank", "r:", function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
@@ -3377,5 +3498,12 @@ return setmetatable({
 	.StatusMessage string?
 	.Success boolean
 	.rawBody string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface vibezDebugTools
+	.stringifyTableDeep (tbl: { any }, tabbing: number?) -> string
+	@private
 	@within VibezAPI
 ]=]

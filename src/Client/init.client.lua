@@ -20,6 +20,7 @@ local isUIContextEnabled, isWarningsAllowed = false, true
 
 --// Modules \\--
 local Table = require(script.Table)
+local Tweens = require(script.TweenService)
 
 --// Functions \\--
 local function findFirstChildWhichIsAByName(parent: Instance, name: string, class: string, tries: number?): Instance?
@@ -137,12 +138,25 @@ local function onNotification(Message: string)
 	newItem.AnchorPoint = Vector2.new(0.5, 1)
 	newItem.BackgroundTransparency = 1
 
-	newItem:TweenSize(
-		UDim2.fromOffset(textSize.X, textSize.Y),
-		notificationSettings.entranceTweenInfo.Direction,
-		notificationSettings.entranceTweenInfo.Style,
-		notificationSettings.entranceTweenInfo.timeItTakes
+	local tweenInInfo = TweenInfo.new(
+		notificationSettings.entranceTweenInfo.timeItTakes,
+		Enum.EasingStyle[notificationSettings.entranceTweenInfo.Style],
+		Enum.EasingDirection[notificationSettings.entranceTweenInfo.Direction]
 	)
+	local tweenOutInfo = TweenInfo.new(
+		notificationSettings.exitTweenInfo.timeItTakes,
+		Enum.EasingStyle[notificationSettings.exitTweenInfo.Style],
+		Enum.EasingDirection[notificationSettings.exitTweenInfo.Direction]
+	)
+
+	local tweenIn = Tweens(newItem, tweenInInfo, {
+		Size = UDim2.fromOffset(textSize.X, textSize.Y),
+	})
+	local tweenOut = Tweens(newItem, tweenOutInfo, {
+		Size = UDim2.fromScale(0, 0),
+	})
+
+	tweenIn:Play()
 
 	-- Filter others to move upwards
 	local children = Table.Filter(notifGui.Holder:GetChildren(), function(v)
@@ -152,29 +166,24 @@ local function onNotification(Message: string)
 	if #children > 0 then
 		coroutine.wrap(function()
 			for _, v in pairs(children) do
-				v:TweenPosition(
-					UDim2.new(0.5, 0, 1, v.Position.Y.Offset - textSize.Y),
-					notificationSettings.entranceTweenInfo.Direction,
-					notificationSettings.entranceTweenInfo.Style,
-					notificationSettings.entranceTweenInfo.timeItTakes,
-					true
-				)
+				Tweens(v, tweenInInfo, {
+					Position = UDim2.new(0.5, 0, 1, v.Position.Y.Offset - textSize.Y),
+				}):Play()
 			end
 		end)()
 	end
 
 	coroutine.wrap(function()
 		task.wait(notificationSettings.delayUntilRemoval)
-		newItem:TweenSize(
-			UDim2.fromScale(0, 0),
-			notificationSettings.exitTweenInfo.Direction,
-			notificationSettings.exitTweenInfo.Style,
-			notificationSettings.exitTweenInfo.timeItTakes,
-			false,
-			function()
-				Debris:AddItem(newItem, 0)
+		tweenOut:setCallback(function(state: Enum.PlaybackState)
+			if state ~= Enum.PlaybackState.Completed then
+				return
 			end
-		)
+
+			Debris:AddItem(newItem, 0)
+		end)
+
+		tweenOut:Play()
 	end)()
 end
 
@@ -214,7 +223,7 @@ local function onSetupRankSticks()
 	Maid["RankSticks"] = {}
 
 	local function handleStickMode(actionName: string, child: Tool)
-		if rankStickMode == "DetectionInFront" then -- Default
+		if rankStickMode == "DetectionInFront" or rankStickMode == "Default" then -- Default
 			local cf, size = Character:GetBoundingBox()
 			local newPart = Instance.new("Part")
 			local Weld = Instance.new("WeldConstraint")

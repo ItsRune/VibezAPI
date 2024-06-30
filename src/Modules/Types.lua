@@ -24,6 +24,10 @@ type fullBlacklists = {
 }
 
 -- Exported Types
+export type vibezDebugTools = {
+	stringifyTableDeep: (tbl: { any }, tabbing: number?) -> string,
+}
+
 export type blacklistResponse = userBlacklistResponse | fullBlacklists
 
 export type groupIdResponse = {
@@ -226,6 +230,7 @@ export type vibezApi = {
 	-- Misc
 	GroupId: number,
 	Settings: vibezSettings,
+	_debug: vibezDebugTools,
 	_private: {
 		Event: RemoteEvent?,
 		Function: RemoteFunction?,
