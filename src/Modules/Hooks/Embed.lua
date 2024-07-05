@@ -1,5 +1,5 @@
 --[=[
-	Builder for discord embeds.
+	Builder for embeds.
     
 	@class EmbedBuilder
 ]=]

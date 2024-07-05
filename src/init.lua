@@ -7,11 +7,10 @@
 		 \___/ \___/\____/\____/\_____/
 
 	Author: ltsRune
-	Link: https://www.roblox.com/users/107392833/profile
-	Discord: ltsrune // 352604785364697091
+	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
 	Updated: 6/30/2024 8:53 EST
-	Version: 1.11.6
+	Version: 1.11.7
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -39,6 +38,9 @@ local Table = require(script.Modules.Table)
 local RoTime = require(script.Modules.RoTime)
 local Utils = require(script.Modules.Utils)
 local Debug = require(script.Modules.Debug)
+
+-- In the future this module will be used for auto updates. But for now, it won't be used.
+-- local Loadstring = require(script.Modules.Loadstring)
 
 --// Constants \\--
 local api = {}
@@ -427,6 +429,11 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 
 		animationTrack:Play()
 	end
+end
+
+local function checkHttp()
+	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
+	return success
 end
 
 --// Private Functions \\--
@@ -903,7 +910,6 @@ function api:_http(
 		data.Body = decodedBody
 	end
 
-	warn(Options)
 	return (success and data.StatusCode >= 200 and data.StatusCode < 300), data
 end
 
@@ -1643,21 +1649,6 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	end, function(...)
 		return self:getUsersForCommands(...)
 	end)
-end
-
---[=[
-	Checks for if HTTP is enabled
-	@return boolean
-
-	@yields
-	@private
-	@within VibezAPI
-	@since 1.1.0
-]=]
----
-function api:_checkHttp()
-	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
-	return success
 end
 
 --[=[
@@ -2429,13 +2420,13 @@ end
 	@since 1.1.1
 ]=]
 ---
-function api:isPlayerBoostingDiscord(User: number | string | Player): boolean
+function api:isPlayerABooster(User: number | string | Player): boolean
 	local userId
 
 	if typeof(User) == "Instance" and User:IsA("Player") then
 		userId = User.UserId
 	elseif typeof(User) == "Instance" then
-		self:_warn(`Class name, "{User.ClassName}", is not supported for ":isPlayerBoostingDiscord"`)
+		self:_warn(`Class name, "{User.ClassName}", is not supported for ":isPlayerABooster"`)
 		return nil
 	else
 		userId = (typeof(userId) == "number" or tonumber(userId) ~= nil) and tonumber(userId) or self:_get(userId)
@@ -2892,13 +2883,6 @@ function api:_initialize(apiKey: string): ()
 	end
 	self._private._initialized = true
 
-	if not self:_checkHttp() then
-		self:_warn("Http is not enabled! Please enable it before trying to interact with our API!")
-
-		-- Allow for GC to clean up the class.
-		self:Destroy()
-	end
-
 	-- Get current wrapper version
 	coroutine.wrap(function()
 		local versionIsOk, productInfo =
@@ -3011,12 +2995,52 @@ end
 	@since 1.0.1
 ]=]
 ---
-function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
+function Constructor(apiKey: string, extraOptions: Types.vibezSettings?, _githubSha: string?): Types.vibezApi
 	if RunService:IsClient() then
-		warn("[Vibez]: Cannot fetch API on the client!")
+		error("[Vibez]: Cannot fetch API on the client!")
 		Debris:AddItem(script, 0)
 		return nil
 	end
+
+	if not checkHttp() then
+		error("[VibezAPI]: Http is not enabled! Please enable it before trying to interact with our API!")
+		return
+	end
+
+	-- Auto-Update with github, lets hope this doesn't hit any rate limits.
+	-- local githubCommitSha = _githubSha or "178708a5cd2d65a849434fd12159c0b58561aca7"
+	-- local _, responseEncoded = pcall(
+	-- 	HttpService.GetAsync,
+	-- 	HttpService,
+	-- 	"https://api.github.com/repos/ItsRune/VibezAPI/commits/" .. string.sub(githubCommitSha, 1, 7)
+	-- )
+	-- local _, commitJSON = pcall(HttpService.JSONDecode, HttpService, responseEncoded)
+
+	-- -- This 'if' statement is just ew.
+	-- if commitJSON.sha ~= githubCommitSha then
+	-- 	local initData = Table.Find(commitJSON.files, function(data)
+	-- 		return data.filename == "src/init.lua"
+	-- 	end)
+
+	-- 	if initData then
+	-- 		warn("[VibezAPI-Update]: Github change found! Fetching Update...")
+	-- 		local fetchOk, sourceCode = pcall(HttpService.GetAsync, HttpService, initData.raw_url)
+
+	-- 		if fetchOk then
+	-- 			warn("[VibezAPI-Update]: Updating...")
+	-- 			warn(sourceCode)
+	-- 			local func = Loadstring(sourceCode, getfenv())
+
+	-- 			warn(typeof(func), func)
+
+	-- 			return func(apiKey, extraOptions, commitJSON.sha)
+	-- 		else
+	-- 			warn("[VibezAPI-Update]: Update failed, keeping same version.")
+	-- 		end
+	-- 	end
+	-- else
+	-- 	warn("[VibezAPI-Update]: Version matched!")
+	-- end
 
 	--[=[
 		@class VibezAPI

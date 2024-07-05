@@ -36,7 +36,7 @@ Class.__index = Class
 
 --// Public Functions \--
 --[=[
-	Creates discord embed widgets when given a part. (SurfaceGui) Or a normal screen gui.
+	Creates discoared embed widgets when given a part. (SurfaceGui) Or a normal screen gui.
 	@param api VibezAPI
 	@return Widgets
 
