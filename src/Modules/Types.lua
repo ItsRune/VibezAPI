@@ -424,6 +424,6 @@ export type embedCreator = {
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi
 
--- export type widgetTypes = "Discord" -- Add more if we decide to add more. (Twitter / Etc)
+-- export type widgetTypes = "" -- Add more if we decide to add more. (Social media platforms)
 
 return nil

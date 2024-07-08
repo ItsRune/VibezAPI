@@ -1,6 +1,5 @@
 -- REMOVE WHEN CONFIRMED --
---# selene: allow(empty_if)
---# selene: allow(unused_variable)
+--# selene: allow(empty_if, unused_variable)
 
 --[[
 	REVIEW:
@@ -263,7 +262,7 @@ function Class:_updateCache()
 				{
 					username = "Kosmos",
 					status = "dnd",
-					playing = "Derail Valley",
+					playing = "ROBLOX",
 				},
 			},
 		},
@@ -301,6 +300,7 @@ end
 --// Return \--
 return setmetatable(Widgets, {
 	__call = function(self, ...)
-		return rawget(self, "new")(...)
+		return nil -- Unreachable
+		-- return rawget(self, "new")(...)
 	end,
 })

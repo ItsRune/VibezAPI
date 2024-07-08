@@ -1843,24 +1843,25 @@ function api:getGroupId()
 	local Body: groupIdResponse = res.Body
 
 	-- Make this a new thread, in case there's a failure we don't return nothing.
-	coroutine.wrap(function()
-		if Body["inGameConfigJSON"] ~= nil then
-			self:_warn("Loading Settings from dashboard...")
+	-- These lines below were for the planned dashboard, which has been placed on halt.
+	-- coroutine.wrap(function()
+	-- 	if Body ~= nil and Body["inGameConfigJSON"] ~= nil then
+	-- 		self:_warn("Loading Settings from dashboard...")
 
-			-- Convert JSON payload to lua tables
-			local jsonConversionIsOk, JSON = pcall(HttpService.JSONDecode, HttpService, Body.inGameConfigJSON)
+	-- 		-- Convert JSON payload to lua tables
+	-- 		local jsonConversionIsOk, JSON = pcall(HttpService.JSONDecode, HttpService, Body.inGameConfigJSON)
 
-			if not jsonConversionIsOk then
-				self:_warn("Settings JSON parse error.")
-				return
-			end
+	-- 		if not jsonConversionIsOk then
+	-- 			self:_warn("Settings JSON parse error.")
+	-- 			return
+	-- 		end
 
-			-- Make current settings the template, so we can keep api key in the
-			-- settings table.
-			self.Settings = Table.Reconcile(JSON, self.Settings)
-			self:_warn("Settings have been loaded from the dashboard successfully!")
-		end
-	end)()
+	-- 		-- Make current settings the template, so we can keep api key in the
+	-- 		-- settings table.
+	-- 		self.Settings = Table.Reconcile(JSON, self.Settings)
+	-- 		self:_warn("Settings have been loaded from the dashboard successfully!")
+	-- 	end
+	-- end)()
 
 	return isOk and Body.groupId or -1
 end

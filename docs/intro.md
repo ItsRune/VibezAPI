@@ -17,7 +17,7 @@ The main pro of this method is that you get auto-updates and you don't have to w
 **Due to Roblox taking down our module, this will be the only method while we attempt to get our module back up.** <br />
 This method is recommended if you'd like more control over our module. With this method, you also get the autocomplete feature in Roblox Studio.
 
-1. Download the [Module](https://drive.google.com/uc?export=download&id=1RlxktXr1ZRx1JHt476oJe5DuII6shLDz)
+1. Download the [Module](https://drive.google.com/uc?export=download&id=1VQk8cKSCx5ZGmD622BiOHDitKbK-370e)
 2. Insert the module into `ServerScriptService`
 3. Use `require(game:GetService("ServerScriptService").VibezAPI)` to fetch the module within your script
     - Anywhere you see `require(14946453963)` in the documentation, replace it with `require(game:GetService("ServerScriptService").VibezAPI)`
