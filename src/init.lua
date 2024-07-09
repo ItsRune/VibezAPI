@@ -37,7 +37,6 @@ local Promise = require(script.Modules.Promise)
 local Table = require(script.Modules.Table)
 local RoTime = require(script.Modules.RoTime)
 local Utils = require(script.Modules.Utils)
-local Debug = require(script.Modules.Debug)
 
 -- In the future this module will be used for auto updates. But for now, it won't be used.
 -- local Loadstring = require(script.Modules.Loadstring)
@@ -437,16 +436,6 @@ local function checkHttp()
 end
 
 --// Private Functions \\--
---[=[
-	@prop _debug vibezDebugTools
-	Refrence to a table that holds useful debugging function(s).
-
-	@private
-	@within VibezAPI
-]=]
----
-api._debug = Debug :: Types.vibezDebugTools
-
 --[=[
 	Sets up the in-game commands.
 	@return ()
