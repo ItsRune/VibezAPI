@@ -10,7 +10,7 @@
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
 	Updated: 6/30/2024 8:53 EST
-	Version: 1.11.7
+	Version: 0.10.7
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
@@ -776,7 +776,7 @@ end
 	@tag Unavailable
 	@private
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:_checkVersion(): ()
@@ -818,7 +818,7 @@ end
 	@tag Unavailable
 	@private
 	@within VibezAPI
-	@since 1.8.0
+	@since 0.8.0
 ]=]
 ---
 function api:_promisify(functionToBind: (...any) -> ...any, ...: any): any
@@ -927,7 +927,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:_getGroupRankFromName(groupRoleName: string): number?
@@ -959,7 +959,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?): any?
@@ -1026,7 +1026,7 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.5.0
+	@since 0.5.0
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
@@ -1094,7 +1094,7 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.5.0
+	@since 0.5.0
 ]=]
 ---
 function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
@@ -1143,7 +1143,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:_getUserIdByName(username: string): number
@@ -1161,7 +1161,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.11.4
+	@since 0.10.4
 ]=]
 ---
 function api:_fixFormattedString(
@@ -1211,7 +1211,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:_getNameById(userId: number): string?
@@ -1229,7 +1229,7 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:_createRemote()
@@ -1279,7 +1279,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.2.1
+	@since 0.2.1
 ]=]
 ---
 function api:_getRoleIdFromRank(rank: number | string): number?
@@ -1323,7 +1323,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.10.0
+	@since 0.10.0
 ]=]
 ---
 function api:_notifyPlayer(Player: Player, Message: string): ()
@@ -1342,7 +1342,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.4.0
+	@since 0.4.0
 ]=]
 ---
 function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | number }): { Player? }
@@ -1436,7 +1436,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.9.0
+	@since 0.9.0
 ]=]
 ---
 function api:_giveSticks(Player: Player)
@@ -1468,7 +1468,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.9.0
+	@since 0.9.0
 ]=]
 ---
 function api:_removeSticks(Player: Player)
@@ -1501,7 +1501,7 @@ end
 	@yields
 	@tag Chainable
 	@within VibezAPI
-	@since 1.9.1
+	@since 0.9.1
 ]=]
 ---
 function api:giveRankSticks(User: Player | string | number, shouldCheckPermissions: boolean?): Types.vibezApi
@@ -1533,7 +1533,7 @@ end
 	@yields
 	@tag Chainable
 	@within VibezAPI
-	@since 1.9.1
+	@since 0.9.1
 ]=]
 ---
 function api:setRankStickTool(tool: Tool | Model): Types.vibezApi
@@ -1598,7 +1598,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
@@ -1659,7 +1659,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.8.0
+	@since 0.8.0
 ]=]
 ---
 function api:_checkPlayerForRankChange(userId: number)
@@ -1704,7 +1704,7 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.7.0
+	@since 0.7.0
 ]=]
 ---
 function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any)
@@ -1726,7 +1726,7 @@ end
 
 	@within VibezAPI
 	@private
-	@since 1.9.0
+	@since 0.9.0
 ]=]
 ---
 function api:_buildAttributes()
@@ -1780,7 +1780,7 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.3.0
+	@since 0.3.0
 ]=]
 function api:_playerIsValidStaff(Player: Player | number | string)
 	local userId = 0
@@ -1803,7 +1803,7 @@ end
 
 	@private
 	@within VibezAPI
-	@since 1.9.2
+	@since 0.9.2
 ]=]
 function api:_verifyUser(userId: Player | number | string, typeToReturn: "UserId" | "Player" | "Name")
 	if typeof(userId) == "Instance" and userId:IsA("Player") then
@@ -1830,7 +1830,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:getGroupId()
@@ -1871,7 +1871,7 @@ end
 	@return simplifiedAPI
 
 	@within VibezAPI
-	@since 1.11.0
+	@since 0.10.0
 ]=]
 ---
 function api:getSimplified()
@@ -1969,7 +1969,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:setRank(
@@ -2030,7 +2030,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
@@ -2076,7 +2076,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
@@ -2122,7 +2122,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
@@ -2169,7 +2169,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.4.0
+	@since 0.4.0
 ]=]
 ---
 function api:bulkRank(
@@ -2229,7 +2229,7 @@ end
 	@return VibezAPI
 
 	@within VibezAPI
-	@since 1.3.1
+	@since 0.3.1
 ]=]
 function api:addCommand(
 	commandName: string,
@@ -2299,7 +2299,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
-	@since 1.3.1
+	@since 0.3.1
 ]=]
 function api:addArgumentPrefix(
 	operationName: string,
@@ -2353,7 +2353,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
-	@since 1.3.1
+	@since 0.3.1
 ]=]
 ---
 function api:removeArgumentPrefix(operationName: string): Types.vibezApi
@@ -2366,7 +2366,7 @@ end
 
 	@within VibezAPI
 	@tag Chainable
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:updateLoggerName(newTitle: string): nil
@@ -2381,7 +2381,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.2.0
+	@since 0.2.0
 ]=]
 ---
 function api:updateKey(newApiKey: string): boolean
@@ -2418,7 +2418,7 @@ end
 	@yields
 	@private
 	@within VibezAPI
-	@since 1.1.1
+	@since 0.1.1
 ]=]
 ---
 function api:isPlayerABooster(User: number | string | Player): boolean
@@ -2466,7 +2466,7 @@ end
 	Destroys the VibezAPI class.
 
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 function api:Destroy()
@@ -2526,7 +2526,7 @@ end
 	@return Webhooks
 
 	@within VibezAPI
-	@since 1.5.0
+	@since 0.5.0
 ]=]
 ---
 function api:getWebhookBuilder(webhook: string): Types.vibezHooks
@@ -2542,7 +2542,7 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
-	@since 1.6.0
+	@since 0.6.0
 ]=]
 ---
 function api:addBlacklist(
@@ -2595,7 +2595,7 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
-	@since 1.6.0
+	@since 0.6.0
 ]=]
 ---
 function api:deleteBlacklist(userToDelete: Player | string | number)
@@ -2622,7 +2622,7 @@ end
 	@return blacklistResponse
 
 	@within VibezAPI
-	@since 1.6.0
+	@since 0.6.0
 ]=]
 ---
 function api:getBlacklists(userId: (string | number | Player)?): Types.blacklistResponse
@@ -2670,7 +2670,7 @@ end
 	@return (boolean, string?)
 
 	@within VibezAPI
-	@since 1.6.0
+	@since 0.6.0
 ]=]
 ---
 function api:isUserBlacklisted(userId: (string | number)?): (boolean, string?, number?)
@@ -2695,7 +2695,7 @@ end
 
 	@tag Chainable
 	@within VibezAPI
-	@since 1.8.0
+	@since 0.8.0
 ]=]
 ---
 function api:waitUntilLoaded(): Types.vibezApi?
@@ -2721,7 +2721,7 @@ end
 	@return activityResponse
 
 	@within VibezAPI
-	@since 1.3.0
+	@since 0.3.0
 ]=]
 ---
 function api:getActivity(userId: (string | number)?): Types.activityResponse
@@ -2746,7 +2746,7 @@ end
 	@return httpResponse
 
 	@within VibezAPI
-	@since 1.3.0
+	@since 0.3.0
 ]=]
 ---
 function api:saveActivity(
@@ -2805,7 +2805,7 @@ end
 	:::
 
 	@within VibezAPI
-	@since 1.9.0
+	@since 0.9.0
 ]=]
 ---
 function api:bindToAction(
@@ -2847,7 +2847,7 @@ end
 	@return VibezAPI
 
 	@within VibezAPI
-	@since 1.9.0
+	@since 0.9.0
 ]=]
 ---
 function api:unbindFromAction(name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist"): Types.vibezApi
@@ -3408,7 +3408,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@since 1.1.0
+	@since 0.1.0
 ]=]
 ---
 return setmetatable({

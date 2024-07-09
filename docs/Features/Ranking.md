@@ -104,8 +104,8 @@ There's a chance this script may not work, as it's not tested. If you have any i
 
 ```lua title="ServerScriptService/autoRankPoints.server.lua"
 --// Configuration \\--
-local apiKey = "API_KEY"
-local pointLocation = "(player).leaderstats.Points" -- Location of user's points
+local groupId = 0, -- Your Group's Id
+local apiKey = "API_KEY" -- Vibez's API Key
 local pointRanks = {
     { Rank = 0, pointsRequired = 0 }
 }
@@ -122,9 +122,13 @@ local userCache = {}
 
 --// Functions \\--
 local function onPlayerAdded(Player: Player)
+    -- Wherever you're keeping your player's points, this is what you'd want to change it to.
+    local pointStats = Player:WaitForChild("leaderstats", 120):WaitForChild("Points", 120)
+
+    -- Don't touch below unless you know what you're doing.
     local isOk, data, connections, formattedString
-    
     isOk, data = pcall(dataStoreToUse.GetAsync, dataStoreToUse, tostring(Player.UserId))
+
     if not isOk then
         return
     end
@@ -134,32 +138,27 @@ local function onPlayerAdded(Player: Player)
 
     vibezApi = vibezApi:waitUntilLoaded()
 
-    -- Maybe I should explain what the 2 private methods do...
-    -- This one formats a string using specific variables which can be seen
-    -- on this page: https://itsrune.github.io/VibezAPI/docs/Settings#formatting-codes
-    formattedString = vibezApi:_fixFormattedString(pointLocation, Player)
+    table.sort(pointRanks, function(a, b)
+        return a.pointsRequired < b.pointsRequired
+    end)
 
-    -- This one loads the string into raw Lua code.
-    _, pointLocation = vibezApi:_Loadstring("return " .. formattedString)
+    table.insert(connections, pointStats:GetPropertyChangedSignal("Value"):Connect(function()
+        local userGroupData = vibezApi:_getGroupFromUser(Player.UserId, groupId)
+        if not userGroupData or userGroupData.Rank == 0 then
+            return
+        end
 
-    if typeof(pointLocation) ~= "Instance" then
-        error("Invalid location of points for user " .. Player.Name)
-        return
-    end
+        for i = 1, #pointRanks do
+            local data = pointRanks[i]
+            local nextData = pointRanks[i + 1]
 
-    table.insert(connections, pointLocation:GetPropertyChangedSignal("Value"):Connect(function()
-        for _, rankData in pairs(pointRanks) do
-            if
-                pointLocation.Value < rankData.pointsRequired
-                or data[rankData.Rank] == true
-            then
-                continue
+            if nextData == nil and (userGroupData.Rank >= data.Rank or pointStats.Value < data.pointsRequired) then
+                return
             end
 
-            local response = vibezApi:setRank(Player, rankData.Rank)
-
-            if response.Success then
-                data[rankData.Rank] = true
+            if userGroupData.Rank < data.Rank and pointStats.Value >= data.pointsRequired and pointStats.Value < nextData.pointsRequired then
+                vibezApi:setRank(Player, data.Rank)
+                break
             end
         end
     end))
