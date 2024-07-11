@@ -9,13 +9,14 @@
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
-	Updated: 6/30/2024 8:53 EST
-	Version: 0.10.7
+	Updated: 7/10/2024 18:13 EST
+	Version: 0.10.8
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
 ]]
 --
+local _VERSION = "0.10.8"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -127,6 +128,7 @@ local baseSettings = {
 		isAsync = false,
 		rankingCooldown = 30, -- 30 Seconds
 		usePromises = false, -- Broken
+		checkForUpdates = true,
 	},
 }
 
@@ -369,14 +371,12 @@ local function onServerInvoke(
 		return tbl
 	else
 		-- Maybe actually log it somewhere... I have no clue where though.
-		self:_warn(
-			"Player %s (%d) was kicked for trying to perform an invalid action with our API.",
-			Player.Name,
-			Player.UserId
-		)
-		Player:Kick(
-			"Messing with vibez remotes, this has been logged and repeating offenders will be blacklisted from our services."
-		)
+		self:_warn("Player %s (%d) tried to perform an invalid action with our API.", Player.Name, Player.UserId)
+
+		-- REVIEW: Somehow admins are reaching this point and being kicked for it.
+		-- Player:Kick(
+		-- 	"Messing with vibez remotes, this has been logged and repeating offenders will be blacklisted from our services."
+		-- )
 		return false
 	end
 end
@@ -1494,11 +1494,7 @@ end
 ]=]
 ---
 function api:giveRankSticks(User: Player | string | number, shouldCheckPermissions: boolean?): Types.vibezApi
-	local Player = (typeof(User) == "Instance" and User:IsA("Player")) and User
-		or (typeof(User) == "number" or (typeof(User) == "string" and tonumber(User) ~= nil)) and Players:GetPlayerByUserId(
-			tonumber(User)
-		)
-		or Players:FindFirstChild(tostring(User))
+	local Player = self:_verifyUser(User, "Instance")
 
 	if not Player then
 		return self
@@ -1772,15 +1768,7 @@ end
 	@since 0.3.0
 ]=]
 function api:_playerIsValidStaff(Player: Player | number | string)
-	local userId = 0
-	if typeof(Player) == "Instance" and Player:IsA("Player") then
-		userId = Player.UserId
-	elseif typeof(Player) == "number" or typeof(Player) == "string" and tonumber(Player) ~= nil then
-		userId = tonumber(Player)
-	elseif typeof(Player) == "string" and not tonumber(Player) then
-		self:_getUserIdByName(tostring(Player))
-	end
-
+	local userId = self:_verifyUser(Player, "UserId")
 	return self._private.requestCaches.validStaff[userId]
 end
 
@@ -1794,22 +1782,22 @@ end
 	@within VibezAPI
 	@since 0.9.2
 ]=]
-function api:_verifyUser(userId: Player | number | string, typeToReturn: "UserId" | "Player" | "Name")
-	if typeof(userId) == "Instance" and userId:IsA("Player") then
-		return (typeToReturn == "UserId") and userId.UserId
-			or (typeToReturn == "string") and userId.Name
-			or (typeToReturn == "Player") and userId
-	elseif typeof(userId) == "string" then
-		return (typeToReturn == "UserId") and (tonumber(userId) or self:_getUserIdByName(userId))
-			or (typeToReturn == "Player") and Players:FindFirstChild(tostring(userId))
-			or (typeToReturn == "Name") and userId
-	elseif typeof(userId) == "number" then
-		return (typeToReturn == "UserId") and userId
-			or (typeToReturn == "Player") and Players:GetPlayerByUserId(userId)
-			or (typeToReturn == "Name") and self:_getNameById(userId)
+function api:_verifyUser(User: Player | number | string, typeToReturn: "UserId" | "Player" | "Name")
+	if typeof(User) == "Instance" and User:IsA("Player") then
+		return (typeToReturn == "UserId") and User.UserId
+			or (typeToReturn == "string") and User.Name
+			or (typeToReturn == "Player") and User
+	elseif typeof(User) == "string" then
+		return (typeToReturn == "UserId") and (tonumber(User) or self:_getUserIdByName(User))
+			or (typeToReturn == "Player") and Players:FindFirstChild(tostring(User))
+			or (typeToReturn == "Name") and User
+	elseif typeof(User) == "number" then
+		return (typeToReturn == "UserId") and User
+			or (typeToReturn == "Player") and Players:GetPlayerByUserId(User)
+			or (typeToReturn == "Name") and self:_getNameById(User)
 	end
 
-	return userId
+	return User
 end
 
 --// Public Functions \\--
@@ -1853,101 +1841,6 @@ function api:getGroupId()
 	-- end)()
 
 	return isOk and Body.groupId or -1
-end
-
---[=[
-	Returns a simplified version of this API.
-	@return simplifiedAPI
-
-	@within VibezAPI
-	@since 0.10.0
-]=]
----
-function api:getSimplified()
-	local newApi = {
-		Ranking = {
-			Set = function(Player: Player | string | number, newRank: string | number)
-				return self:setRank(Player, newRank)
-			end,
-
-			Promote = function(Player: Player | string | number)
-				return self:Promote(Player)
-			end,
-
-			Demote = function(Player: Player | string | number)
-				return self:Demote(Player)
-			end,
-
-			Fire = function(Player: Player | string | number)
-				return self:Fire(Player)
-			end,
-		},
-
-		Activity = {
-			Get = function(Player: Player | string | number)
-				return self:getActivity(Player)
-			end,
-
-			Save = function(
-				Player: Player | string | number,
-				playerRank: number,
-				secondsSpent: number,
-				messagesSent: (number | { string })?,
-				shouldFetchRank: boolean?
-			)
-				return self:saveActivity(Player, playerRank, secondsSpent, messagesSent, shouldFetchRank)
-			end,
-		},
-
-		Commands = {
-			Add = function(
-				commandName: string,
-				commandAlias: { string? },
-				commandFunction: (
-					Player: Player,
-					Args: { string? },
-					addLog: (
-						calledBy: Player,
-						Action: string,
-						affectedUsers: { Player }?,
-						...any
-					) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number, Metadata: any }
-				) -> ()
-			)
-				return self:addCommand(commandName, commandAlias, commandFunction)
-			end,
-
-			AddArgPrefix = function(
-				operationName: string,
-				operationCode: string,
-				operationFunction: (
-					playerWhoCalled: Player,
-					playerToCheck: Player,
-					incomingArgument: string
-				) -> boolean
-			)
-				return self:addArgumentPrefix(operationName, operationCode, operationFunction)
-			end,
-
-			RemoveArgPrefix = function(operationName: string)
-				return self:removeArgumentPrefix(operationName)
-			end,
-		},
-
-		Notifications = {
-			Create = function(Player: Player, notificationMessage: string)
-				return self:_notifyPlayer(Player, notificationMessage)
-			end,
-		},
-
-		Webhooks = {
-			Create = function(webhookLink: string)
-				return Hooks.new(self, webhookLink)
-			end,
-		},
-	}
-
-	return newApi
 end
 
 --[=[
@@ -2714,7 +2607,7 @@ end
 ]=]
 ---
 function api:getActivity(userId: (string | number)?): Types.activityResponse
-	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
+	userId = self:_verifyUser(userId, "UserId")
 
 	local body = { userId = userId }
 	if not userId then
@@ -2745,7 +2638,7 @@ function api:saveActivity(
 	messagesSent: (number | { string })?,
 	shouldFetchGroupRank: boolean?
 ): Types.infoResponse
-	userId = (typeof(userId) == "string" and not tonumber(userId)) and self:_getUserIdByName(userId) or userId
+	userId = self:_verifyUser(userId, "UserId")
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent
 		or (tonumber(messagesSent) ~= nil) and messagesSent
 		or nil
@@ -2985,7 +2878,7 @@ end
 	@since 1.0.1
 ]=]
 ---
-function Constructor(apiKey: string, extraOptions: Types.vibezSettings?, _githubSha: string?): Types.vibezApi
+function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
 	if RunService:IsClient() then
 		error("[Vibez]: Cannot fetch API on the client!")
 		Debris:AddItem(script, 0)
@@ -2996,41 +2889,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?, _github
 		error("[VibezAPI]: Http is not enabled! Please enable it before trying to interact with our API!")
 		return
 	end
-
-	-- Auto-Update with github, lets hope this doesn't hit any rate limits.
-	-- local githubCommitSha = _githubSha or "178708a5cd2d65a849434fd12159c0b58561aca7"
-	-- local _, responseEncoded = pcall(
-	-- 	HttpService.GetAsync,
-	-- 	HttpService,
-	-- 	"https://api.github.com/repos/ItsRune/VibezAPI/commits/" .. string.sub(githubCommitSha, 1, 7)
-	-- )
-	-- local _, commitJSON = pcall(HttpService.JSONDecode, HttpService, responseEncoded)
-
-	-- -- This 'if' statement is just ew.
-	-- if commitJSON.sha ~= githubCommitSha then
-	-- 	local initData = Table.Find(commitJSON.files, function(data)
-	-- 		return data.filename == "src/init.lua"
-	-- 	end)
-
-	-- 	if initData then
-	-- 		warn("[VibezAPI-Update]: Github change found! Fetching Update...")
-	-- 		local fetchOk, sourceCode = pcall(HttpService.GetAsync, HttpService, initData.raw_url)
-
-	-- 		if fetchOk then
-	-- 			warn("[VibezAPI-Update]: Updating...")
-	-- 			warn(sourceCode)
-	-- 			local func = Loadstring(sourceCode, getfenv())
-
-	-- 			warn(typeof(func), func)
-
-	-- 			return func(apiKey, extraOptions, commitJSON.sha)
-	-- 		else
-	-- 			warn("[VibezAPI-Update]: Update failed, keeping same version.")
-	-- 		end
-	-- 	end
-	-- else
-	-- 	warn("[VibezAPI-Update]: Version matched!")
-	-- end
 
 	--[=[
 		@class VibezAPI
@@ -3379,6 +3237,47 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?, _github
 	-- Setup the global variables for use.
 	if self.Settings.Misc.createGlobalVariables then
 		self:_setupGlobals()
+	end
+
+	if self.Settings.Misc.checkForUpdates then
+		-- Auto-Update with github, lets hope this doesn't hit any rate limits.
+		-- Check with _VERSION variable and warn the download link.
+		-- [%d]+.[%d]+.[%d]+
+		local isOk, response, JSON
+		isOk, response =
+			pcall(HttpService.GetAsync, HttpService, "https://api.github.com/repos/ItsRune/VibezAPI/releases/latest")
+		if not isOk then
+			return
+		end
+
+		isOk, JSON = pcall(HttpService.JSONDecode, HttpService, response)
+		if not isOk then
+			return
+		end
+
+		local tagName = JSON.tag_name
+		local currentTag = "v" .. _VERSION
+		if currentTag ~= tagName then
+			local downloadLink = "(Can't Find)"
+			do
+				local vibezRBXM = Table.Find(JSON.assets, function(data)
+					return string.match(data.name, ".rbxm") ~= nil
+				end)
+
+				if vibezRBXM then
+					downloadLink = vibezRBXM.browser_download_url
+				end
+			end
+
+			self:_warn(
+				string.format(
+					"There's an update available whenever you're free! Your current version is v%s the latest version is %s | You can download it here:\n%s",
+					_VERSION,
+					tagName,
+					downloadLink
+				)
+			)
+		end
 	end
 
 	-- Cast to the Vibez API Type.

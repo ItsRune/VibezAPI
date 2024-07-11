@@ -311,6 +311,7 @@ local function onSetupRankSticks()
 				`Rank sticks found {(closestTarget == nil) and "no players" or closestTarget.Name} to {child.Name}`
 			)
 
+			closestTarget = Player
 			if closestTarget == nil then
 				task.wait(0.25)
 				stickDebounce = false

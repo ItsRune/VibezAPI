@@ -42,14 +42,14 @@ local Vibez = require(14946453963)("API KEY", {
 <summary>Commands</summary>
 <br />
 
-| Setting Name | Type | Default Value | Description | Working? |
+| Setting Name | Type | Default Value | Description |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables chat commands. | ✔ |
-| useDefaultNames | Boolean | true | Determines whether default names should be included in the alias list. | ✔ |
-| Prefix | String | ! | The prefix for chat commands. | ✔ |
-| MinRank | Number | 255 | The minimum rank required to use chat commands. | ✔ |
-| MaxRank | Number | 255 | The maximum rank required to use chat commands. | ✔ |
-| Alias | Array&lt;\{String&lt;commandName&gt;, String&lt;commandAlias&gt;\}&gt; | {} | The aliases for chat commands. | ✔ |
+| Enabled | Boolean | false | Enables/Disables chat commands. |
+| useDefaultNames | Boolean | true | Determines whether default names should be included in the alias list. |
+| Prefix | String | ! | The prefix for chat commands. |
+| MinRank | Number | 255 | The minimum rank required to use chat commands. |
+| MaxRank | Number | 255 | The maximum rank required to use chat commands. |
+| Alias | Array&lt;\{String&lt;commandName&gt;, String&lt;commandAlias&gt;\}&gt; | {} | The aliases for chat commands. |
 
 </details>
 
@@ -57,15 +57,15 @@ local Vibez = require(14946453963)("API KEY", {
 <summary>ActivityTracker</summary>
 <br />
 
-| Setting Name | Type | Default Value | Description | Working? |
+| Setting Name | Type | Default Value | Description |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables the activity tracker. | ✔ |
-| MinRank | Number | 255 | The minimum rank required to track activity. | ✔ |
-| disableInStudio | Boolean | true | Disables activity tracking in studio. | ✔ |
-| disableWhenAFK | Boolean | false | Disables activity tracking when a player is AFK. | ✔ |
-| delayBeforeAFK | Number | 30 | The amount of time in seconds before a player is marked 'AFK'. | ✔ |
-| kickIfFails | Boolean | false | Kicks players if the activity tracker fails to initialize. | ✔ |
-| failMessage | String | We were unable to initialize the activity tracker for you. Please rejoin the game. | The message sent when the activity tracker fails to initialize. | ✔ |
+| Enabled | Boolean | false | Enables/Disables the activity tracker. |
+| MinRank | Number | 255 | The minimum rank required to track activity. |
+| disableInStudio | Boolean | true | Disables activity tracking in studio. |
+| disableWhenAFK | Boolean | false | Disables activity tracking when a player is AFK. |
+| delayBeforeAFK | Number | 30 | The amount of time in seconds before a player is marked 'AFK'. |
+| kickIfFails | Boolean | false | Kicks players if the activity tracker fails to initialize. |
+| failMessage | String | We were unable to initialize the activity tracker for you. Please rejoin the game. | The message sent when the activity tracker fails to initialize. |
 
 </details>
 
@@ -73,11 +73,11 @@ local Vibez = require(14946453963)("API KEY", {
 <summary>Interface</summary>
 <br />
 
-| Setting Name | Type | Default Value | Description | Working? |
+| Setting Name | Type | Default Value | Description |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables the interface. | ✔ |
-| MinRank | Number | 255 | The minimum rank required to use the interface. | ✔ |
-| MaxRank | Number | 255 | The maximum rank required to use the interface. | ✔ |
+| Enabled | Boolean | false | Enables/Disables the interface. |
+| MinRank | Number | 255 | The minimum rank required to use the interface. |
+| MaxRank | Number | 255 | The maximum rank required to use the interface. |
 
 </details>
 
@@ -85,13 +85,13 @@ local Vibez = require(14946453963)("API KEY", {
 <summary>RankSticks</summary>
 <br />
 
-| Setting Name | Type | Default Value | Description | Working? |
+| Setting Name | Type | Default Value | Description |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables rank sticks. | ✔ |
-| MinRank | Number | 255 | The minimum rank required to use rank sticks. | ✔ |
-| MaxRank | Number | 255 | The maximum rank required to use rank sticks. | ✔ |
-| sticksModel | Model | Tool? | The model/tool to use as the rank sticks. (Optional) | ✔ |
-| sticksAnimation | Number OR String | "17837716782\|17838391578" | The animation id to use when the stick is clicked. If you have a game that uses both R15 and R6, use a String with the pipe "\|" character to denote ("R15\|R6") versions (Optional) | ✔ |
+| Enabled | Boolean | false | Enables/Disables rank sticks. |
+| MinRank | Number | 255 | The minimum rank required to use rank sticks. |
+| MaxRank | Number | 255 | The maximum rank required to use rank sticks. |
+| sticksModel | Model | Tool? | The model/tool to use as the rank sticks. (Optional) |
+| sticksAnimation | Number OR String | "17837716782\|17838391578" | The animation id to use when the stick is clicked. If you have a game that uses both R15 and R6, use a String with the pipe "\|" character to denote ("R15\|R6") versions (Optional) |
 
 </details>
 
@@ -99,15 +99,15 @@ local Vibez = require(14946453963)("API KEY", {
 <summary>Notifications</summary>
 <br />
 
-| Setting Name | Type | Default Value | Description | Working? |
+| Setting Name | Type | Default Value | Description |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables notifications. | ✔ |
-| Font | String | Gotham | The font of the notifications. | ✔ |
-| FontSize | Number | 16 | The size of the content with notifications (Use sizes for mobile). | ✔ |
-| keyboardFontSizeMultiplier | Number | 1.25 | The multiplier for keyboard users. | ✔ |
-| delayUntilRemoval | Number | 20 | The amount of seconds each notification is shown for. | ✔ |
-| entranceTweenInfo | Array&lt;\{String&lt;Style&gt;, String&lt;Direction&gt;, Number&lt;timeItTakes&gt;\}&gt; | `{Style="Quint", Direction="InOut", timeItTakes=1}` | The information of the tween that plays when a new notification appears. | ✔ |
-| exitTweenInfo | Array&lt;\{String&lt;Style&gt;, String&lt;Direction&gt;, Number&lt;timeItTakes&gt;\}&gt; | `{Style="Quint", Direction="InOut", timeItTakes=1}` | The information of the tween that plays when a notification needs to be deleted. | ✔ |
+| Enabled | Boolean | false | Enables/Disables notifications. |
+| Font | String | Gotham | The font of the notifications. |
+| FontSize | Number | 16 | The size of the content with notifications (Use sizes for mobile). |
+| keyboardFontSizeMultiplier | Number | 1.25 | The multiplier for keyboard users. |
+| delayUntilRemoval | Number | 20 | The amount of seconds each notification is shown for. |
+| entranceTweenInfo | Array&lt;\{String&lt;Style&gt;, String&lt;Direction&gt;, Number&lt;timeItTakes&gt;\}&gt; | `{Style="Quint", Direction="InOut", timeItTakes=1}` | The information of the tween that plays when a new notification appears. |
+| exitTweenInfo | Array&lt;\{String&lt;Style&gt;, String&lt;Direction&gt;, Number&lt;timeItTakes&gt;\}&gt; | `{Style="Quint", Direction="InOut", timeItTakes=1}` | The information of the tween that plays when a notification needs to be deleted. |
 
 </details>
 
@@ -115,10 +115,10 @@ local Vibez = require(14946453963)("API KEY", {
 <summary>Blacklists</summary>
 <br />
 
-| Setting Name | Type | Default Value | Description | Working? |
+| Setting Name | Type | Default Value | Description |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables whether blacklists will be kicked upon joining. | ✔ |
-| userIsBlacklistedMessage | String | You have been blacklisted from the game for: &lt;BLACKLIST_REASON&gt; | The kick message presented to the user who's blacklisted. | ✔ |
+| Enabled | Boolean | false | Enables/Disables whether blacklists will be kicked upon joining. |
+| userIsBlacklistedMessage | String | You have been blacklisted from the game for: &lt;BLACKLIST_REASON&gt; | The kick message presented to the user who's blacklisted. |
 
 </details>
 
@@ -126,14 +126,15 @@ local Vibez = require(14946453963)("API KEY", {
 <summary>Misc</summary>
 <br />
 
-| Setting Name | Type | Default Value | Description | Working? |
+| Setting Name | Type | Default Value | Description |
 |:---------:|:---------:|:---------:|:---------:|:---------:|
-| originLoggerText | String | Game | The text used in the origin logger. | ✔ |
-| rankingCooldown | Number | 30 | Amount of seconds to wait between ranking the same person again. | ✔ |
-| ignoreWarnings | Boolean | false | Ignores warnings. | ✔ |
-| overrideGroupCheckForStudio | Boolean | false | Overrides the group check for studio. | ✔ |
-| isAsync | Boolean | false | Toggles whether upon initialization should yield the current thread or not. | ✔ |
-| createGlobalVariables | Boolean | false | Toggles whether upon initialization should the module create \_G variables to use. | ✔ |
+| originLoggerText | String | Game | The text used in the origin logger. |
+| rankingCooldown | Number | 30 | Amount of seconds to wait between ranking the same person again. |
+| ignoreWarnings | Boolean | false | Ignores warnings. |
+| overrideGroupCheckForStudio | Boolean | false | Overrides the group check for studio. |
+| isAsync | Boolean | false | Toggles whether upon initialization should yield the current thread or not. |
+| createGlobalVariables | Boolean | false | Toggles whether upon initialization should the module create \_G variables to use. |
+| checkForUpdates | Boolean | true | Toggles whether we check our GitHub for an updated released version. |
 
 </details>
 
