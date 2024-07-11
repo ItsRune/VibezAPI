@@ -1774,7 +1774,7 @@ end
 
 --[=[
 	Ensures that the parameter returns the proper type associated to the `typeToReturn`
-	@param userId Player | number | string
+	@param User Player | number | string
 	@param typeToReturn "UserId" | "Player" | "Name"
 	@return number | string | Player
 
