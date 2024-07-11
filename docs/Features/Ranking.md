@@ -104,11 +104,13 @@ There's a chance this script may not work, as it's not tested. If you have any i
 
 ```lua title="ServerScriptService/autoRankPoints.server.lua"
 --// Configuration \\--
-local groupId = 0, -- Your Group's Id
-local apiKey = "API_KEY" -- Vibez's API Key
+local apiKey = require(script.ModuleScript) -- Vibez's API Key
 local pointRanks = {
-    { Rank = 0, pointsRequired = 0 }
+	{ Rank = 254, pointsRequired = 50 }
 }
+
+-- IMPORTANT: Scroll down to line 23 to change the location
+-- of a player's points!
 
 --// Services \\--
 local Players = game:GetService("Players")
@@ -116,82 +118,102 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 
 --// Variables \\--
-local vibezApi = require(14946453963)(apiKey, { Misc = { isAsync = true } })
+local vibezApi = require(script.Parent.MainModule)(apiKey, { Misc = { isAsync = true } })
 local dataStoreToUse = DataStoreService:GetDataStore("pointRanks_" .. game.PlaceId)
 local userCache = {}
 
 --// Functions \\--
 local function onPlayerAdded(Player: Player)
-    -- Wherever you're keeping your player's points, this is what you'd want to change it to.
-    local pointStats = Player:WaitForChild("leaderstats", 120):WaitForChild("Points", 120)
+	-- Wherever you're keeping your player's points, this is what you'd want to change it to.
+	local pointStats = Player:WaitForChild("leaderstats", 120):WaitForChild("Points", 120)
 
-    -- Don't touch below unless you know what you're doing.
-    local isOk, data, connections, formattedString
-    isOk, data = pcall(dataStoreToUse.GetAsync, dataStoreToUse, tostring(Player.UserId))
+	-- Don't touch below unless you know what you're doing.
+	local isOk, data, connections, formattedString
+	isOk, data = pcall(dataStoreToUse.GetAsync, dataStoreToUse, tostring(Player.UserId))
 
-    if not isOk then
-        return
-    end
+	if not isOk then
+		return
+	end
 
-    data = data or {}
-    connections = {}
+	data = data or {}
+	connections = {}
 
-    vibezApi = vibezApi:waitUntilLoaded()
+	vibezApi = vibezApi:waitUntilLoaded()
 
-    table.sort(pointRanks, function(a, b)
-        return a.pointsRequired < b.pointsRequired
-    end)
+	table.sort(pointRanks, function(a, b)
+		return a.pointsRequired < b.pointsRequired
+	end)
 
-    table.insert(connections, pointStats:GetPropertyChangedSignal("Value"):Connect(function()
-        local userGroupData = vibezApi:_getGroupFromUser(Player.UserId, groupId)
-        if not userGroupData or userGroupData.Rank == 0 then
-            return
-        end
+	table.insert(connections, pointStats:GetPropertyChangedSignal("Value"):Connect(function()
+		local userGroupData = vibezApi:_getGroupFromUser(vibezApi.GroupId, Player.UserId)
+		local copiedData = userCache[Player.UserId][2] or {}
+		
+		if not userGroupData or userGroupData.Rank == 0 then
+			return
+		end
 
-        for i = 1, #pointRanks do
-            local data = pointRanks[i]
-            local nextData = pointRanks[i + 1]
+		for i = 1, #pointRanks do
+			local data = pointRanks[i]
+			local nextData = pointRanks[i + 1] or { Rank = data.Rank, pointsRequired = data.pointsRequired + 1 }
 
-            if nextData == nil and (userGroupData.Rank >= data.Rank or pointStats.Value < data.pointsRequired) then
-                return
-            end
+			if
+                table.find(copiedData, data.Rank) ~= nil
+                or userGroupData.Rank >= data.Rank
+                or pointStats.Value < data.pointsRequired
+            then
+				continue
+			end
+			
+			if
+				userGroupData.Rank < data.Rank
+				and pointStats.Value >= data.pointsRequired
+				and pointStats.Value < nextData.pointsRequired
+			then
+				local response = vibezApi:setRank(Player, data.Rank)
+				
+				if response.success then
+					table.insert(copiedData, data.Rank)
+				end
+				break
+			end
+		end
+		
+		userCache[Player.UserId][2] = copiedData
+	end))
 
-            if userGroupData.Rank < data.Rank and pointStats.Value >= data.pointsRequired and pointStats.Value < nextData.pointsRequired then
-                vibezApi:setRank(Player, data.Rank)
-                break
-            end
-        end
-    end))
-
-    userCache[Player.UserId] = {connections, data}
+	userCache[Player.UserId] = {connections, data}
 end
 
 local function onPlayerLeft(Player: Player, retry: number?)
-    local exists = userCache[Player.UserId]
-    if not exists then
-        return
-    end
+	local exists = userCache[Player.UserId]
+	if not exists then
+		return
+	end
 
-    local isOk = pcall(dataStoreToUse.SetAsync, dataStoreToUse, tostring(Player.UserId), exists[2])
-    if not isOk then
-        retry = retry or 0
-        if retry > 3 then
-            error("Failed to save data for user " .. Player.Name)
-            return
-        end
+	local isOk = pcall(dataStoreToUse.SetAsync, dataStoreToUse, tostring(Player.UserId), exists[2])
+	if not isOk then
+		retry = retry or 0
+		if retry > 3 then
+			error("Failed to save data for user " .. Player.Name)
+			return
+		end
 
-        task.wait(3)
-        return onPlayerLeft(Player, retry + 1)
-    end
+		task.wait(3)
+		return onPlayerLeft(Player, retry + 1)
+	end
 
-    for _, connection: RBXScriptConnection in pairs(exists[1]) do
-        connection:Disconnect()
-    end
+	for _, connection: RBXScriptConnection in pairs(exists[1]) do
+		connection:Disconnect()
+	end
 
-    userCache[Player.UserId] = nil
+	userCache[Player.UserId] = nil
 end
 
 --// Events \\--
+for _, v in ipairs(Players:GetPlayers()) do
+	coroutine.wrap(onPlayerAdded)(v)
+end
+
 Players.PlayerAdded:Connect(onPlayerAdded)
 Players.PlayerRemoving:Connect(onPlayerLeft)
 ```

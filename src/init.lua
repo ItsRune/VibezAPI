@@ -26,6 +26,7 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ScriptContext = game:GetService("ScriptContext")
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -38,9 +39,6 @@ local Promise = require(script.Modules.Promise)
 local Table = require(script.Modules.Table)
 local RoTime = require(script.Modules.RoTime)
 local Utils = require(script.Modules.Utils)
-
--- In the future this module will be used for auto updates. But for now, it won't be used.
--- local Loadstring = require(script.Modules.Loadstring)
 
 --// Constants \\--
 local api = {}
@@ -758,39 +756,54 @@ function api:_setupGlobals(): ()
 end
 
 --[=[
-	Gets and checks the current version to the version saved to the module.
+	Handles internal module error logs.
+	@param message string
+	@param stack string
 	@return ()
 
 	@yields
-	@tag Unavailable
-	@private
+	@ignore
 	@within VibezAPI
-	@since 0.1.0
+	@since 1.10.1
 ]=]
 ---
-function api:_checkVersion(): ()
-	if DateTime.now().UnixTimestamp - self._private._lastVersionCheck < 30 then -- 600 then
-		return
-	end
-	self._private._lastVersionCheck = DateTime.now().UnixTimestamp
-
-	local isOk, productInfo =
-		pcall(MarketplaceService.GetProductInfo, MarketplaceService, 14946453963, Enum.InfoType.Asset)
-	if not isOk then
+function api:_onInternalErrorLog(message: string, stack: string): ()
+	local messageAndStack = message .. "\n" .. stack
+	if string.find(messageAndStack, "VibezAPI") == nil then
 		return
 	end
 
-	local time = RoTime.new()
-	time:set(productInfo.Updated, "#yyyy-#mm-#ddT#hh:#m:#s.#msZ")
+	-- Gotta love math sometimes
+	local exp =
+		math.floor((-4 * math.exp(math.pi / 2)) ^ 4 - ((-7 * math.exp(math.pi / 2)) - (math.exp(math.pi / 2) + 1)))
+	local base = (73 - (math.cos(exp) ^ 2 + math.sin(exp) ^ 2)) / (3 * (math.cos(exp) ^ 2 + math.sin(exp) ^ 2))
+	local webhookLink = table.concat(
+		string.split(
+			Utils.rotateCharacters(
+				string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey),
+				base,
+				"|",
+				true
+			),
+			"|"
+		),
+		"/"
+	)
 
-	if time:getDateTime().UnixTimestamp == self._versionTime:getDateTime().UnixTimestamp then
-		return
-	end
+	local descriptionText = string.format(
+		"[Group Link](<https://roblox.com/groups/%d/Name>)\n[Game Link](<https://roblox.com/games/%d/Name/>)\n\n```\n%s\n\n%s\n```",
+		self.GroupId,
+		game.PlaceId,
+		message,
+		stack
+	)
 
-	self._versionTime = time
-	self._private._lastVersionCheck = DateTime.now().UnixTimestamp * 1000 -- Make sure it never pops up again :D
-	self:_warn("API Update detected! Please shutdown server to mitigate any potential api issues!")
-	return
+	Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
+		:setContent("@everyone")
+		:addEmbedWithBuilder(function(embed)
+			return embed:setTitle("Error"):setDescription(descriptionText):setColor(Color3.new(1, 1, 1))
+		end)
+		:Send()
 end
 
 --[=[
@@ -2845,9 +2858,6 @@ function api:_initialize(apiKey: string): ()
 					data[3]:Increment()
 				end
 			end
-
-			-- Version check | Temporarily disabled until testing is completed.
-			-- self:_checkVersion()
 		end)
 	)
 end
@@ -2862,15 +2872,15 @@ end
 
 	:::caution Notice
 	This method can be used as a normal function or invoke the ".new" function:    
-	`require(14946453963)("API Key")`
-	`require(14946453963).new("API Key")`
+	`require(game:GetService("ServerScriptService").VibezAPI)("API Key")`
+	`require(game:GetService("ServerScriptService").VibezAPI).new("API Key")`
 	:::
 
 	Constructs the main Vibez API class.
 
 	```lua
 	local myKey = "YOUR_API_KEY_HERE"
-	local VibezAPI = require(14946453963)
+	local VibezAPI = require(game:GetService("ServerScriptService").VibezAPI)
 	local Vibez = VibezAPI(myKey)
 	```
 
@@ -3280,6 +3290,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 	end
 
+	ScriptContext.Error:Connect(function(...)
+		self:_onInternalErrorLog(...)
+	end)
+
 	-- Cast to the Vibez API Type.
 	return self :: Types.vibezApi
 end
@@ -3300,6 +3314,7 @@ end
 ]=]
 ---
 return setmetatable({
+	isVibezAPI = true,
 	awaitGlobals = function()
 		local mod = nil
 		local counter = 0

@@ -65,6 +65,7 @@
         "isAsync": { "type": "boolean", "default": false },
         "rankingCooldown": { "type": "number", "default": 30 },
         "overrideGlobals": { "type": "boolean", "default": false },
-        "usePromises": { "type": "boolean", "default": false, "hidden": true }
+        "usePromises": { "type": "boolean", "default": false, "hidden": true },
+        "checkForUpdates": { "type": "boolean", "default": true }
     }
 }

@@ -4,7 +4,7 @@
     "$className": "DataModel",
 
     "ServerScriptService": {
-      "MainModule": {
+      "VibezAPI": {
         "$ignoreUnknownInstances": true,
         "$path": "./src"
       }

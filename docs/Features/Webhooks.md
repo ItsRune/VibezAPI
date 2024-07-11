@@ -132,7 +132,7 @@ local Players = game:GetService("Players")
 
 --// Variables \\--
 local myWebhook = "Webhook_Link_Here"
-local Vibez = require(14946453963)("API Key", { Misc = { isAsync = true } })
+local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key", { Misc = { isAsync = true } })
 
 --// Functions \\--
 local function sendWebhook(Player: Player, state: "joined" | "left")
@@ -169,7 +169,7 @@ Players.PlayerRemoving:Connect(onPlayerRemoving)
 <br />
 
 ```lua
-local Vibez = require(14946453963)("API Key", {
+local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key", {
     nameOfGameForLogging = "Colors Example"
 })
 

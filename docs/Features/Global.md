@@ -14,7 +14,7 @@ Our global API is located within Roblox's `_G` global variable. This means that 
 Yes! If your script has direct access to the module, you can use `.awaitGlobals()` to wait for the global APIs to load. This is useful if you're unsure if the global APIs have loaded yet.
 
 ```lua
-local Vibez = require(14946453963)
+local Vibez = require(game:GetService("ServerScriptService").VibezAPI)
 local globalApi = Vibez.awaitGlobals()
 ```
 

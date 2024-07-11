@@ -11,7 +11,7 @@ sidebar_position: 1
 The main pro of this method is that you get auto-updates and you don't have to worry about updating the module yourself.
 
 1. Get the [Module](https://www.roblox.com/library/14946453963/VibezAPI)
-2. Use `require(14946453963)` to fetch the module
+2. Use `require(game:GetService("ServerScriptService").VibezAPI)` to fetch the module
 3. Done! -->
 
 **Due to Roblox taking down our module, this will be the only method while we attempt to get our module back up.** <br />
@@ -21,7 +21,7 @@ This method is recommended if you'd like more control over our module. With this
 1. Download the [Module](https://github.com/ItsRune/VibezAPI/releases/download/v0.10.7/VibezAPI.rbxm)
 2. Insert the module into `ServerScriptService`
 3. Use `require(game:GetService("ServerScriptService").VibezAPI)` to fetch the module within your script
-    - Anywhere you see `require(14946453963)` in the documentation, replace it with `require(game:GetService("ServerScriptService").VibezAPI)`
+    - Anywhere you see `require(game:GetService("ServerScriptService").VibezAPI)` in the documentation, replace it with `require(game:GetService("ServerScriptService").VibezAPI)`
 4. Done!
 
 ---
@@ -31,7 +31,7 @@ This method is recommended if you'd like more control over our module. With this
 To begin, open a new `Script` in `ServerScriptService` and require the module with your preferred method:
 
 ```lua
-local VibezAPI = require(14946453963)
+local VibezAPI = require(game:GetService("ServerScriptService").VibezAPI)
 ```
 
 From there, you can use the API to create a new Vibez instance:

@@ -77,4 +77,19 @@ function Utils.getTemporaryStorage(): Folder
 	return folder
 end
 
+-- Rotates characters for a simple ROT cipher.
+function Utils.rotateCharacters(Input: string, Key: number, splitter: string, shouldDecode: boolean)
+	local bytes = shouldDecode and string.split(Input, splitter) or string.split(Input, "")
+
+	for i, v in ipairs(bytes) do
+		if shouldDecode and not tonumber(v) then
+			continue
+		end
+
+		bytes[i] = shouldDecode and string.char(tonumber(v) - Key) or string.byte(v) + Key .. splitter
+	end
+
+	return table.concat(bytes, "")
+end
+
 return Utils
