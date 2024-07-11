@@ -3271,7 +3271,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 			self:_warn(
 				string.format(
-					"There's an update available whenever you're free! Your current version is v%s the latest version is %s | You can download it here:\n%s",
+					"There's an update available whenever you're free! Your current version is v%s the latest version is %s\n\nYou can download the update here:\n%s",
 					_VERSION,
 					tagName,
 					downloadLink
