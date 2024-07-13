@@ -100,13 +100,12 @@ There's many reasons why the ranking API may fail, maybe your discord bot is off
 <summary>AutoRank Points</summary>
 <br />
 
-There's a chance this script may not work, as it's not tested. If you have any issues, please join our discord and ask for help in the support channel.
-
 ```lua title="ServerScriptService/autoRankPoints.server.lua"
 --// Configuration \\--
-local apiKey = require(script.ModuleScript) -- Vibez's API Key
+local apiKey = "API KEY" -- Vibez's API Key
+local vibezApiLocation = game:GetService("ServerScriptService").VibezAPI
 local pointRanks = {
-	{ Rank = 254, pointsRequired = 50 }
+	{ Rank = 2, pointsRequired = 10 }
 }
 
 -- IMPORTANT: Scroll down to line 23 to change the location
@@ -118,7 +117,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 
 --// Variables \\--
-local vibezApi = require(script.Parent.MainModule)(apiKey, { Misc = { isAsync = true } })
+local vibezApi = require(vibezApiLocation)(apiKey)
 local dataStoreToUse = DataStoreService:GetDataStore("pointRanks_" .. game.PlaceId)
 local userCache = {}
 
@@ -138,8 +137,6 @@ local function onPlayerAdded(Player: Player)
 	data = data or {}
 	connections = {}
 
-	vibezApi = vibezApi:waitUntilLoaded()
-
 	table.sort(pointRanks, function(a, b)
 		return a.pointsRequired < b.pointsRequired
 	end)
@@ -154,7 +151,6 @@ local function onPlayerAdded(Player: Player)
 
 		for i = 1, #pointRanks do
 			local data = pointRanks[i]
-			local nextData = pointRanks[i + 1] or { Rank = data.Rank, pointsRequired = data.pointsRequired + 1 }
 
 			if
                 table.find(copiedData, data.Rank) ~= nil
@@ -167,7 +163,6 @@ local function onPlayerAdded(Player: Player)
 			if
 				userGroupData.Rank < data.Rank
 				and pointStats.Value >= data.pointsRequired
-				and pointStats.Value < nextData.pointsRequired
 			then
 				local response = vibezApi:setRank(Player, data.Rank)
 				

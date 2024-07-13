@@ -125,8 +125,8 @@ local baseSettings = {
 		createGlobalVariables = false,
 		isAsync = false,
 		rankingCooldown = 30, -- 30 Seconds
-		usePromises = false, -- Broken
 		checkForUpdates = true,
+		autoReportErrors = false, -- It's best to use this when a developer asks you to within a ticket.
 	},
 }
 
@@ -337,7 +337,6 @@ local function onServerInvoke(
 
 		existingTracker:changeAfkState(override)
 	elseif Action == "isStaff" then
-		self:waitUntilLoaded()
 		local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 		local tbl = {}
 
@@ -382,7 +381,13 @@ end
 local function onServerEvent(self: Types.vibezApi, Player: Player, Command: string, ...: any)
 	local Data = { ... }
 
-	if Command == "Animate" then
+	if Command == "clientError" then
+		if not self.Settings.Misc.autoReportErrors then
+			return
+		end
+
+		self:_onInternalErrorLog(...)
+	elseif Command == "Animate" then
 		if Player.Character == nil or Player.Character:FindFirstChildOfClass("Tool") == nil then
 			return
 		end
@@ -804,31 +809,6 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 			return embed:setTitle("Error"):setDescription(descriptionText):setColor(Color3.new(1, 1, 1))
 		end)
 		:Send()
-end
-
---[=[
-	Uses `Promise.lua` to attempt to promisify a method. (Only applies when `usePromises` is set to true).
-	@param functionToBind (...any) -> ...any
-	@param ... any
-	@return Promise | any
-
-	:::danger BROKEN
-	All though this method can be used, it may not result in proper responses.
-	:::
-
-	@yields
-	@tag Unavailable
-	@private
-	@within VibezAPI
-	@since 0.8.0
-]=]
----
-function api:_promisify(functionToBind: (...any) -> ...any, ...: any): any
-	if self.Settings.Misc.usePromises then
-		return Promise.promisify(functionToBind)(...)
-	end
-
-	return functionToBind(...)
 end
 
 --[=[
@@ -1765,6 +1745,7 @@ function api:_buildAttributes()
 
 		MISC = {
 			ignoreWarnings = self.Settings.Misc.ignoreWarnings,
+			autoReportErrors = self.Settings.Misc.autoReportErrors,
 		},
 	}
 
@@ -1858,7 +1839,7 @@ end
 
 --[=[
 	Sets the rank of a player and `whoCalled` (Optional) is used for logging purposes.
-	@param userId string | number
+	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
 
@@ -1868,13 +1849,12 @@ end
 ]=]
 ---
 function api:setRank(
-	userId: string | number,
+	User: Player | string | number,
 	rankId: string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse
-	userId = self:_verifyUser(userId, "UserId")
-
-	local userName = self:_getNameById(userId)
+	local userId = self:_verifyUser(User, "UserId")
+	local userName = self:_verifyUser(User, "Name")
 	local roleId = self:_getRoleIdFromRank(rankId)
 
 	if not whoCalled then
@@ -1908,9 +1888,9 @@ function api:setRank(
 		rankId = tonumber(roleId),
 	}
 
-	local _, response = self:_http("/ranking/changerank", "post", nil, body)
+	local isOk, response = self:_http("/ranking/changerank", "post", nil, body)
 
-	if response.Success and response.Body and response.Body["success"] == true then
+	if isOk and response.Body and response.Body["success"] == true then
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
 	end
 
@@ -2588,6 +2568,7 @@ end
 	Gets a player's or everyone's current activity
 	@return VibezAPI?
 
+	@deprecated v0.10.9
 	@tag Chainable
 	@within VibezAPI
 	@since 0.8.0
@@ -3235,6 +3216,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- and you don't want it to yield as it gathers necessary api data.
 	-- ie, fetching group data & external-config
 	if self.Settings.Misc.isAsync then
+		self:_warn("Setting 'isAsync' has been marked deprecated, it is not recommended to use this method.")
 		coroutine.wrap(self._initialize)(self, apiKey)
 	else
 		self:_initialize(apiKey)
@@ -3290,9 +3272,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 	end
 
-	ScriptContext.Error:Connect(function(...)
-		self:_onInternalErrorLog(...)
-	end)
+	if self.Settings.Misc.autoReportErrors then
+		ScriptContext.Error:Connect(function(...)
+			self:_onInternalErrorLog(...)
+		end)
+	end
 
 	-- Cast to the Vibez API Type.
 	return self :: Types.vibezApi

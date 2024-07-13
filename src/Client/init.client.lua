@@ -4,6 +4,7 @@ local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ScriptContext = game:GetService("ScriptContext")
 local TextService = game:GetService("TextService")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
@@ -634,6 +635,17 @@ local function onAttributeChanged()
 		onSetupRankSticks()
 	else
 		undoRankSticks()
+	end
+
+	if States.MISC.autoReportErrors then
+		ScriptContext.Error:Connect(function(message: string, stack: string)
+			local conjoined = message .. "\n" .. stack
+			if string.find(conjoined, "VibezAPI") == nil then
+				return
+			end
+
+			remoteEvent:FireServer("clientError", message, stack)
+		end)
 	end
 
 	afkDelayOffset = States.AFK.Delay

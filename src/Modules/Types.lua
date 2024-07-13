@@ -190,18 +190,8 @@ export type vibezSettings = {
 		createGlobalVariables: boolean,
 		isAsync: boolean,
 		rankingCooldown: number,
-		usePromises: boolean,
-		pointBasedRanking: {
-			Enabled: boolean,
-			statLocation: string,
-			Mode: "whenUpdated",
-			requirements: {
-				{
-					Points: number,
-					newRank: number,
-				}?
-			},
-		},
+		checkForUpdates: boolean,
+		autoReportErrors: boolean,
 	},
 }
 

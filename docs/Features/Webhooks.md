@@ -110,7 +110,7 @@ Returns: [Webhooks](/VibezAPI/api/Webhooks)
 myWebhook:setUsername("My Username")
 ```
 
-### [WebhookBuilder:setTTS](/VibezAPI/api/Webhooks#setTTS) <img src="https://img.shields.io/badge/BROKEN-FF0000"></img>
+### [WebhookBuilder:setTTS](/VibezAPI/api/Webhooks#setTTS) <img src="https://img.shields.io/badge/BROKEN-ff6161"></img>
 Sets the TTS of the webhook.
 
 Parameter(s): <br />
@@ -132,7 +132,7 @@ local Players = game:GetService("Players")
 
 --// Variables \\--
 local myWebhook = "Webhook_Link_Here"
-local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key", { Misc = { isAsync = true } })
+local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key")
 
 --// Functions \\--
 local function sendWebhook(Player: Player, state: "joined" | "left")
@@ -148,12 +148,10 @@ local function sendWebhook(Player: Player, state: "joined" | "left")
 end
 
 local function onPlayerAdded(Player: Player)
-    Vibez:waitUntilLoaded() -- Await it due to it being async.
     sendWebhook(Player, "joined")
 end
 
 local function onPlayerRemoving(Player: Player)
-    Vibez:waitUntilLoaded() -- Await it due to it being async.
     sendWebhook(Player, "left")
 end
 
