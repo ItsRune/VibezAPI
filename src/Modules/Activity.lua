@@ -2,7 +2,7 @@
 local RunService = game:GetService("RunService")
 
 --// Variables \\--
-local Activity = { Users = {} }
+local Activity = { Keys = {}, Processing = {} }
 local Class = {}
 Class.__index = Class
 
@@ -54,17 +54,6 @@ Class.__index = Class
 ]=]
 
 local Types = require(script.Parent.Types)
-local activityRouter = Instance.new("RemoteEvent")
-
-activityRouter.OnServerEvent:Connect(function(Player: Player)
-	local existingClass = Activity.Users[Player.UserId]
-
-	if not existingClass then
-		return
-	end
-
-	existingClass:changeAfkState(not existingClass.isAfk)
-end)
 
 --[=[
     Creates a new activity object for the player.
@@ -72,16 +61,47 @@ end)
     @param forPlayer Player
     @return ActivityTracker
 
+	@yields
     @within ActivityTracker
     @since 1.0.0
 ]=]
 ---
 function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.ActivityTracker
+	if typeof(VibezAPI) ~= "table" or VibezAPI["isVibez"] ~= true then
+		return nil
+	end
+
+	-- Await a random number to ensure processing is in effect at different load-times.
+	local RNG = Random.new(tick())
+	task.wait(RNG:NextNumber())
+
+	-- This should prevent the creation of multiple activity trackers for 1 player.
+	local existsInTable = table.find(Activity.Processing, forPlayer.UserId)
+	if existsInTable then
+		repeat
+			task.wait(1)
+			existsInTable = table.find(Activity.Processing, forPlayer.UserId)
+		until not existsInTable
+	end
+
+	-- Rotate the characters within the key to prevent any bad-actors. (If this module ends up in a client-replicated service)
+	local reversedKey = VibezAPI._private._modules.Utils.rotateCharacters(string.reverse(VibezAPI.Settings.apiKey), 128)
+	local keyTracker = Activity.Keys[reversedKey] or {}
+	local existingTracker = keyTracker[forPlayer.UserId]
+
+	-- We need to ensure the API Key matches both version of the wrapper that was provided
+	if existingTracker and VibezAPI.apiKey == existingTracker._api.apiKey then
+		return existingTracker
+	end
+
+	table.insert(Activity.Processing, forPlayer.UserId)
+
 	local self = setmetatable({}, Class)
 
 	self.isLeaving = false
 	self.isAfk = false
 
+	self._token = reversedKey
 	self._api, self._player = VibezAPI, forPlayer
 	self._seconds, self._messages, self._afkCounter, self._increment = 0, 0, 0, 1
 	self._lastCheck = DateTime.now().UnixTimestamp
@@ -100,12 +120,30 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 		end
 
 		self:Destroy()
+		table.remove(Activity.Processing, table.find(Activity.Processing, forPlayer.UserId))
 		return nil
 	end
 
 	self._api:_warn(string.format("Setting up activity tracking for %s.", tostring(forPlayer)))
-	Activity.Users[self._player.UserId] = self
 
+	keyTracker[self._player.UserId] = self
+	Activity.Keys[reversedKey] = keyTracker
+
+	table.insert(self._api._private.Binds._internal["Afk"], function(Player: Player, override: boolean?)
+		local existingClass = Activity.Keys[reversedKey][Player.UserId]
+		if not existingClass then
+			return
+		end
+
+		if override == nil then
+			override = not existingClass.isAfk
+		end
+
+		existingClass:changeAfkState(override)
+	end)
+
+	table.remove(Activity.Processing, table.find(Activity.Processing, forPlayer.UserId))
+	warn(Activity)
 	return self
 end
 
@@ -192,7 +230,7 @@ end
 ]=]
 ---
 function Class:Destroy()
-	Activity.Users[self._player.UserId] = nil
+	Activity.Keys[self._token][self._player.UserId] = nil
 
 	table.clear(self)
 	setmetatable(self, nil)

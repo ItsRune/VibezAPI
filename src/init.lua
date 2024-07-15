@@ -324,18 +324,9 @@ local function onServerInvoke(
 
 		return true
 	elseif Action == "Afk" then
-		local override = Data[1]
-		local existingTracker = ActivityTracker.Users[Player.UserId]
-
-		if not existingTracker then
-			return
-		end
-
-		if override == nil then
-			override = not existingTracker.isAfk
-		end
-
-		existingTracker:changeAfkState(override)
+		Table.ForEach(self._private.Binds._internal.Afk, function(classRouter: (Player: Player) -> ())
+			classRouter(Player, Data[1])
+		end)
 	elseif Action == "isStaff" then
 		local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 		local tbl = {}
@@ -1061,6 +1052,7 @@ function api:_onPlayerAdded(Player: Player)
 	client.Enabled = true
 
 	-- Enabled activity tracking for player
+	-- REVIEW: Keep this last at all times! The activity tracker yields on creation!
 	if
 		self.Settings.ActivityTracker.Enabled == true
 		and theirGroupData.Rank >= self.Settings.ActivityTracker.MinRank
@@ -1081,12 +1073,12 @@ end
 ---
 function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
 	-- Check for and submit activity data.
-	local existingTracker = ActivityTracker.Users[Player.UserId]
-	if existingTracker and not isPlayerStillInGame then
-		existingTracker:Left()
-
-		-- Clear from activity tracking.
-		ActivityTracker.Users[Player.UserId] = nil
+	for _, v in pairs(ActivityTracker.Keys) do
+		local class = v[Player.UserId]
+		if class then
+			-- Destroy the player's tracker.
+			class:Left()
+		end
 	end
 
 	-- Check for ranking sticks
@@ -2826,21 +2818,24 @@ function api:_initialize(apiKey: string): ()
 	-- Initialize the workspace attribute
 	self:_buildAttributes()
 
-	table.insert(
-		self._private.Maid,
-		RunService.Heartbeat:Connect(function()
-			-- Track activity
-			if self.Settings.ActivityTracker.Enabled == true then
-				for _, data in pairs(self._private.requestCaches.validStaff) do
-					if data[3] == nil then
-						continue
-					end
+	-- Track activity
+	if self.Settings.ActivityTracker.Enabled then
+		table.insert(
+			self._private.Maid,
+			RunService.Heartbeat:Connect(function()
+				-- Perform this check again in case the setting changes in game.
+				if self.Settings.ActivityTracker.Enabled == true then
+					for _, data in pairs(self._private.requestCaches.validStaff) do
+						if data[3] == nil then
+							continue
+						end
 
-					data[3]:Increment()
+						data[3]:Increment()
+					end
 				end
-			end
-		end)
-	)
+			end)
+		)
+	end
 end
 
 --// Constructor \\--
@@ -2893,6 +2888,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	local self = setmetatable({}, api)
 
 	--[=[
+		@prop isVibez boolean
+		@within VibezAPI
+		A quick boolean check to determine whether the table is indeed related to Vibez.
+	]=]
+	self.isVibez = true
+
+	--[=[
 		@prop Loaded boolean
 		@within VibezAPI
 		Determines whether the API has loaded.
@@ -2925,8 +2927,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		_initialized = false,
 		_lastVersionCheck = DateTime.now().UnixTimestamp,
-		recentlyChangedKey = false,
+		_rotateIndex = Random.new():NextInteger(12, 256),
+		_modules = { -- This is to prevent stack overflow on multiple required modules.
+			Utils = Utils,
+			Table = Table,
+		},
 
+		recentlyChangedKey = false,
 		newApiUrl = "https://leina.vibez.dev",
 		oldApiUrl = "https://api.vibez.dev/api",
 
@@ -2954,6 +2961,9 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			["fire"] = {},
 			["setrank"] = {},
 			["addblacklist"] = {},
+			["_internal"] = {
+				["Afk"] = {},
+			},
 		},
 
 		validModes = {
@@ -3261,21 +3271,29 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				end
 			end
 
-			self:_warn(
-				string.format(
-					"There's an update available whenever you're free! Your current version is v%s the latest version is %s\n\nYou can download the update here:\n%s",
-					_VERSION,
-					tagName,
-					downloadLink
-				)
+			local updateInfo = string.format(
+				"There's an update available whenever you're free! Your current version is v%s the latest version is %s\n\nYou can download the update here:\n%s",
+				_VERSION,
+				tagName,
+				downloadLink
 			)
+			local changelogInfo = ""
+
+			if JSON.body ~= "" then
+				changelogInfo = string.format("\nChangelog:\n%s", JSON.body)
+			end
+
+			self:_warn(updateInfo .. changelogInfo)
 		end
 	end
 
 	if self.Settings.Misc.autoReportErrors then
-		ScriptContext.Error:Connect(function(...)
-			self:_onInternalErrorLog(...)
-		end)
+		table.insert(
+			self._private.Maid,
+			ScriptContext.Error:Connect(function(...)
+				self:_onInternalErrorLog(...)
+			end)
+		)
 	end
 
 	-- Cast to the Vibez API Type.
