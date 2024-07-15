@@ -143,7 +143,6 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	end)
 
 	table.remove(Activity.Processing, table.find(Activity.Processing, forPlayer.UserId))
-	warn(Activity)
 	return self
 end
 

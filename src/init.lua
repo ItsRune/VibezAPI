@@ -10,13 +10,13 @@
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
 	Updated: 7/10/2024 18:13 EST
-	Version: 0.10.8
+	Version: 0.10.9
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
 ]]
 --
-local _VERSION = "0.10.8"
+local _VERSION = "0.10.9"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -28,6 +28,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ScriptContext = game:GetService("ScriptContext")
 local ServerStorage = game:GetService("ServerStorage")
+local TestService = game:GetService("TestService")
 local Workspace = game:GetService("Workspace")
 
 --// Modules \\--
@@ -3280,10 +3281,19 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			local changelogInfo = ""
 
 			if JSON.body ~= "" then
-				changelogInfo = string.format("\nChangelog:\n%s", JSON.body)
+				local fixedBody = string.gsub(JSON.body, "`[%(%)a-zA-Z]+`", function(str: string)
+					return string.format("'%s'", string.sub(str, 2, #str - 1))
+				end)
+				changelogInfo = string.format("\n\nChangelog:\n%s", fixedBody)
 			end
 
-			self:_warn(updateInfo .. changelogInfo)
+			if _G.VIBEZ_VERSION_CHECK then
+				return
+			end
+
+			_G.VIBEZ_VERSION_CHECK = true
+			TestService:Message("\n" .. updateInfo .. changelogInfo)
+			-- self:_warn(updateInfo .. changelogInfo)
 		end
 	end
 
