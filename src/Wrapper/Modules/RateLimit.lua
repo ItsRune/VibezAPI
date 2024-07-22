@@ -4,6 +4,7 @@
 --[=[
 	A class to handle rate limited requests and their errors.
 
+	@ignore
 	@class RateLimiter
 ]=]
 

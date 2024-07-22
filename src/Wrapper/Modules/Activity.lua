@@ -7,6 +7,7 @@ local Class = {}
 Class.__index = Class
 
 --[=[
+    @ignore
     @class ActivityTracker
     Main tracker for player instances, holding information like when they're AFK and how long they've been in game.
 ]=]
@@ -56,14 +57,14 @@ Class.__index = Class
 local Types = require(script.Parent.Types)
 
 --[=[
-    Creates a new activity object for the player.
-    @param VibezAPI VibezAPI
-    @param forPlayer Player
-    @return ActivityTracker
+	Creates a new activity object for the player.
+	@param VibezAPI VibezAPI
+	@param forPlayer Player
+	@return ActivityTracker
 
 	@yields
-    @within ActivityTracker
-    @since 1.0.0
+	@within ActivityTracker
+	@since 1.0.0
 ]=]
 ---
 function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.ActivityTracker
@@ -90,7 +91,7 @@ function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.Activi
 	local existingTracker = keyTracker[forPlayer.UserId]
 
 	-- We need to ensure the API Key matches both version of the wrapper that was provided
-	if existingTracker and VibezAPI.apiKey == existingTracker._api.apiKey then
+	if existingTracker and existingTracker._token == reversedKey then
 		return existingTracker
 	end
 

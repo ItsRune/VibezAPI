@@ -1,6 +1,7 @@
 --[=[
 	Builder for embeds.
     
+	@ignore
 	@class EmbedBuilder
 ]=]
 local Embed = {}

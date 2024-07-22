@@ -23,6 +23,8 @@ type fullBlacklists = {
 	blacklists: { [number | string]: { reason: string, blacklistedBy: number } },
 }
 
+type userType = Player | string | number
+
 -- Exported Types
 export type vibezDebugTools = {
 	stringifyTableDeep: (tbl: { any }, tabbing: number?) -> string,
@@ -295,43 +297,44 @@ export type vibezApi = {
 	-- Blacklists
 	addBlacklist: (
 		self: vibezApi,
-		userToBlacklist: Player | string | number,
+		userToBlacklist: userType,
 		Reason: string?,
-		blacklistExecutedBy: (Player | string | number)?
+		blacklistExecutedBy: userType?
 	) -> blacklistResponse,
-	deleteBlacklist: (self: vibezApi, userToDelete: Player | string | number) -> blacklistResponse,
-	getBlacklists: (self: vibezApi, userId: string | number) -> blacklistResponse,
+	deleteBlacklist: (self: vibezApi, userToDelete: userType) -> blacklistResponse,
+	getBlacklists: (self: vibezApi, userId: userType) -> blacklistResponse,
 	isUserBlacklisted: (self: vibezApi, userId: number | string) -> blacklistResponse,
 
 	-- Ranking
 	Promote: (
 		self: vibezApi,
-		userId: string | number,
+		userId: userType,
 		whoCalled: { userName: string, userId: number }?
 	) -> responseBody,
-	Demote: (self: vibezApi, userId: string | number, whoCalled: { userName: string, userId: number }?) -> responseBody,
-	Fire: (self: vibezApi, userId: string | number, whoCalled: { userName: string, userId: number }?) -> responseBody,
+	Demote: (self: vibezApi, userId: userType, whoCalled: { userName: string, userId: number }?) -> responseBody,
+	Fire: (self: vibezApi, userId: userType, whoCalled: { userName: string, userId: number }?) -> responseBody,
 	setRank: (
 		self: vibezApi,
-		userId: string | number,
+		userId: userType,
 		rankId: string | number,
 		whoCalled: { userName: string, userId: number }?
 	) -> responseBody,
 
 	--- Ranking Sticks
-	giveRankSticks: (self: vibezApi, User: Player | string | number, shouldCheckPermissions: boolean?) -> boolean,
+	giveRankSticks: (self: vibezApi, User: userType, shouldCheckPermissions: boolean?) -> boolean,
 	setRankStickModel: (self: vibezApi, tool: Tool | Model) -> (),
 
 	-- Activity
+	removeActivity: (self: vibezApi, userId: userType) -> boolean,
 	saveActivity: (
 		self: vibezApi,
-		userId: string | number,
+		userId: userType,
 		userRank: number,
 		secondsSpent: number?,
 		messagesSent: (number | { string })?,
 		shouldFetchGroupRank: boolean?
 	) -> httpResponse,
-	getActivity: (self: vibezApi, userId: (string | number)?) -> activityResponse,
+	getActivity: (self: vibezApi, userId: userType?) -> activityResponse,
 
 	-- Commands
 	addCommand: (
