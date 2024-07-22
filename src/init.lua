@@ -1868,7 +1868,7 @@ function api:Promote(userId: string | number, whoCalled: { userName: string, use
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
 	end
 
-	return response
+	return response.Body
 end
 
 --[=[
@@ -1914,7 +1914,7 @@ function api:Demote(userId: string | number, whoCalled: { userName: string, user
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
 	end
 
-	return response
+	return response.Body
 end
 
 --[=[
@@ -1960,7 +1960,7 @@ function api:Fire(userId: string | number, whoCalled: { userName: string, userId
 		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
 	end
 
-	return response
+	return response.Body
 end
 
 --[=[
