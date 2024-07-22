@@ -420,3 +420,99 @@ export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) ->
 -- export type widgetTypes = "" -- Add more if we decide to add more. (Social media platforms)
 
 return nil
+
+--[=[
+	@interface extraOptionsType
+	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
+	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
+	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
+	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
+	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
+	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface simplifiedAPI
+	.Ranking { Set: (Player: Player | string | number, newRank: string | number) -> rankResponse, Promote: (Player: Player | string | number) -> rankResponse, Demote: (Player: Player | string | number) -> rankResponse, Fire: (Player: Player | string | number) -> rankResponse }
+	.Activity { Get: (Player: Player | string | number) -> activityResponse, Save: (Player: Player | string | number, playerRank: number, secondsSpent: number, messagesSent: (number | {string})?, shouldFetchRank: boolean) -> httpResponse }
+	.Commands { Add: (commandName: string, commandAlias: {string?}, commandFunction: (Player: Player, Args: {string?}, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: {Player}?, affectedCount: number, Metadata: any })) -> VibezAPI, AddArgPrefix: (operationName: string, operationCode: string, operationFunction: (playerWhoCalled: Player, playerToCheck: Player, incomingArgument: string) -> boolean) -> VibezAPI, RemoveArgePrefix: (operationName: string) -> VibezAPI }
+	.Notifications { Create: (Player: Player, notificationMessage: string) -> () }
+	.Webhooks { Create: (webhookLink: string) -> Webhooks }
+	A simplified version of our API.
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface groupIdResponse
+	.success boolean
+	.groupId number?
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface errorResponse
+	.success boolean
+	.errorMessage string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface rankResponse
+	.success boolean
+	.message string
+	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface blacklistResponse
+	.success boolean
+	.message string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface fullBlacklists
+	.success boolean
+	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface infoResponse
+	.success boolean
+	.message string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface activityResponse
+	.secondsUserHasSpent number
+	.messagesUserHasSent number
+	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
+	@within VibezAPI
+]=]
+
+--[=[
+	@type responseBody groupIdResponse | errorResponse | rankResponse
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface httpResponse
+	.Body responseBody
+	.Headers { [string]: any }
+	.StatusCode number
+	.StatusMessage string?
+	.Success boolean
+	.rawBody string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface vibezDebugTools
+	.stringifyTableDeep (tbl: { any }, tabbing: number?) -> string
+	@private
+	@within VibezAPI
+]=]

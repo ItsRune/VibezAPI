@@ -103,7 +103,7 @@ There's many reasons why the ranking API may fail, maybe your discord bot is off
 ```lua title="ServerScriptService/autoRankPoints.server.lua"
 --// Configuration \\--
 local apiKey = "API KEY" -- Vibez's API Key
-local vibezApiLocation = game:GetService("ServerScriptService").VibezAPI
+local vibezApiLocation = 14946453963 --game:GetService("ServerScriptService").VibezAPI
 local pointRanks = {
 	{ Rank = 2, pointsRequired = 10 }
 }

@@ -1,7 +1,6 @@
 --[=[
 	Creates an easy way to manage and use webhooks.
 
-	@ignore
 	@class Webhooks
 ]=]
 

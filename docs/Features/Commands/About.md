@@ -191,16 +191,10 @@ local Plugin = function(...)
     local pluginLevel = 1
     local pluginUsage = "<User(s)>" -- leave blank if the command has no arguments
     local pluginDescription = "Promotes a player's rank within the group."
+    local vibezApi = require(14946453963).getGlobalsForKey("API KEY")
 
     -- Example Plugin Function --
     local function pluginFunction(Args) -- keep the name of the function as "pluginFunction"
-        local vibezApi = nil
-
-        while vibezApi == nil do
-            vibezApi = _G["VibezApi"]
-            task.wait(.25)
-        end
-
         local Sender = Args[1]
         local Users = returnPlayers(Sender, Args[3])
         local succeeded, failed = {}, {}
@@ -210,7 +204,7 @@ local Plugin = function(...)
         end
 
         for _, User in pairs(Users) do
-            local response = vibezApi.Ranking:Promote(User.UserId, {
+            local response = vibezApi.Ranking.Promote:Invoke(User.UserId, {
                 userName = Sender.Name,
                 userId = Sender.UserId
             })
@@ -317,7 +311,7 @@ local Plugin = function(...)
         end
 
         for _, User in pairs(Users) do
-            local response = vibezApi.Ranking:Demote(User.UserId, {
+            local response = vibezApi.Ranking.Demote:Invoke(User.UserId, {
                 userName = Sender.Name,
                 userId = Sender.UserId
             })
@@ -424,7 +418,7 @@ local Plugin = function(...)
         end
 
         for _, User in pairs(Users) do
-            local response = vibezApi.Ranking:Fire(User.UserId, {
+            local response = vibezApi.Ranking.Fire:Invoke(User.UserId, {
                 userName = Sender.Name,
                 userId = Sender.UserId
             })
@@ -533,7 +527,7 @@ local Plugin = function(...)
         end
 
         for _, User in pairs(Users) do
-            local response = vibezApi.Ranking:setRank(User.UserId, tonumber(Args[4]), {
+            local response = vibezApi.Ranking.setRank:Invoke(User.UserId, tonumber(Args[4]), {
                 userName = Sender.Name,
                 userId = Sender.UserId
             })
@@ -630,7 +624,7 @@ return function(Vargs)
                 task.wait(.25)
             end
 
-            vibezApi.Ranking:Promote(args[1], { userName = plr.Name, userId = plr.UserId })
+            vibezApi.Ranking.Promote:Invoke(args[1], { userName = plr.Name, userId = plr.UserId })
 		end
 	}
 
@@ -656,7 +650,7 @@ return function(Vargs)
                 task.wait(.25)
             end
 
-            vibezApi.Ranking:Demote(args[1], { userName = plr.Name, userId = plr.UserId })
+            vibezApi.Ranking.Demote:Invoke(args[1], { userName = plr.Name, userId = plr.UserId })
 		end
 	}
 
@@ -682,7 +676,7 @@ return function(Vargs)
                 task.wait(.25)
             end
 
-            vibezApi.Ranking:SetRank(args[1], args[2], { userName = plr.Name, userId = plr.UserId })
+            vibezApi.Ranking.SetRank:Invoke(args[1], args[2], { userName = plr.Name, userId = plr.UserId })
 		end
 	}
 end

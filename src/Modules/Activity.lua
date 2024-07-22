@@ -7,7 +7,6 @@ local Class = {}
 Class.__index = Class
 
 --[=[
-    @ignore
     @class ActivityTracker
     Main tracker for player instances, holding information like when they're AFK and how long they've been in game.
 ]=]

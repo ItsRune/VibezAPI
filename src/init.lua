@@ -9,14 +9,12 @@
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
-	Updated: 7/10/2024 18:13 EST
-	Version: 0.10.9
+	Updated: 7/22/2024 04:32 EST
+	Version: 0.11.0
 	
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
 ]]
---
-local _VERSION = "0.10.9"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -28,8 +26,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ScriptContext = game:GetService("ScriptContext")
 local ServerStorage = game:GetService("ServerStorage")
-local TestService = game:GetService("TestService")
 local Workspace = game:GetService("Workspace")
+-- local TestService = game:GetService("TestService")
 
 --// Modules \\--
 local Types = require(script.Modules.Types)
@@ -127,8 +125,8 @@ local baseSettings = {
 		createGlobalVariables = false,
 		isAsync = false,
 		rankingCooldown = 30, -- 30 Seconds
-		checkForUpdates = true,
 		autoReportErrors = false, -- It's best to use this when a developer asks you to within a ticket.
+		-- checkForUpdates = false, -- This check is no longer necessary after finding AI moderation issue. (You can enable if you'd like)
 	},
 }
 
@@ -593,122 +591,40 @@ function api:_setupCommands()
 end
 
 --[=[
-	Sets up the _G API.
+	~~Sets up the _G API.~~ **Creates RemoteFunctions within ServerStorage.**
 	@return ()
 
 	@private
 	@within VibezAPI
+	@since 0.4.0
 ]=]
 ---
 function api:_setupGlobals(): ()
 	if
-		_G["VibezApi"] ~= nil
-		or ServerStorage:FindFirstChild("VibezApi")
+		ServerStorage:FindFirstChild(self._private.clientScriptName)
 		or self.Settings.Misc.createGlobalVariables == false
 	then
 		return
 	end
 
-	self:_warn(
-		"We are switching from '_G' to using RemoteFunctions within 'ServerStorage', please look at the updated documentation for what this change entails. For now everything using '_G' will work, however in the near future this will no longer be possible. We recommend you update all your scripts to use the new version of Global methods."
-	)
-
-	local Ranking = {
-		Promote = function(
-			_: { any },
-			userId: number | string | Player,
-			whoCalled: { userName: string, userId: number }?
-		)
-			return self:Promote(userId, whoCalled)
-		end,
-
-		Fire = function(_: { any }, userId: number | string | Player, whoCalled: { userName: string, userId: number }?)
-			return self:Fire(userId, whoCalled)
-		end,
-
-		Demote = function(
-			_: { any },
-			userId: number | string | Player,
-			whoCalled: { userName: string, userId: number }?
-		)
-			return self:Demote(userId, whoCalled)
-		end,
-
-		setRank = function(
-			_: { any },
-			userId: number | string | Player,
-			rank: number | string,
-			whoCalled: { userName: string, userId: number }?
-		)
-			return self:setRank(userId, rank, whoCalled)
-		end,
-	}
-
-	local Activity = {
-		getActivity = function(_: { any }, userId: number | string | Player)
-			return self:getActivity(userId)
-		end,
-
-		saveActivity = function(
-			_: { any },
-			_: { any },
-			userId: string | number,
-			userRank: number,
-			secondsSpent: number?,
-			messagesSent: (number | { string })?,
-			shouldFetchGroupRank: boolean?
-		)
-			return self:saveActivity(userId, userRank, secondsSpent, messagesSent, shouldFetchGroupRank)
-		end,
-	}
-
-	local webHooks = {
-		new = function(_: { any }, webhook: string): Types.vibezHooks
-			return self:getWebhookBuilder(webhook)
-		end,
-	}
-
-	local Notifications = {
-		new = function(_: { any }, Player: Player, Message: string): Types.vibezHooks
-			return self:_notifyPlayer(Player, Message)
-		end,
-	}
-
-	local General = {
-		-- _getGroupFromUser(groupId: number, userId: number, force: boolean?)
-		getGroup = function(_: { any }, Player: Player, groupId: number, force: boolean?): { any }?
-			return self:_getGroupFromUser(groupId, Player.UserId, force)
-		end,
-
-		getGroupRank = function(_: { any }, Player: Player, groupId: number, force: boolean?): number?
-			local data = self:_getGroupFromUser(groupId, Player.UserId, force)
-			return data["Rank"]
-		end,
-
-		getGroupRole = function(_: { any }, Player: Player, groupId: number, force: boolean?): string?
-			local data = self:_getGroupFromUser(groupId, Player.UserId, force)
-			return data["Role"]
-		end,
-	}
-
 	local serializedData = {
 		["Ranking"] = {
-			["Promote"] = "RemoteFunction",
-			["Fire"] = "RemoteFunction",
-			["Demote"] = "RemoteFunction",
-			["setRank"] = "RemoteFunction",
+			["Promote"] = "BindableFunction",
+			["Fire"] = "BindableFunction",
+			["Demote"] = "BindableFunction",
+			["setRank"] = "BindableFunction",
 		},
 		["Activity"] = {
-			["Save"] = "RemoteFunction",
-			["Fetch"] = "RemoteFunction",
+			["Save"] = "BindableFunction",
+			["Fetch"] = "BindableFunction",
 		},
 		["General"] = {
-			["getGroup"] = "RemoteFunction",
-			["getGroupRank"] = "RemoteFunction",
-			["getGroupRole"] = "RemoteFunction",
+			["getGroup"] = "BindableFunction",
+			["getGroupRank"] = "BindableFunction",
+			["getGroupRole"] = "BindableFunction",
 		},
-		["Notification"] = "RemoteFunction",
-		["Webhook"] = "RemoteFunction",
+		["Notifications"] = "BindableFunction",
+		["Webhooks"] = "BindableFunction",
 	}
 
 	local function deserialize(item: any)
@@ -737,50 +653,44 @@ function api:_setupGlobals(): ()
 	end
 
 	local globalsFolder = deserialize(serializedData)
-	globalsFolder.Name = "VibezApi"
+	globalsFolder.Name = self._private.clientScriptName
 	globalsFolder.Parent = ServerStorage
 
-	globalsFolder.Ranking.Promote.OnServerInvoke = function(...: any): any
-		return Ranking:Promote(...)
+	globalsFolder.Ranking.Promote.OnInvoke = function(...: any): any
+		return self:Promote(...)
 	end
-	globalsFolder.Ranking.Demote.OnServerInvoke = function(...: any): any
-		return Ranking:Demote(...)
+	globalsFolder.Ranking.Demote.OnInvoke = function(...: any): any
+		return self:Demote(...)
 	end
-	globalsFolder.Ranking.Fire.OnServerInvoke = function(...: any): any
-		return Ranking:Fire(...)
+	globalsFolder.Ranking.Fire.OnInvoke = function(...: any): any
+		return self:Fire(...)
 	end
-	globalsFolder.Ranking.setRank.OnServerInvoke = function(...: any): any
-		return Ranking:setRank(...)
+	globalsFolder.Ranking.setRank.OnInvoke = function(...: any): any
+		return self:setRank(...)
 	end
-	globalsFolder.Activity.Save.OnServerInvoke = function(...: any): any
-		return Activity:saveActivity(...)
+	globalsFolder.Activity.Save.OnInvoke = function(...: any): any
+		return self:saveActivity(...)
 	end
-	globalsFolder.Activity.Fetch.OnServerInvoke = function(...: any): any
-		return Activity:getActivity(...)
+	globalsFolder.Activity.Fetch.OnInvoke = function(...: any): any
+		return self:getActivity(...)
 	end
-	globalsFolder.Notification.OnServerInvoke = function(...: any): any
-		return Notifications:new(...)
+	globalsFolder.Notifications.OnInvoke = function(...: any): any
+		return self:_notifyPlayer(...)
 	end
-	globalsFolder.Webhook.OnServerInvoke = function(...: any): any
-		return webHooks:new(...)
+	globalsFolder.Webhooks.OnInvoke = function(...: any): any
+		return self:getWebhookBuilder(...)
 	end
-	globalsFolder.General.getGroup.OnServerInvoke = function(...: any): any
-		return General:getGroup(...)
+	globalsFolder.General.getGroup.OnInvoke = function(...: any): any
+		return self:_getGroupFromUser(...)
 	end
-	globalsFolder.General.getGroupRank.OnServerInvoke = function(...: any): any
-		return General:getGroupRank(...)
+	globalsFolder.General.getGroupRank.OnInvoke = function(...: any): any
+		local data = self:_getGroupFromUser(...)
+		return data["Rank"]
 	end
-	globalsFolder.General.getGroupRole.OnServerInvoke = function(...: any): any
-		return General:getGroupRole(...)
+	globalsFolder.General.getGroupRole.OnInvoke = function(...: any): any
+		local data = self:_getGroupFromUser(...)
+		return data["Role"]
 	end
-
-	_G.VibezApi = {
-		Ranking = Ranking,
-		Activity = Activity,
-		Webhooks = webHooks,
-		Notifications = Notifications,
-		General = General,
-	}
 end
 
 --[=[
@@ -2863,6 +2773,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@prop isVibez boolean
+		@since 0.11.0
 		@within VibezAPI
 		A quick boolean check to determine whether the table is indeed related to Vibez.
 	]=]
@@ -2870,6 +2781,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@prop Loaded boolean
+		@since 0.4.0
 		@within VibezAPI
 		Determines whether the API has loaded.
 	]=]
@@ -2877,6 +2789,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@prop GroupId number
+		@since 0.2.0
 		@within VibezAPI
 		Holds the groupId associated with the API Key.
 	]=]
@@ -2884,6 +2797,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@prop Settings extraOptionsType
+		@since 0.1.0
 		@within VibezAPI
 		Holds a copy of the settings for the API.
 	]=]
@@ -2891,6 +2805,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
+		@since 0.1.0
 		@private
 		@within VibezAPI
 		From caches to simple booleans/instances/numbers, this table holds all the information necessary for this API to work. 
@@ -3216,60 +3131,61 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_setupGlobals()
 	end
 
-	if self.Settings.Misc.checkForUpdates then
-		-- Auto-Update with github, lets hope this doesn't hit any rate limits.
-		-- Check with _VERSION variable and warn the download link.
-		-- [%d]+.[%d]+.[%d]+
-		local isOk, response, JSON
-		isOk, response =
-			pcall(HttpService.GetAsync, HttpService, "https://api.github.com/repos/ItsRune/VibezAPI/releases/latest")
-		if not isOk then
-			return
-		end
+	-- This code will be kept in case I brick the module again with my descriptive comments. :rolling_eyes:
+	-- if self.Settings.Misc.checkForUpdates then
+	-- 	-- Auto-Update with github, lets hope this doesn't hit any rate limits.
+	-- 	-- Check with _VERSION variable and warn the download link.
+	-- 	-- [%d]+.[%d]+.[%d]+
+	-- 	local isOk, response, JSON
+	-- 	isOk, response =
+	-- 		pcall(HttpService.GetAsync, HttpService, "https://api.github.com/repos/ItsRune/VibezAPI/releases/latest")
+	-- 	if not isOk then
+	-- 		return
+	-- 	end
 
-		isOk, JSON = pcall(HttpService.JSONDecode, HttpService, response)
-		if not isOk then
-			return
-		end
+	-- 	isOk, JSON = pcall(HttpService.JSONDecode, HttpService, response)
+	-- 	if not isOk then
+	-- 		return
+	-- 	end
 
-		local tagName = JSON.tag_name
-		local currentTag = "v" .. _VERSION
-		if currentTag ~= tagName then
-			local downloadLink = "(Can't Find)"
-			do
-				local vibezRBXM = Table.Find(JSON.assets, function(data)
-					return string.match(data.name, ".rbxm") ~= nil
-				end)
+	-- 	local tagName = JSON.tag_name
+	-- 	local currentTag = "v" .. _VERSION
+	-- 	if currentTag ~= tagName then
+	-- 		local downloadLink = "(Can't Find)"
+	-- 		do
+	-- 			local vibezRBXM = Table.Find(JSON.assets, function(data)
+	-- 				return string.match(data.name, ".rbxm") ~= nil
+	-- 			end)
 
-				if vibezRBXM then
-					downloadLink = vibezRBXM.browser_download_url
-				end
-			end
+	-- 			if vibezRBXM then
+	-- 				downloadLink = vibezRBXM.browser_download_url
+	-- 			end
+	-- 		end
 
-			local updateInfo = string.format(
-				"There's an update available whenever you're free! Your current version is v%s the latest version is %s\n\nYou can download the update here:\n%s",
-				_VERSION,
-				tagName,
-				downloadLink
-			)
-			local changelogInfo = ""
+	-- 		local updateInfo = string.format(
+	-- 			"There's an update available whenever you're free! Your current version is v%s the latest version is %s\n\nYou can download the update here:\n%s",
+	-- 			_VERSION,
+	-- 			tagName,
+	-- 			downloadLink
+	-- 		)
+	-- 		local changelogInfo = ""
 
-			if JSON.body ~= "" then
-				local fixedBody = string.gsub(JSON.body, "`[%(%)a-zA-Z]+`", function(str: string)
-					return string.format("'%s'", string.sub(str, 2, #str - 1))
-				end)
-				changelogInfo = string.format("\n\nChangelog:\n%s", fixedBody)
-			end
+	-- 		if JSON.body ~= "" then
+	-- 			local fixedBody = string.gsub(JSON.body, "`[%(%)a-zA-Z]+`", function(str: string)
+	-- 				return string.format("'%s'", string.sub(str, 2, #str - 1))
+	-- 			end)
+	-- 			changelogInfo = string.format("\n\nChangelog:\n%s", fixedBody)
+	-- 		end
 
-			if _G.VIBEZ_VERSION_CHECK then
-				return
-			end
+	-- 		if _G.VIBEZ_VERSION_CHECK then
+	-- 			return
+	-- 		end
 
-			_G.VIBEZ_VERSION_CHECK = true
-			TestService:Message("\n" .. updateInfo .. changelogInfo)
-			-- self:_warn(updateInfo .. changelogInfo)
-		end
-	end
+	-- 		_G.VIBEZ_VERSION_CHECK = true
+	-- 		TestService:Message("\n" .. updateInfo .. changelogInfo)
+	-- 		-- self:_warn(updateInfo .. changelogInfo)
+	-- 	end
+	-- end
 
 	if self.Settings.Misc.autoReportErrors then
 		table.insert(
@@ -3279,6 +3195,9 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			end)
 		)
 	end
+
+	_G["vibez_api_key_private_names"] = _G["vibez_api_key_private_names"] or {}
+	_G["vibez_api_key_private_names"][self.Settings.apiKey] = self._private.clientScriptName
 
 	-- Cast to the Vibez API Type.
 	return self :: Types.vibezApi
@@ -3296,12 +3215,33 @@ end
 
 	@yields
 	@within VibezAPI
+	@deprecated 0.11.0
 	@since 0.1.0
 ]=]
 ---
+
+--[=[
+	@function getGlobalsForKey
+	Awaits for the Global API to be loaded.
+	@param apiKey string
+	@return Folder
+
+	```lua
+	local globals = VibezAPI.getGlobalsForKey("API KEY")
+	```
+
+	@within VibezAPI
+	@deprecated 0.11.0
+	@since 0.11.0
+]=]
+---
+
 return setmetatable({
 	isVibezAPI = true,
+
 	awaitGlobals = function()
+		assert(false, "This method has been deprecated, we recommend using the new 'getGlobalsForKey' function.")
+
 		local mod = nil
 		local counter = 0
 
@@ -3318,106 +3258,15 @@ return setmetatable({
 
 		return mod
 	end,
+
+	getGlobalsForKey = function(apiKey: string)
+		local vibezKey = _G["vibez_api_key_private_names"][apiKey]
+		return (vibezKey ~= nil) and ServerStorage:FindFirstChild(vibezKey) or nil
+	end,
+
 	new = Constructor,
 }, {
 	__call = function(t, ...)
 		return rawget(t, "new")(...)
-	end,
-}) :: Types.vibezConstructor
-
---// Documentation \\--
---[=[
-	@interface extraOptionsType
-	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
-	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
-	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
-	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
-	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
-	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface simplifiedAPI
-	.Ranking { Set: (Player: Player | string | number, newRank: string | number) -> rankResponse, Promote: (Player: Player | string | number) -> rankResponse, Demote: (Player: Player | string | number) -> rankResponse, Fire: (Player: Player | string | number) -> rankResponse }
-	.Activity { Get: (Player: Player | string | number) -> activityResponse, Save: (Player: Player | string | number, playerRank: number, secondsSpent: number, messagesSent: (number | {string})?, shouldFetchRank: boolean) -> httpResponse }
-	.Commands { Add: (commandName: string, commandAlias: {string?}, commandFunction: (Player: Player, Args: {string?}, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: {Player}?, affectedCount: number, Metadata: any })) -> VibezAPI, AddArgPrefix: (operationName: string, operationCode: string, operationFunction: (playerWhoCalled: Player, playerToCheck: Player, incomingArgument: string) -> boolean) -> VibezAPI, RemoveArgePrefix: (operationName: string) -> VibezAPI }
-	.Notifications { Create: (Player: Player, notificationMessage: string) -> () }
-	.Webhooks { Create: (webhookLink: string) -> Webhooks }
-	A simplified version of our API.
-	@within VibezAPI
-]=]
-
---[=[
-	@interface groupIdResponse
-	.success boolean
-	.groupId number?
-	@within VibezAPI
-]=]
-
---[=[
-	@interface errorResponse
-	.success boolean
-	.errorMessage string
-	@within VibezAPI
-]=]
-
---[=[
-	@interface rankResponse
-	.success boolean
-	.message string
-	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface blacklistResponse
-	.success boolean
-	.message string
-	@within VibezAPI
-]=]
-
---[=[
-	@interface fullBlacklists
-	.success boolean
-	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface infoResponse
-	.success boolean
-	.message string
-	@within VibezAPI
-]=]
-
---[=[
-	@interface activityResponse
-	.secondsUserHasSpent number
-	.messagesUserHasSent number
-	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
-	@within VibezAPI
-]=]
-
---[=[
-	@type responseBody groupIdResponse | errorResponse | rankResponse
-	@within VibezAPI
-]=]
-
---[=[
-	@interface httpResponse
-	.Body responseBody
-	.Headers { [string]: any }
-	.StatusCode number
-	.StatusMessage string?
-	.Success boolean
-	.rawBody string
-	@within VibezAPI
-]=]
-
---[=[
-	@interface vibezDebugTools
-	.stringifyTableDeep (tbl: { any }, tabbing: number?) -> string
-	@private
-	@within VibezAPI
-]=]
+	end :: Types.vibezConstructor,
+})

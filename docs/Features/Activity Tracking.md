@@ -11,7 +11,7 @@ The activity tracker works by using object orientated programming that creates s
 All you need to do is require the main module and change an option to `true`. Then you're all set up to use the activity tracker within your game.
 
 ```lua
-local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key", {
+local Vibez = require(14946453963)("API Key", {
     ActivityTracker = {
         Enabled = true, -- Enabled the tracker for players.
         MinRank = 255, -- The minimum rank that a staff member must be to be tracked.
@@ -66,7 +66,7 @@ VibezApi:saveActivity(107392833, 200, 10, 5)
 local DataStoreService = game:GetService("DataStoreService")
 
 --// Variables \\--
-local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key"):waitUntilLoaded()
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 local backupDataStore = DataStoreService:GetDataStore("PlayerActivity")
 
 --// Functions \\--
@@ -87,7 +87,7 @@ game.OnClose:Connect(onGameShutdown)
 <br />
 
 ```lua
-local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key"):waitUntilLoaded()
+local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
 
 local function addActivity(playerUserId: number, secondsSpent: number, messagesSent: number)
     Vibez:saveActivity(playerUserId, secondsSpent, messagesSent)
