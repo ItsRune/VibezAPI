@@ -4,9 +4,9 @@
     "$className": "DataModel",
 
     "ServerScriptService": {
-      "VibezRanking": {
+      "VibezAPI": {
         "$ignoreUnknownInstances": true,
-        "$path": "./src/Ranking"
+        "$path": "./src"
       }
     }
   }

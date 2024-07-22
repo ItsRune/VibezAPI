@@ -1178,7 +1178,7 @@ function api:_fixFormattedString(
 	Custom = Custom or { onlyApplyCustom = false, Codes = {} }
 	Custom["onlyApplyCustom"] = Custom["onlyApplyCustom"] or false
 
-	-- 'Loadstring' module is non-existent in these versions and aren't needed anymore.
+	-- A module that loaded lua code into game servers is no longer necessary.
 	-- local playerService = 'game:GetService("Players")'
 	-- local repStorage = 'game:GetService("ReplicatedStorage")'
 	-- local repFirst = 'game:GetService("ReplicatedFirst")'
