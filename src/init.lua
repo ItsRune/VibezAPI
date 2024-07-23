@@ -1,8 +1,9 @@
+--!strict
 --[[
 		 _   _ ___________ _____ ______
 		| | | |_   _| ___ \  ___|___  /
-		| | | | | | | |_/ / |__    / / 
-		| | | | | | | ___ \  __|  / /  
+		| | | | | | | |_/ / |__    / /
+		| | | | | | | ___ \  __|  / /
 		\ \_/ /_| |_| |_/ / |___./ /___
 		 \___/ \___/\____/\____/\_____/
 
@@ -11,14 +12,13 @@
 	Created: 9/11/2023 15:01 EST
 	Updated: 7/22/2024 04:32 EST
 	Version: 0.11.0
-	
+
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
 ]]
 
 --// Services \\--
 local Debris = game:GetService("Debris")
-local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
@@ -35,7 +35,6 @@ local Hooks = require(script.Modules.Hooks)
 local ActivityTracker = require(script.Modules.Activity)
 local RateLimit = require(script.Modules.RateLimit)
 local Table = require(script.Modules.Table)
-local RoTime = require(script.Modules.RoTime)
 local Utils = require(script.Modules.Utils)
 -- local Promise = require(script.Modules.Promise)
 
@@ -439,7 +438,7 @@ end
 ]=]
 ---
 function api:_setupCommands()
-	local baseCommands = {
+	local baseCommands: { [number]: { [number]: string | { any } | (Player: Player, Args: { string }) -> () } } = {
 		{
 			"promote",
 			{},
@@ -539,28 +538,9 @@ function api:_setupCommands()
 				end
 
 				local affectedUsers = {}
-				local targetData = table.remove(Args[1])
-				local Targets
+				local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 
-				Targets = Table.Map(string.split(targetData, ","), function(value)
-					if tonumber(value) ~= nil then
-						local nameIsOk, targetName = pcall(Players.GetNameFromUserIdAsync, Players, value)
-						if not nameIsOk then
-							return
-						end
-
-						return { Name = targetName, UserId = tonumber(value) }
-					else
-						local idIsOk, targetUserId = pcall(Players.GetUserIdFromNameAsync, Players, value)
-						if not idIsOk then
-							return
-						end
-
-						return { Name = value, UserId = targetUserId }
-					end
-				end)
-
-				for _, Target: { Name: string, UserId: number } in pairs(Targets) do
+				for _, Target: Player | { Name: string, UserId: number } in pairs(users) do
 					if not Target then
 						return
 					end
@@ -591,7 +571,7 @@ function api:_setupCommands()
 end
 
 --[=[
-	~~Sets up the _G API.~~ **Creates RemoteFunctions within ServerStorage.**
+	~~Sets up the _G API.~~ **Creates RemoteFunctions within ServerStorage under a direct folder with that specific wrapper.**
 	@return ()
 
 	@private
@@ -617,6 +597,7 @@ function api:_setupGlobals(): ()
 		["Activity"] = {
 			["Save"] = "BindableFunction",
 			["Fetch"] = "BindableFunction",
+			["Remove"] = "BindableFunction",
 		},
 		["General"] = {
 			["getGroup"] = "BindableFunction",
@@ -652,7 +633,7 @@ function api:_setupGlobals(): ()
 		end
 	end
 
-	local globalsFolder = deserialize(serializedData)
+	local globalsFolder = deserialize(serializedData) :: Folder
 	globalsFolder.Name = self._private.clientScriptName
 	globalsFolder.Parent = ServerStorage
 
@@ -673,6 +654,9 @@ function api:_setupGlobals(): ()
 	end
 	globalsFolder.Activity.Fetch.OnInvoke = function(...: any): any
 		return self:getActivity(...)
+	end
+	globalsFolder.Activity.Remove.OnInvoke = function(...: any): any
+		return self:removeActivity(...)
 	end
 	globalsFolder.Notifications.OnInvoke = function(...: any): any
 		return self:_notifyPlayer(...)
@@ -718,7 +702,7 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 	local webhookLink = table.concat(
 		string.split(
 			Utils.rotateCharacters(
-				string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey),
+				string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey()),
 				base,
 				"|",
 				true
@@ -771,20 +755,21 @@ function api:_http(
 		local message = "You're being rate limited! " .. err
 
 		-- Create a fake error response
-		return {
-			Success = false,
-			StatusCode = 429,
-			StatusMessage = message,
-			rawBody = "{}",
-			Headers = {
-				["Content-Type"] = "application/json",
-				["x-api-key"] = self.Settings.apiKey,
-			},
-			Body = {
-				success = false,
-				errorMessage = message,
-			},
-		}
+		return false,
+			{
+				Success = false,
+				StatusCode = 429,
+				StatusMessage = message,
+				rawBody = "{}",
+				Headers = {
+					["Content-Type"] = "application/json",
+					["x-api-key"] = self.Settings.apiKey,
+				},
+				Body = {
+					success = false,
+					errorMessage = message,
+				},
+			}
 	end
 
 	Route = (typeof(Route) == "string") and Route or "/"
@@ -869,7 +854,7 @@ end
 	Uses roblox's group service to get a player's rank.
 	@param groupId number
 	@param userId number
-	@return { any }
+	@return { Rank: number?, Role: string?, Id: number?, errMessage: string? }
 
 	@yields
 	@private
@@ -877,7 +862,11 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:_getGroupFromUser(groupId: number, userId: number, force: boolean?): any?
+function api:_getGroupFromUser(
+	groupId: number,
+	userId: number,
+	force: boolean?
+): { Rank: number?, Role: string?, Id: number?, errMessage: string? }
 	if self._private.requestCaches.groupInfo[userId] ~= nil and not force then
 		return self._private.requestCaches.groupInfo[userId]
 	end
@@ -1085,7 +1074,10 @@ function api:_fixFormattedString(
 	Player: { Name: string, UserId: number } | Player?,
 	Custom: { onlyApplyCustom: boolean?, Codes: { { code: string, equates: string }? } }?
 ): string
-	Custom = Custom or { onlyApplyCustom = false, Codes = {} }
+	if not Custom then
+		Custom = { onlyApplyCustom = false, Codes = {} }
+	end
+
 	Custom["onlyApplyCustom"] = Custom["onlyApplyCustom"] or false
 
 	-- A module that loaded lua code into game servers is no longer necessary.
@@ -1385,10 +1377,13 @@ function api:_removeSticks(Player: Player)
 	local character = Player.Character
 	local backpack = Player.Backpack
 
+	local charChildren = (character ~= nil) and character:GetChildren() or {}
+	local packChildren = (backpack ~= nil) and backpack:GetChildren() or {}
+
 	self:_warn("Removing ranking sticks from " .. Player.Name .. " (" .. Player.UserId .. ")")
 
 	local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
-	local conjoinedLocations = Table.Assign(character:GetChildren(), backpack:GetChildren())
+	local conjoinedLocations = Table.Assign(charChildren, packChildren)
 	local result = Table.Filter(conjoinedLocations, function(tool: Instance)
 		return tool:IsA("Tool")
 			and table.find(stickTypes, tool.Name) ~= nil
@@ -1415,8 +1410,7 @@ end
 ]=]
 ---
 function api:giveRankSticks(User: Player | string | number, shouldCheckPermissions: boolean?): Types.vibezApi
-	local Player = self:_verifyUser(User, "Instance")
-
+	local Player = self:_verifyUser(User, "Instance") :: Player?
 	if not Player then
 		return self
 	end
@@ -1442,16 +1436,16 @@ end
 	@since 0.9.1
 ]=]
 ---
-function api:setRankStickTool(tool: Tool | Model): Types.vibezApi
+function api:setRankStickTool(tool: Tool): Types.vibezApi
 	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
 		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
-		return
+		return self
 	end
 
 	if tool:IsA("Model") then
 		if not tool:FindFirstChild("Handle") then
 			self:_warn("Ranking Stick's model requires a 'Handle'!")
-			return
+			return self
 		end
 
 		local children = tool:GetChildren()
@@ -1468,7 +1462,7 @@ function api:setRankStickTool(tool: Tool | Model): Types.vibezApi
 		tool = t
 	end
 
-	local handle = tool:FindFirstChild("Handle")
+	local handle = tool:FindFirstChild("Handle") :: BasePart
 	handle.Anchored = false
 	handle.CanCollide = false
 
@@ -1509,7 +1503,8 @@ end
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
 	-- Check for activity tracker to increment messages sent.
-	local existingTracker = ActivityTracker.Users[Player.UserId]
+	local token = self._private._modules.Utils.rotateCharacters(string.reverse(self.Settings.apiKey), 128)
+	local existingTracker = ActivityTracker.Keys[token][Player.UserId]
 	if existingTracker then
 		existingTracker:Chatted()
 	end
@@ -1707,7 +1702,7 @@ end
 function api:_verifyUser(User: Player | number | string, typeToReturn: "UserId" | "Player" | "Name")
 	if typeof(User) == "Instance" and User:IsA("Player") then
 		return (typeToReturn == "UserId") and User.UserId
-			or (typeToReturn == "string") and User.Name
+			or (typeToReturn == "Name") and User.Name
 			or (typeToReturn == "Player") and User
 	elseif typeof(User) == "string" then
 		return (typeToReturn == "UserId") and (tonumber(User) or self:_getUserIdByName(User))
@@ -1739,7 +1734,7 @@ function api:getGroupId()
 
 	self._private.recentlyChangedKey = false
 	local isOk, res = self:_http("/ranking/groupid", "post", nil, nil)
-	local Body: groupIdResponse = res.Body
+	local Body: Types.groupIdResponse = res.Body
 
 	-- Make this a new thread, in case there's a failure we don't return nothing.
 	-- These lines below were for the planned dashboard, which has been placed on halt.
@@ -1780,7 +1775,7 @@ function api:setRank(
 	User: Player | string | number,
 	rankId: string | number,
 	whoCalled: { userName: string, userId: number }?
-): Types.rankResponse
+): Types.rankResponse | Types.errorResponse
 	local userId = self:_verifyUser(User, "UserId")
 	local userName = self:_verifyUser(User, "Name")
 	local roleId = self:_getRoleIdFromRank(rankId)
@@ -1796,14 +1791,14 @@ function api:setRank(
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
+		}
 	end
 
 	if not tonumber(roleId) then
 		return {
 			success = false,
 			errorMessage = "Parameter 'rankId' is an invalid rank.",
-		} :: Types.errorResponse
+		}
 	end
 
 	local body = {
@@ -1836,7 +1831,10 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:Promote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+function api:Promote(
+	userId: string | number,
+	whoCalled: { userName: string, userId: number }?
+): Types.rankResponse | Types.errorResponse
 	userId = self:_verifyUser(userId, "UserId")
 
 	local userName = self:_getNameById(userId)
@@ -1852,7 +1850,7 @@ function api:Promote(userId: string | number, whoCalled: { userName: string, use
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
+		}
 	end
 
 	local _, response = self:_http("/ranking/promote", "post", nil, {
@@ -1882,7 +1880,10 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:Demote(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+function api:Demote(
+	userId: string | number,
+	whoCalled: { userName: string, userId: number }?
+): Types.rankResponse | Types.errorResponse
 	userId = self:_verifyUser(userId, "UserId")
 
 	local userName = self:_getNameById(userId)
@@ -1898,7 +1899,7 @@ function api:Demote(userId: string | number, whoCalled: { userName: string, user
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
+		}
 	end
 
 	local _, response = self:_http("/ranking/demote", "post", nil, {
@@ -1928,7 +1929,10 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:Fire(userId: string | number, whoCalled: { userName: string, userId: number }?): Types.rankResponse
+function api:Fire(
+	userId: string | number,
+	whoCalled: { userName: string, userId: number }?
+): Types.rankResponse | Types.errorResponse
 	userId = self:_verifyUser(userId, "UserId")
 
 	local userName = self:_getNameById(userId)
@@ -1944,7 +1948,7 @@ function api:Fire(userId: string | number, whoCalled: { userName: string, userId
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
-		} :: Types.errorResponse
+		}
 	end
 
 	local _, response = self:_http("/ranking/fire", "post", nil, {
@@ -2056,10 +2060,10 @@ function api:addArgumentPrefix(
 ): Types.vibezApi
 	if self._private.commandOperationCodes[operationName] then
 		self:_warn(`Command operation code '{operationCode}' already exists!`)
-		return
+		return self
 	elseif typeof(operationFunction) ~= "function" then
 		self:_warn(`Command operation callback is not a type "function", it's a "{typeof(operationFunction)}"`)
-		return
+		return self
 	end
 
 	for opName, opData in pairs(self._private.commandOperationCodes) do
@@ -2069,7 +2073,6 @@ function api:addArgumentPrefix(
 	end
 
 	local data = { Code = operationCode, Execute = operationFunction }
-
 	if typeof(metaData) == "table" and Table.Count(metaData) > 0 then
 		for key: string, value: boolean in pairs(metaData) do
 			if data[key] ~= nil or typeof(value) ~= "boolean" then
@@ -2111,7 +2114,7 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:updateLoggerName(newTitle: string): nil
+function api:updateLoggerName(newTitle: string): Types.vibezApi
 	self.Settings.Misc.originLoggerText = tostring(newTitle)
 	return self
 end
@@ -2163,7 +2166,7 @@ end
 	@since 0.1.1
 ]=]
 ---
-function api:isPlayerABooster(User: number | string | Player): boolean
+function api:isPlayerABooster(User: number | string | Player): boolean?
 	local userId
 
 	if typeof(User) == "Instance" and User:IsA("Player") then
@@ -2291,7 +2294,7 @@ function api:addBlacklist(
 	userToBlacklist: Player | string | number,
 	Reason: string?,
 	blacklistExecutedBy: (Player | string | number)?
-)
+): Types.blacklistResponse | Types.errorResponse
 	local userId, reason, blacklistedBy = nil, (Reason or "Unknown."), nil
 
 	if not userToBlacklist then
@@ -2327,7 +2330,7 @@ end
 	@since 0.6.0
 ]=]
 ---
-function api:deleteBlacklist(userToDelete: Player | string | number)
+function api:deleteBlacklist(userToDelete: Player | string | number): Types.blacklistResponse | Types.errorResponse
 	if not userToDelete then
 		return nil
 	end
@@ -2354,7 +2357,7 @@ end
 	@since 0.6.0
 ]=]
 ---
-function api:getBlacklists(userId: (string | number | Player)?): Types.blacklistResponse
+function api:getBlacklists(userId: (string | number | Player)?): Types.blacklistResponse | Types.errorResponse
 	userId = self:_verifyUser(userId, "UserId")
 	local isOk, response = self:_http(`/blacklists/{userId}`)
 
@@ -2396,13 +2399,13 @@ end
 --[=[
 	Gets either a full list of blacklists or checks if a player is currently blacklisted.
 	@param userId (string | number)?
-	@return (boolean, string?)
+	@return (boolean, string?, string?)
 
 	@within VibezAPI
 	@since 0.6.0
 ]=]
 ---
-function api:isUserBlacklisted(userId: (string | number)?): (boolean, string?, number?)
+function api:isUserBlacklisted<B, R, BB>(userId: (string | number)?): ...any
 	local blacklistData = self:getBlacklists(userId)
 
 	if blacklistData.success then
@@ -2467,7 +2470,7 @@ function api:getActivity(userId: (string | number)?): Types.activityResponse
 end
 
 --[=[
-	Removes a player's current week activity.
+	Negates the player's activity seconds & message counts. (Does not clear detail logs array.)
 	@param userId Player | string | number
 	@return boolean
 
@@ -2484,7 +2487,19 @@ function api:removeActivity(userId: Player | string | number): boolean
 
 	-- Get the current activity and negate the activity to remove it. (Temporary Solution)
 	local currentActivity = self:getActivity(userId)
-	warn(currentActivity)
+	if not currentActivity then
+		return false
+	end
+
+	local userGroupInformation = self:_getGroupFromUser(self.GroupId, userId)
+
+	local secondsSpent = currentActivity.secondsUserHasSpent
+	local messagesSent = currentActivity.messagesUserHasSent
+	local fixedSeconds, fixedMessages =
+		(secondsSpent == 0) and 0 or -secondsSpent, (messagesSent == 0) and 0 or -messagesSent
+
+	local response = self:saveActivity(userId, userGroupInformation.Rank, fixedSeconds, fixedMessages)
+	return response.success or false
 end
 
 --[=[
@@ -2507,19 +2522,27 @@ function api:saveActivity(
 	secondsSpent: number,
 	messagesSent: (number | { string })?,
 	shouldFetchGroupRank: boolean?
-): Types.infoResponse
+): Types.infoResponse | Types.errorResponse
 	userId = self:_verifyUser(userId, "UserId")
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent
 		or (tonumber(messagesSent) ~= nil) and messagesSent
 		or nil
-	userRank = (typeof(userRank) == "number" or tonumber(userRank) ~= nil) and userRank or nil
+	userRank = (typeof(userRank) == "number" or tonumber(userRank) ~= nil) and userRank or -1
 
 	if not tonumber(messagesSent) then
-		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'messagesSent' parameter!`, 2))
-		return
+		local errMessage = "Cannot save activity with an invalid 'number' as the 'messagesSent' parameter!"
+		self:_warn(errMessage)
+		return {
+			success = false,
+			errorMessage = errMessage,
+		}
 	elseif not tonumber(secondsSpent) then
-		self:_warn(debug.traceback(`Cannot save activity with an invalid 'number' as the 'secondsSpent' parameter!`, 2))
-		return
+		local errMessage = "Cannot save activity with an invalid 'number' as the 'secondsSpent' parameter!"
+		self:_warn(errMessage)
+		return {
+			success = false,
+			errorMessage = errMessage,
+		}
 	end
 
 	if shouldFetchGroupRank == true then
@@ -2551,10 +2574,6 @@ end
 	@param action string<Promote | Demote | Fire | Blacklist>
 	@param callback (result: responseBody) -> ()
 	@return VibezAPI
-
-	:::info
-	When a ranking action is triggered, your custom function will run with the response.
-	:::
 
 	@within VibezAPI
 	@since 0.9.0
@@ -2635,19 +2654,6 @@ function api:_initialize(apiKey: string): ()
 		return
 	end
 	self._private._initialized = true
-
-	-- Get current wrapper version
-	coroutine.wrap(function()
-		local versionIsOk, productInfo =
-			pcall(MarketplaceService.GetProductInfo, MarketplaceService, 14946453963, Enum.InfoType.Asset)
-		if versionIsOk and productInfo then
-			self._private["_versionTime"] = RoTime.new():set(productInfo.Updated, "#yyyy-#mm-#ddT#hh:#m:#s.#msZ")
-		else
-			self._private["_versionTime"] = 0
-		end
-
-		self._private["_allowVersionChecking"] = (versionIsOk == true and productInfo ~= nil)
-	end)()
 
 	-- Update the api key using the public function, in case of errors it'll log them.
 	local isOk = self:updateKey(apiKey)
@@ -3228,10 +3234,10 @@ end
 
 	```lua
 	local globals = VibezAPI.getGlobalsForKey("API KEY")
+	globals.Notifications:Invoke(Player, "Hello World!")
 	```
 
 	@within VibezAPI
-	@deprecated 0.11.0
 	@since 0.11.0
 ]=]
 ---

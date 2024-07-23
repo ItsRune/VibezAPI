@@ -66,7 +66,7 @@ local Types = require(script.Parent.Types)
 	@since 1.0.0
 ]=]
 ---
-function Activity.new(VibezAPI: Types.VibezAPI, forPlayer: Player): Types.ActivityTracker
+function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.ActivityTracker
 	if typeof(VibezAPI) ~= "table" or VibezAPI["isVibez"] ~= true then
 		return nil
 	end

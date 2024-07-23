@@ -7,6 +7,7 @@ type RateLimit = {
 	_counter: number,
 	_maxCount: number,
 	_counterStartedAt: number,
+	_limiterKey: string,
 	Check: (self: RateLimit) -> (boolean, string?),
 }
 
@@ -98,23 +99,6 @@ export type httpResponse = {
 	rawBody: string,
 }
 
-export type legacyVibezSettings = {
-	commandPrefix: string,
-	minRankToUseCommandsAndUI: number,
-	maxRankToUseCommandsAndUI: number,
-	isChatCommandsEnabled: boolean,
-	isUIEnabled: boolean,
-	disableActivityTrackingInStudio: boolean,
-	activityTrackingEnabled: boolean,
-	disableActivityTrackingWhenAFK: boolean,
-	rankToStartTrackingActivityFor: number,
-	delayBeforeMarkedAFK: number,
-	nameOfGameForLogging: string,
-	overrideGroupCheckForStudio: boolean,
-	ignoreWarnings: boolean,
-	usePromises: boolean,
-}
-
 export type vibezSettings = {
 	Commands: {
 		Enabled: boolean,
@@ -125,6 +109,7 @@ export type vibezSettings = {
 
 		Prefix: string,
 		Alias: { { any } },
+		Removed: { string? },
 	},
 
 	RankSticks: {
@@ -220,6 +205,7 @@ export type vibezCommandFunctions = {
 
 export type vibezApi = {
 	-- Misc
+
 	GroupId: number,
 	Settings: vibezSettings,
 	_debug: vibezDebugTools,
@@ -243,6 +229,7 @@ export type vibezApi = {
 		inGameLogs: { {}? },
 		Maid: { RBXScriptConnection? },
 		rankingCooldowns: {},
+		Binds: { [string]: { [string]: (result: responseBody) -> () } },
 
 		usersWithSticks: { number? },
 		stickTypes: string,
@@ -274,20 +261,56 @@ export type vibezApi = {
 			[string]: {
 				Code: string,
 				isExternal: boolean?,
-				Execute: (Player: Player, playerToCheck: Player, incomingArgument) -> boolean,
+				Execute: (Player: Player, playerToCheck: Player, incomingArgument: string) -> boolean,
 			}?,
 		},
 	},
 
+	-- Internal methods
+	_buildAttributes: () -> (),
+	_setupCommands: () -> (),
+
+	_http: (
+		self: vibezApi,
+		Route: string,
+		Method: string?,
+		Headers: { [string]: any }?,
+		Body: { any }?,
+		useOldApi: boolean?
+	) -> (boolean, httpResponse),
+
+	_giveSticks: (self: vibezApi, Player: Player) -> (),
+	_playerIsValidStaff: (self: vibezApi, Player: Player | number | string) -> { any },
+
+	_notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
+	_warn: (self: vibezApi, ...string) -> (),
+	_addLog: (
+		self: vibezApi,
+		calledBy: Player,
+		Action: string,
+		affectedUsers: { { Name: string, UserId: number } }?,
+		...any
+	) -> (),
+	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
+	_getGroupFromUser: (
+		self: vibezApi,
+		groupId: number,
+		userId: number,
+		force: boolean?
+	) -> { Rank: number?, Role: string?, Id: number?, errMessage: string? },
+	_getUserIdByName: (self: vibezApi, username: string) -> number,
+
+	_onPlayerRemoved: (self: vibezApi, Player: Player, isPlayerStillInGame: boolean?) -> (),
+	_onPlayerAdded: (self: vibezApi, Player: Player) -> (),
+
+	-- Misc methods
 	bindToAction: (
 		self: vibezApi,
 		name: string,
 		action: "Promote" | "Demote" | "Fire" | "Blacklist",
 		callback: (result: responseBody) -> ()
 	) -> vibezApi,
-	unbindFromAction: (name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist") -> vibezApi,
-
-	-- Misc methods
+	unbindFromAction: (self: vibezApi, name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist") -> vibezApi,
 	updateLoggerName: (self: vibezApi, newTitle: string) -> nil,
 	getWebhookBuilder: (self: vibezApi, webhook: string) -> vibezHooks,
 	waitUntilLoaded: (self: vibezApi) -> vibezApi?,
@@ -300,25 +323,33 @@ export type vibezApi = {
 		userToBlacklist: userType,
 		Reason: string?,
 		blacklistExecutedBy: userType?
-	) -> blacklistResponse,
-	deleteBlacklist: (self: vibezApi, userToDelete: userType) -> blacklistResponse,
-	getBlacklists: (self: vibezApi, userId: userType) -> blacklistResponse,
-	isUserBlacklisted: (self: vibezApi, userId: number | string) -> blacklistResponse,
+	) -> blacklistResponse | errorResponse,
+	deleteBlacklist: (self: vibezApi, userToDelete: userType) -> blacklistResponse | errorResponse,
+	getBlacklists: (self: vibezApi, userId: userType) -> blacklistResponse | errorResponse,
+	isUserBlacklisted: (self: vibezApi, userId: number | string) -> ...any,
 
 	-- Ranking
 	Promote: (
 		self: vibezApi,
 		userId: userType,
 		whoCalled: { userName: string, userId: number }?
-	) -> responseBody,
-	Demote: (self: vibezApi, userId: userType, whoCalled: { userName: string, userId: number }?) -> responseBody,
-	Fire: (self: vibezApi, userId: userType, whoCalled: { userName: string, userId: number }?) -> responseBody,
+	) -> responseBody | errorResponse,
+	Demote: (
+		self: vibezApi,
+		userId: userType,
+		whoCalled: { userName: string, userId: number }?
+	) -> responseBody | errorResponse,
+	Fire: (
+		self: vibezApi,
+		userId: userType,
+		whoCalled: { userName: string, userId: number }?
+	) -> responseBody | errorResponse,
 	setRank: (
 		self: vibezApi,
 		userId: userType,
 		rankId: string | number,
 		whoCalled: { userName: string, userId: number }?
-	) -> responseBody,
+	) -> responseBody | errorResponse,
 
 	--- Ranking Sticks
 	giveRankSticks: (self: vibezApi, User: userType, shouldCheckPermissions: boolean?) -> boolean,
@@ -333,10 +364,11 @@ export type vibezApi = {
 		secondsSpent: number?,
 		messagesSent: (number | { string })?,
 		shouldFetchGroupRank: boolean?
-	) -> httpResponse,
-	getActivity: (self: vibezApi, userId: userType?) -> activityResponse,
+	) -> infoResponse | errorResponse,
+	getActivity: (self: vibezApi, userId: userType?) -> activityResponse | errorResponse,
 
 	-- Commands
+	getUsersForCommands: (playerWhoCalled: Player, usernames: { string | number }) -> { Player? },
 	addCommand: (
 		self: vibezApi,
 		commandName: string,
@@ -417,7 +449,7 @@ export type embedCreator = {
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi
 
--- export type widgetTypes = "" -- Add more if we decide to add more. (Social media platforms)
+export type widgetTypes = "" -- Add more if we decide to add more. (Social media platforms)
 
 return nil
 
@@ -429,17 +461,6 @@ return nil
 	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
 	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
 	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
-	@within VibezAPI
-]=]
-
---[=[
-	@interface simplifiedAPI
-	.Ranking { Set: (Player: Player | string | number, newRank: string | number) -> rankResponse, Promote: (Player: Player | string | number) -> rankResponse, Demote: (Player: Player | string | number) -> rankResponse, Fire: (Player: Player | string | number) -> rankResponse }
-	.Activity { Get: (Player: Player | string | number) -> activityResponse, Save: (Player: Player | string | number, playerRank: number, secondsSpent: number, messagesSent: (number | {string})?, shouldFetchRank: boolean) -> httpResponse }
-	.Commands { Add: (commandName: string, commandAlias: {string?}, commandFunction: (Player: Player, Args: {string?}, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: {Player}?, affectedCount: number, Metadata: any })) -> VibezAPI, AddArgPrefix: (operationName: string, operationCode: string, operationFunction: (playerWhoCalled: Player, playerToCheck: Player, incomingArgument: string) -> boolean) -> VibezAPI, RemoveArgePrefix: (operationName: string) -> VibezAPI }
-	.Notifications { Create: (Player: Player, notificationMessage: string) -> () }
-	.Webhooks { Create: (webhookLink: string) -> Webhooks }
-	A simplified version of our API.
 	@within VibezAPI
 ]=]
 
