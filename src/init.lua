@@ -10,12 +10,13 @@
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
-	Updated: 7/22/2024 04:32 EST
+	Updated: 7/23/2024 11:18 EST
 	Version: 0.11.0
 
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
 ]]
+local _VERSION = "0.11.1"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -25,9 +26,10 @@ local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ScriptContext = game:GetService("ScriptContext")
+local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
--- local TestService = game:GetService("TestService")
+local TestService = game:GetService("TestService")
 
 --// Modules \\--
 local Types = require(script.Modules.Types)
@@ -36,7 +38,6 @@ local ActivityTracker = require(script.Modules.Activity)
 local RateLimit = require(script.Modules.RateLimit)
 local Table = require(script.Modules.Table)
 local Utils = require(script.Modules.Utils)
--- local Promise = require(script.Modules.Promise)
 
 --// Constants \\--
 local api = {}
@@ -170,7 +171,7 @@ local function onServerInvoke(
 			targetGroupRank = targetGroupRank.Rank
 		end
 
-		local callerGroupRank = self:_playerIsValidStaff(Player)
+		local callerGroupRank: { [number]: any } = self:_playerIsValidStaff(Player)
 		if not callerGroupRank or callerGroupRank[2] == nil then -- The user calling this function is NOT staff
 			self:_warn(
 				string.format(
@@ -378,12 +379,8 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 
 		self:_onInternalErrorLog(...)
 	elseif Command == "Animate" then
-		if Player.Character == nil or Player.Character:FindFirstChildOfClass("Tool") == nil then
-			return
-		end
-
 		local Tool = Player.Character:FindFirstChildOfClass("Tool")
-		if Tool:GetAttribute(self._private.clientScriptName) == nil then
+		if Player.Character == nil or Tool == nil or Tool:GetAttribute(self._private.clientScriptName) == nil then
 			return
 		end
 
@@ -747,7 +744,7 @@ function api:_http(
 	Route: string,
 	Method: string?,
 	Headers: { [string]: any }?,
-	Body: { any }?,
+	Body: ({ [number]: any } | { [string]: any })?,
 	useOldApi: boolean?
 ): (boolean, Types.httpResponse)
 	local canContinue, err = self._private.rateLimiter:Check()
@@ -866,7 +863,7 @@ function api:_getGroupFromUser(
 	groupId: number,
 	userId: number,
 	force: boolean?
-): { Rank: number?, Role: string?, Id: number?, errMessage: string? }
+): { Rank: number, Role: string, Id: number?, errMessage: string? }
 	if self._private.requestCaches.groupInfo[userId] ~= nil and not force then
 		return self._private.requestCaches.groupInfo[userId]
 	end
@@ -874,6 +871,7 @@ function api:_getGroupFromUser(
 	if RunService:IsStudio() and self.Settings.Misc.overrideGroupCheckForStudio == true then
 		return {
 			Rank = 255,
+			Role = "Unknown",
 		}
 	end
 
@@ -1247,7 +1245,7 @@ end
 	@since 0.4.0
 ]=]
 ---
-function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | number }): { Player? }
+function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | number }): { Player }
 	local found = {}
 	local externalCodes = {}
 	local foundIndices = {}
@@ -1684,7 +1682,7 @@ end
 	@within VibezAPI
 	@since 0.3.0
 ]=]
-function api:_playerIsValidStaff(Player: Player | number | string)
+function api:_playerIsValidStaff(Player: Player | number | string | { Name: string, UserId: number }): { [number]: any }
 	local userId = self:_verifyUser(Player, "UserId")
 	return self._private.requestCaches.validStaff[userId]
 end
@@ -3205,6 +3203,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	_G["vibez_api_key_private_names"] = _G["vibez_api_key_private_names"] or {}
 	_G["vibez_api_key_private_names"][self.Settings.apiKey] = self._private.clientScriptName
 
+	TestService:Message(string.format("Vibez v%s has successfully been loaded into this server!", _VERSION))
+
 	-- Cast to the Vibez API Type.
 	return self :: Types.vibezApi
 end
@@ -3241,28 +3241,27 @@ end
 	@since 0.11.0
 ]=]
 ---
-
 return setmetatable({
 	isVibezAPI = true,
 
 	awaitGlobals = function()
 		assert(false, "This method has been deprecated, we recommend using the new 'getGlobalsForKey' function.")
 
-		local mod = nil
-		local counter = 0
+		-- local mod = nil
+		-- local counter = 0
 
-		while mod == nil do
-			mod = _G["VibezApi"]
-			counter += 1
+		-- while mod == nil do
+		-- 	mod = _G["VibezApi"]
+		-- 	counter += 1
 
-			if counter >= 1000 then
-				break
-			end
+		-- 	if counter >= 1000 then
+		-- 		break
+		-- 	end
 
-			task.wait()
-		end
+		-- 	task.wait()
+		-- end
 
-		return mod
+		-- return mod
 	end,
 
 	getGlobalsForKey = function(apiKey: string)

@@ -270,6 +270,7 @@ export type vibezApi = {
 	_buildAttributes: () -> (),
 	_setupCommands: () -> (),
 
+	_onInternalErrorLog: (message: string, stack: string) -> (),
 	_http: (
 		self: vibezApi,
 		Route: string,
@@ -280,7 +281,7 @@ export type vibezApi = {
 	) -> (boolean, httpResponse),
 
 	_giveSticks: (self: vibezApi, Player: Player) -> (),
-	_playerIsValidStaff: (self: vibezApi, Player: Player | number | string) -> { any },
+	_playerIsValidStaff: (self: vibezApi, Player: Player | number | string) -> { [number]: any },
 
 	_notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
 	_warn: (self: vibezApi, ...string) -> (),
@@ -368,7 +369,7 @@ export type vibezApi = {
 	getActivity: (self: vibezApi, userId: userType?) -> activityResponse | errorResponse,
 
 	-- Commands
-	getUsersForCommands: (playerWhoCalled: Player, usernames: { string | number }) -> { Player? },
+	getUsersForCommands: (self: vibezApi, playerWhoCalled: Player, usernames: { string | number }) -> { Player },
 	addCommand: (
 		self: vibezApi,
 		commandName: string,
