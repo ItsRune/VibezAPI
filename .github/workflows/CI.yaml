@@ -26,9 +26,10 @@ jobs:
         touch selene.toml
         echo 'std="roblox"' >> selene.toml
         echo '' >> selene.toml
-        echo '[lints]' >> selene.toml
-        echo 'global_usage="warning"' >> selene.toml
-        echo 'incorrect_standard_library_use="ignore"' >> selene.toml
+        echo "[lints]" >> selene.toml
+        echo 'global_usage="allow"' >> selene.toml
+        echo 'incorrect_standard_library_use="allow"' >> selene.toml
+        cat selene.toml
       shell: bash
     
     - name: Lint & Stylua Check
