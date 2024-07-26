@@ -1,4 +1,3 @@
---!strict
 --[[
 		 _   _ ___________ _____ ______
 		| | | |_   _| ___ \  ___|___  /
@@ -90,6 +89,13 @@ local baseSettings = {
 		Enabled = false,
 		MinRank = 255,
 		MaxRank = 255,
+
+		Allowed = {
+			Ranking = true,
+			Notifications = true,
+			Activity = true,
+			Logs = true,
+		},
 	},
 
 	ActivityTracker = {
@@ -138,7 +144,7 @@ local function onServerInvoke(
 	Origin: "Interface" | "Sticks" | "Commands",
 	...: any
 )
-	local rankingActions = { "promote", "demote", "fire", "blacklist" }
+	local rankingActions = { "promote", "demote", "fire", "blacklist", "setRank" }
 	local Data = { ... }
 	local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
 
@@ -185,8 +191,8 @@ local function onServerInvoke(
 			)
 			return false
 		end
-		callerGroupRank = callerGroupRank[2] -- THIS IS A NUMBER
 
+		callerGroupRank = callerGroupRank[2] -- THIS IS A NUMBER
 		local minRank = (Origin == "Interface") and self.Settings.Interface.MinRank
 			or (Origin == "Sticks" and self.Settings.RankSticks.MinRank)
 			or (Origin == "Commands" and self.Settings.Commands.MinRank)
@@ -278,6 +284,9 @@ local function onServerInvoke(
 			-- 		coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
 			-- 	end
 			-- end
+		elseif actionFunc == "setRank" then
+			warn(...)
+			-- result = self[actionFunc](self, userId, Data[2], { userName = Player.Name, userId = Player.UserId })
 		else
 			result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
 		end
@@ -652,7 +661,7 @@ function api:_setupGlobals(): ()
 	globalsFolder.Activity.Fetch.OnInvoke = function(...: any): any
 		return self:getActivity(...)
 	end
-	globalsFolder.Activity.Remove.OnInvoke = function(...: any): any
+	globalsFolder.Activity:FindFirstChild("Remove").OnInvoke = function(...: any): any
 		return self:removeActivity(...)
 	end
 	globalsFolder.Notifications.OnInvoke = function(...: any): any
@@ -981,7 +990,7 @@ function api:_onPlayerAdded(Player: Player)
 	client.Enabled = true
 
 	-- Enabled activity tracking for player
-	-- REVIEW: Keep this last at all times! The activity tracker yields on creation!
+	-- Keep this last at all times! The activity tracker yields on creation!
 	if
 		self.Settings.ActivityTracker.Enabled == true
 		and theirGroupData.Rank >= self.Settings.ActivityTracker.MinRank
@@ -2754,8 +2763,8 @@ end
 ---
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
 	if RunService:IsClient() then
-		error("[Vibez]: Cannot fetch API on the client!")
 		Debris:AddItem(script, 0)
+		error("[Vibez]: Cannot fetch API on the client!")
 		return nil
 	end
 

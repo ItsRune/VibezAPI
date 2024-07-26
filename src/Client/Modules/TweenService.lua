@@ -16,9 +16,11 @@ local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: 
 
 	self._tween = TweenService:Create(Inst, tweenInfo, propertyTable)
 	self._callback = function() end
+	self._completedCallback = function() end
 	self._connection = self._tween.Completed:Connect(function(playBackState)
 		if playBackState == Enum.PlaybackState.Completed then
 			runningTweens[self._instance] = nil
+			self._completedCallback()
 		end
 
 		return self._callback(playBackState)
@@ -56,10 +58,16 @@ function Class:Pause()
 	--end
 end
 
+function Class:onCompleted(callback: () -> ())
+	self._completedCallback = callback
+	return self
+end
+
 -- Overwrites the callback function when completed.
 function Class:setCallback(Func: (playbackState: Enum.PlaybackState) -> ())
 	assert(typeof(Func) == "function", "'Func' can only be a function!")
 	self._callback = Func
+	return self
 end
 
 -- Destroys the class.

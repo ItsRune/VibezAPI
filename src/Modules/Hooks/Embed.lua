@@ -8,7 +8,6 @@ local Class = {}
 Class.__index = Class
 
 local embedTypes = require(script.Parent.Parent.Types)
-local RoTime = require(script.Parent.Parent.RoTime)
 
 --// Local Functions \\--
 local function checkCharLimit(value: string, charLimit: number): boolean
@@ -287,20 +286,9 @@ end
 	@private
 ]=]
 ---
-function Class:setTimestamp(unixTimeStamp: (number | string | "auto")?): embedTypes.Embed
-	unixTimeStamp = unixTimeStamp or "auto"
-
-	if typeof(unixTimeStamp) == "string" then
-		unixTimeStamp = string.lower(unixTimeStamp)
-	end
-
-	local newTime = RoTime.new()
-	if unixTimeStamp ~= "auto" and tonumber(unixTimeStamp) ~= nil then
-		newTime:fromUnix(unixTimeStamp)
-	end
-
-	self.data.timestamp = newTime:getTimestamp()
-	newTime:Destroy()
+function Class:setTimestamp(unixTimeStamp: number?): embedTypes.Embed
+	unixTimeStamp = unixTimeStamp or DateTime.now().UnixTimestamp
+	self.data.timestamp = unixTimeStamp
 
 	return self
 end
