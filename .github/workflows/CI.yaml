@@ -25,11 +25,11 @@ jobs:
       run: |
         touch selene.toml
         echo 'std="roblox"' >> selene.toml
-        echo '[lints]' >> selene.toml
-        echo 'global_usage = "allow"' >> selene.toml
       shell: bash
     
     - name: Lint & Stylua Check
       run: |
+        selene generate-roblox-std
         selene ./src
         stylua ./src
+      shell: bash
