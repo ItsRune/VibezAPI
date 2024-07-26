@@ -1,3 +1,4 @@
+--#selene: allow(unused_variable)
 --// Services \\--
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -28,6 +29,17 @@ local currentOpenFrame = nil
 local function _changeSelectorHighlight(Tweens: Tweens, frameName: string)
 	-- Selected color: 255, 255, 255
 	-- Unselected color: 147, 147, 147
+
+	for _, topButton: TextButton in ipairs(Top.Buttons:GetChildren()) do
+		if not topButton:IsA("TextButton") then
+			continue
+		end
+
+		local colorToShiftTo = (frameName == topButton.Name) and Color3.new(1, 1, 1) or Color3.fromRGB(147, 147, 147)
+		Tweens(topButton, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+			TextColor3 = colorToShiftTo,
+		}):Play()
+	end
 end
 
 -- Protected calls to prevent any issues with loading/executing a frame's module.
@@ -84,6 +96,7 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 	end
 
 	_safelyLoadModuleAndRun(frameModule, "Setup", newFrame, componentData)
+	_changeSelectorHighlight(componentData.Tweens, frameName)
 end
 
 local function onDestroy(componentData: { [any]: any })

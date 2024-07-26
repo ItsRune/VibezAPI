@@ -1,10 +1,6 @@
+--#selene: allow(unused_variable)
 --// Services \\--
-local Debris = game:GetService("Debris")
-local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local TextService = game:GetService("TextService")
-local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
 
 --// Variables \\--
 local Player = Players.LocalPlayer
