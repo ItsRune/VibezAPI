@@ -138,6 +138,9 @@ local function onAttributeChanged()
 end
 
 local function onStart()
+	remoteFunction = _findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteFunction")
+	remoteEvent = _findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteEvent")
+
 	for _, module: ModuleScript in ipairs(script.Components:GetChildren()) do
 		if not module:IsA("ModuleScript") then
 			continue
@@ -149,9 +152,6 @@ local function onStart()
 
 	Workspace:GetAttributeChangedSignal(script.Name):Connect(onAttributeChanged)
 	onAttributeChanged()
-
-	remoteFunction = _findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteFunction")
-	remoteEvent = _findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteEvent")
 end
 
 --// Core \\--

@@ -1,4 +1,3 @@
---#selene: allow(unused_variable)
 --// Services \\--
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
