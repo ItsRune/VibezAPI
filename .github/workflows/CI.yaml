@@ -10,25 +10,26 @@ on:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint & Style Check
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    
     - name: Install Foreman
       uses: Roblox/setup-foreman@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Lint
-      run: selene ./src
 
-  style:
-    name: Styling
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: JohnnyMorganz/stylua-action@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        version: v0.20.0
-        args: --check ./src
+    - name: Generate selene.toml
+      run: |
+        touch selene.toml
+        echo 'std="roblox"' >> selene.toml
+        echo '[lints]' >> selene.toml
+        echo 'global_usage = "allow"' >> selene.toml
+      shell: bash
+    
+    - name: Lint & Stylua Check
+      run: |
+        selene ./src
+        stylua ./src
