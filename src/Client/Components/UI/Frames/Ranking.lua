@@ -7,7 +7,7 @@ local Player = Players.LocalPlayer
 local defaultThumbnail = "rbxasset://textures/AvatarCompatibilityPreviewer/user.png"
 local userCache = {}
 local selectedUsers = {}
-local Maid = { -- TODO: Covert subMaids into the main Maid table.
+local Maid = {
 	Main = {},
 	suggestionButtons = {},
 }
@@ -62,13 +62,13 @@ local function _updateUserSuggestions(
 	textBox: TextBox,
 	componentData: { [any]: any },
 	filteredPlayers: { Player },
-	tempMaid: { RBXScriptConnection? }
+	Tag: string?
 )
 	local suggestionFrame = textBox.Parent.Suggestions
 	local templateFrame = suggestionFrame:FindFirstChild("Template")
 
-	componentData.Disconnect(tempMaid)
-	table.clear(tempMaid)
+	componentData.Disconnect(Maid.suggestionButtons)
+	table.clear(Maid.suggestionButtons)
 
 	if not templateFrame then
 		componentData._warn("Vibez Error", "No valid template for user suggestions!")
@@ -91,14 +91,13 @@ local function _updateUserSuggestions(
 		newTemplate.Left.Information.Username.Text = Target.Name
 		newTemplate.Left.Information.DisplayName.Text = "@" .. Target.DisplayName
 		newTemplate.Left.Thumbnail.Image = userInformation.Thumbnail
+		newTemplate.Right.Tag.Text = (Tag ~= nil) and Tag or ""
 		newTemplate.Parent = templateFrame.Parent
 		newTemplate.Visible = true
 
-		-- DEBUG: Find out why this connection is not working and fix this shit out of it.
 		table.insert(
-			tempMaid,
+			Maid.suggestionButtons,
 			newTemplate.MouseButton1Click:Connect(function()
-				warn("Fired checkbox")
 				local appendedTableIndex = table.find(selectedUsers, Target)
 				local tweenDirection = appendedTableIndex and 1 or 0.2
 
@@ -110,6 +109,7 @@ local function _updateUserSuggestions(
 					newTemplate.LayoutOrder = #selectedUsers
 				end
 
+				textBox.Parent.Selected.Text = string.format("%d User(s) Selected", #selectedUsers)
 				componentData
 					.Tweens(
 						newTemplate.Right.Checkbox,
@@ -122,8 +122,29 @@ local function _updateUserSuggestions(
 			end)
 		)
 	end
+end
 
-	return tempMaid
+local function _handleExternalUserSearch(textBox: TextBox, componentData: { [any]: any })
+	local Text = textBox.Text
+	local isOk, userId, realName
+
+	isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, Text)
+	warn(isOk, userId)
+	if not isOk or not userId then
+		return
+	end
+
+	isOk, realName = pcall(Players.GetNameFromUserIdAsync, Players, userId)
+	warn(isOk, realName)
+	if not isOk or not realName then
+		return
+	end
+
+	local fakePlayer = newproxy(false)
+	fakePlayer.Name = realName
+	fakePlayer.UserId = userId
+
+	_updateUserSuggestions(textBox, componentData, fakePlayer, '<font color="rgb(200, 50, 50)">[External]</font>')
 end
 
 --// Functions \\--
@@ -146,17 +167,19 @@ end
 local function onSetup(Frame: Frame, componentData: { [any]: any })
 	-- Destroy first, in case there was an issue destroying previously.
 	onDestroy(Frame, componentData)
+	Maid = {
+		Main = {},
+		suggestionButtons = {},
+	}
 
-	local suggestionsMaid = {}
 	local remoteFunction = componentData.remoteFunction
-
 	for _, actionButton: TextButton in ipairs(Frame.Actions:GetChildren()) do
 		if not actionButton:IsA("TextButton") then
 			continue
 		end
 
 		table.insert(
-			Maid,
+			Maid.Main,
 			actionButton.MouseButton1Click:Connect(function()
 				if #selectedUsers == 0 then
 					return
@@ -168,47 +191,57 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 	end
 
 	table.insert(
-		Maid,
-		Frame.User.Username.FocusLost:Connect(function()
-			componentData.Disconnect(suggestionsMaid)
-			table.clear(suggestionsMaid)
-		end)
-	)
-
-	table.insert(
-		Maid,
+		Maid.Main,
 		Frame.User.Username.Focused:Connect(function()
 			if Frame.User.Username.Text ~= "" then
 				return
 			end
 
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-				return true --Target ~= Player
+				return Target ~= Player
 			end)
 
-			suggestionsMaid =
-				_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers, suggestionsMaid)
+			_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
 		end)
 	)
 
 	table.insert(
-		Maid,
+		Maid.Main,
 		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
 			local Text = Frame.User.Username.Text
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
 				return (
 					Text == ""
 					or string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
-				) --and Target ~= Player
+				) and Target ~= Player
 			end)
 
-			suggestionsMaid =
-				_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers, suggestionsMaid)
+			_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
 		end)
 	)
 
 	table.insert(
-		Maid,
+		Maid.Main,
+		Frame.User.Username.FocusLost:Connect(function()
+			local Text = Frame.User.Username.Text
+			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
+				return (
+					Text == ""
+					or string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
+				) and Target ~= Player
+			end)
+
+			warn(filteredPlayers, #filteredPlayers)
+			if #filteredPlayers ~= 0 then
+				return
+			end
+
+			_handleExternalUserSearch(Frame.User.Username, componentData)
+		end)
+	)
+
+	table.insert(
+		Maid.Main,
 		Frame.Actions.setRank.Button.MouseButton1Click:Connect(function()
 			local newRank = Frame.Actions.setRank.newRank.Text
 			if newRank == "" or #selectedUsers == 0 then
@@ -218,6 +251,20 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 			remoteFunction:InvokeServer("SetRank", "Interface", selectedUsers, newRank)
 		end)
 	)
+
+	if UserInputService.TouchEnabled then
+		for _, Inst: Instance in ipairs(Frame:GetDescendants()) do
+			if
+				string.match(Inst.ClassName, "Text") == nil
+				or Inst:FindFirstChildOfClass("UITextSizeConstraint") == nil
+			then
+				continue
+			end
+
+			local constraint = Inst:FindFirstChildOfClass("UITextSizeConstraint")
+			constraint.MaxTextSize -= 8
+		end
+	end
 end
 
 --// Core \\--

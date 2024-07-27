@@ -13,14 +13,15 @@ type tweenServiceElement = {
 type Tweens = (Inst: Instance, TweenInfo, { [string]: any }) -> tweenServiceElement
 
 --// Variables \\--
-local Player = Players.LocalPlayer
 local frameComponents = script.Frames
 local Maid = {}
 
 --// UI Variables \\--
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
 local UI = script.Interface
 local Frame = UI.Frame
-local Content, Top, Bottom = Frame.Content, Frame.Top, Frame.Bottom
+local Content, Top = Frame.Content, Frame.Top
 local currentOpenFrame = nil
 
 --// Functions \\--
@@ -122,7 +123,44 @@ local function onSetup(componentData: { [any]: any })
 	table.insert(
 		Maid,
 		Top.Exit.MouseButton1Click:Connect(function()
-			warn("Close frame. (PLACEHOLDER)")
+			UI.Enabled = false
+			onDestroy(componentData)
+		end)
+	)
+
+	local isDragging = false
+	local startX, startY, startFramePos
+	table.insert(
+		Maid,
+		Top.Drag.MouseButton1Down:Connect(function()
+			isDragging = true
+
+			startX, startY = Mouse.X, Mouse.Y
+			startFramePos = Frame.Position
+		end)
+	)
+
+	table.insert(
+		Maid,
+		Top.Drag.MouseButton1Up:Connect(function()
+			isDragging = false
+		end)
+	)
+
+	table.insert(
+		Maid,
+		Mouse.Move:Connect(function()
+			if not isDragging then
+				return
+			end
+
+			local distX, distY = startX - Mouse.X, startY - Mouse.Y
+
+			componentData
+				.Tweens(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+					Position = startFramePos - UDim2.fromOffset(distX, distY),
+				})
+				:Play()
 		end)
 	)
 
