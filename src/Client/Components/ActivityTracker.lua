@@ -1,5 +1,4 @@
 --// Services \\--
--- local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -25,7 +24,7 @@ local function onSetup(componentData: { [any]: any })
 
 	onDestroy(componentData)
 
-	local afkDelayOffset = componentData.afkDelayOffset
+	local afkDelayOffset = componentData.Data.AfkTracker.Delay
 	local lastCheck = DateTime.now().UnixTimestamp
 	local Counter = 0
 

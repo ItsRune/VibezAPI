@@ -1,6 +1,5 @@
 --// Services \\--
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 
 --// Variables \\--
 local Player = Players.LocalPlayer
@@ -251,20 +250,6 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 			remoteFunction:InvokeServer("SetRank", "Interface", selectedUsers, newRank)
 		end)
 	)
-
-	if UserInputService.TouchEnabled then
-		for _, Inst: Instance in ipairs(Frame:GetDescendants()) do
-			if
-				string.match(Inst.ClassName, "Text") == nil
-				or Inst:FindFirstChildOfClass("UITextSizeConstraint") == nil
-			then
-				continue
-			end
-
-			local constraint = Inst:FindFirstChildOfClass("UITextSizeConstraint")
-			constraint.MaxTextSize -= 8
-		end
-	end
 end
 
 --// Core \\--

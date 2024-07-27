@@ -148,6 +148,8 @@ export type vibezSettings = {
 		Enabled: boolean,
 		MinRank: number,
 		MaxRank: number,
+
+		activationKeybind: Enum.KeyCode | string,
 	},
 
 	ActivityTracker: {
@@ -458,7 +460,7 @@ return nil
 	@interface extraOptionsType
 	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
 	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
-	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255> }
+	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, activationKey: Enum.KeyCode | string }
 	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
 	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
 	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }

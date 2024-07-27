@@ -14,7 +14,10 @@ type Tweens = (Inst: Instance, TweenInfo, { [string]: any }) -> tweenServiceElem
 
 --// Variables \\--
 local frameComponents = script.Frames
-local Maid = {}
+local Maid = {
+	Parent = {},
+	Children = {},
+}
 
 --// UI Variables \\--
 local Player = Players.LocalPlayer
@@ -22,7 +25,8 @@ local Mouse = Player:GetMouse()
 local UI = script.Interface
 local Frame = UI.Frame
 local Content, Top = Frame.Content, Frame.Top
-local currentOpenFrame = nil
+local currentOpenFrame, isToggled = nil, false
+local onSetup
 
 --// Functions \\--
 -- Changes the color of the active topbar button to be a brighter white.
@@ -99,39 +103,46 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 	_changeSelectorHighlight(componentData.Tweens, frameName)
 end
 
-local function onDestroy(componentData: { [any]: any })
-	componentData.Disconnect(Maid)
-	table.clear(Maid)
-end
+local function _toggleUI(componentData: { [any]: any })
+	isToggled = not isToggled
 
-local function onSetup(componentData: { [any]: any })
-	onDestroy(componentData)
+	if not isToggled then
+		return
+	end
 
+	-- Setup top button tab buttons.
 	for _, componentButton: TextButton in ipairs(Top.Buttons:GetChildren()) do
 		if not componentButton:IsA("TextButton") then
 			continue
 		end
 
 		table.insert(
-			Maid,
+			Maid.Children,
 			componentButton.MouseButton1Click:Connect(function()
 				_openFrame(componentData, componentButton.Name)
 			end)
 		)
 	end
 
+	-- Exit button
 	table.insert(
-		Maid,
+		Maid.Children,
 		Top.Exit.MouseButton1Click:Connect(function()
 			UI.Enabled = false
-			onDestroy(componentData)
+			UI.Frame.Position = UDim2.fromScale(0.5, 0.5)
+
+			componentData.Disconnect(Maid.Children)
+			table.clear(Maid.Children)
+
+			onSetup(componentData)
 		end)
 	)
 
+	-- Main frame's dragging mechanics
 	local isDragging = false
 	local startX, startY, startFramePos
 	table.insert(
-		Maid,
+		Maid.Children,
 		Top.Drag.MouseButton1Down:Connect(function()
 			isDragging = true
 
@@ -141,14 +152,14 @@ local function onSetup(componentData: { [any]: any })
 	)
 
 	table.insert(
-		Maid,
+		Maid.Children,
 		Top.Drag.MouseButton1Up:Connect(function()
 			isDragging = false
 		end)
 	)
 
 	table.insert(
-		Maid,
+		Maid.Children,
 		Mouse.Move:Connect(function()
 			if not isDragging then
 				return
@@ -164,6 +175,7 @@ local function onSetup(componentData: { [any]: any })
 		end)
 	)
 
+	-- Resize mobile user's text size to hopefully fit better.
 	-- I don't want to hear that this is a bad solution.
 	if UserInputService.TouchEnabled then
 		for _, uiTextConstraint: UITextSizeConstraint in ipairs(UI:GetDescendants()) do
@@ -175,6 +187,31 @@ local function onSetup(componentData: { [any]: any })
 		end
 
 		Frame.Size = UDim2.fromScale(1, 0.45)
+	end
+end
+
+local function onDestroy(componentData: { [any]: any })
+	componentData.Disconnect(Maid)
+	table.clear(Maid.Parent)
+	table.clear(Maid.Children)
+end
+
+function onSetup(componentData: { [any]: any })
+	onDestroy(componentData)
+
+	if not UserInputService.TouchEnabled then
+		local Connection
+		Connection = UserInputService.InputBegan:Connect(function(input: InputObject)
+			if
+				input.UserInputType ~= Enum.UserInputType.Keyboard
+				or componentData.Data.activationKey ~= input.KeyCode
+			then
+				return
+			end
+
+			Connection:Disconnect()
+			_toggleUI(componentData)
+		end)
 	end
 end
 

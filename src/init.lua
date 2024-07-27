@@ -89,6 +89,8 @@ local baseSettings = {
 		MinRank = 255,
 		MaxRank = 255,
 
+		activationKeybind = Enum.KeyCode.RightShift,
+
 		Allowed = {
 			Ranking = true,
 			Notifications = true,
@@ -392,7 +394,10 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 			return
 		end
 
-		-- REVIEW:
+		-- DEBUG:
+		-- Update 7/27/24
+		-- 'Animate' does not work as intended and requires an entire debug session by itself.
+		--
 		-- Uses Humanoid only due to this Roblox Studio Error:
 		-- Property "Animator.EvaluationThrottled" is not currently enabled. (x14)
 		--
@@ -1637,42 +1642,61 @@ end
 ]=]
 ---
 function api:_buildAttributes()
+	local function convertEnumToString(enum: Enum)
+		if typeof(enum) == "Enum" then
+			return enum.Name
+		end
+
+		return enum
+	end
+
 	local dataToEncode = {
-		AFK = {
-			Status = self.Settings.ActivityTracker.disableWhenAFK,
-			Delay = self.Settings.ActivityTracker.delayBeforeMarkedAFK,
+		ActivityTracker = {
+			AfkTracker = {
+				Status = self.Settings.ActivityTracker.disableWhenAFK,
+				Delay = self.Settings.ActivityTracker.delayBeforeMarkedAFK,
+			},
+
+			Status = self.Settings.ActivityTracker.Enabled,
+			MinRank = self.Settings.ActivityTracker.MinRank,
+			MaxRank = self.Settings.ActivityTracker.MaxRank,
+		},
+
+		Notifications = {
+			Status = self.Settings.Notifications.Enabled,
+			Font = convertEnumToString(self.Settings.Notifications.Font),
+			FontSize = convertEnumToString(self.Settings.Notifications.FontSize),
+
+			keyboardFontSizeMultiplier = self.Settings.Notifications.keyboardFontSizeMultiplier,
+			delayUntilRemoval = self.Settings.Notifications.delayUntilRemoval,
+
+			entranceTweenInfo = {
+				Style = convertEnumToString(self.Settings.Notifications.entranceTweenInfo.Style),
+				Direction = convertEnumToString(self.Settings.Notifications.entranceTweenInfo.Direction),
+				timeItTakes = self.Settings.Notifications.entranceTweenInfo.timeItTakes,
+			},
+
+			exitTweenInfo = {
+				Style = convertEnumToString(self.Settings.Notifications.exitTweenInfo.Style),
+				Direction = convertEnumToString(self.Settings.Notifications.exitTweenInfo.Direction),
+				timeItTakes = self.Settings.Notifications.exitTweenInfo.timeItTakes,
+			},
 		},
 
 		UI = {
 			Status = self.Settings.Interface.Enabled,
-			Notifications = {
-				Status = self.Settings.Notifications.Enabled,
-				Font = self.Settings.Notifications.Font.Name,
-				FontSize = self.Settings.Notifications.FontSize,
+			MinRank = self.Settings.Interface.MinRank,
+			MaxRank = self.Settings.Interface.MaxRank,
 
-				keyboardFontSizeMultiplier = self.Settings.Notifications.keyboardFontSizeMultiplier,
-				delayUntilRemoval = self.Settings.Notifications.delayUntilRemoval,
-
-				entranceTweenInfo = {
-					Style = self.Settings.Notifications.entranceTweenInfo.Style.Name,
-					Direction = self.Settings.Notifications.entranceTweenInfo.Direction.Name,
-					timeItTakes = self.Settings.Notifications.entranceTweenInfo.timeItTakes,
-				},
-
-				exitTweenInfo = {
-					Style = self.Settings.Notifications.exitTweenInfo.Style.Name,
-					Direction = self.Settings.Notifications.exitTweenInfo.Direction.Name,
-					timeItTakes = self.Settings.Notifications.exitTweenInfo.timeItTakes,
-				},
-			},
+			activationKeybind = convertEnumToString(self.Settings.Interface.activationKeybind),
 		},
 
-		STICKS = {
+		RankSticks = {
 			Status = self.Settings.RankSticks.Enabled,
 			Mode = self.Settings.RankSticks.Mode,
 		},
 
-		MISC = {
+		Misc = {
 			ignoreWarnings = self.Settings.Misc.ignoreWarnings,
 			autoReportErrors = self.Settings.Misc.autoReportErrors,
 		},
@@ -2590,15 +2614,6 @@ function api:bindToAction(
 	action: "Promote" | "Demote" | "Fire" | "Blacklist" | "setRank",
 	callback: (result: Types.responseBody) -> ()
 ): Types.vibezApi
-	--[[
-	REVIEW:
-	Implement a way for developers to bind to specific originated actions:
-	"Sticks", "Interface", "Commands", "any"
-
-	Maybe:
-	_private.Binds[string.lower(action)][origin .. "_" .. name]?
-	]]
-	--
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[string.lower(action)] == nil then
@@ -2978,8 +2993,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		if typeof(value) == "table" then
 			-- Handle 'nilCheckIgnore' for tables that can be somewhat-wrongly typed.
 			for settingToChange, newSetting in pairs(value) do
+				local currentSettingToChange = self.Settings[settingSubCategory][settingToChange]
+
 				-- 'sticksModel' is nil by default.
-				if self.Settings[settingSubCategory][settingToChange] == nil and settingToChange ~= "sticksModel" then
+				if currentSettingToChange == nil and settingToChange ~= "sticksModel" then
 					self:_warn(
 						string.format(
 							"Optional key 'Settings.%s.%s' is not a valid option.",
@@ -2991,7 +3008,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				elseif
 					-- Custom logic to validate feature modes.
 					self.Settings[settingSubCategory] ~= nil
-					and self.Settings[settingSubCategory][settingToChange] ~= nil
+					and currentSettingToChange ~= nil
 					and settingToChange == "Mode"
 					and typeof(newSetting) == "string"
 				then
@@ -3011,14 +3028,14 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 								"Optional mode '%s' for 'Settings.%s' is not a valid, it's been overwritten to the default of '%s'.",
 								newSetting,
 								settingSubCategory,
-								self.Settings[settingSubCategory][settingToChange]
+								currentSettingToChange
 							)
 						)
 						continue
 					end
 				elseif
 					-- Write in custom logic for 'Instance' types.
-					typeof(self.Settings[settingSubCategory][settingToChange]) ~= typeof(newSetting)
+					typeof(currentSettingToChange) ~= typeof(newSetting)
 					and (settingToChange == "sticksModel" and typeof(newSetting) ~= "Instance")
 				then
 					self:_warn(
@@ -3026,7 +3043,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 							"Optional key 'Settings.%s.%s' is not the same type as it's default value of '%s'",
 							settingSubCategory,
 							settingToChange,
-							typeof(self.Settings[settingSubCategory][settingToChange])
+							typeof(currentSettingToChange)
 						)
 					)
 					continue
@@ -3038,6 +3055,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self.Settings[settingSubCategory] = value
 		end
 	end
+
+	warn(self.Settings)
 
 	--/ Configuration Setup \--
 	-- Only add "sticks" command when rank sticks is enabled.

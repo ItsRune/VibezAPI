@@ -98,8 +98,7 @@ local function onAttributeChanged()
 			remoteFunction = remoteFunction,
 			remoteEvent = remoteEvent,
 
-			rankStickMode = System.rankStickMode,
-			afkDelayOffset = System.afkData.afkDelay,
+			Data = data,
 
 			Disconnect = Disconnect,
 			Tweens = Tweens,
