@@ -26,7 +26,7 @@ local UI = script.Interface
 local Frame = UI.Frame
 local Content, Top = Frame.Content, Frame.Top
 local currentOpenFrame, isToggled = nil, false
-local onSetup
+local onSetup, onDestroy
 
 --// Functions \\--
 -- Changes the color of the active topbar button to be a brighter white.
@@ -103,12 +103,16 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 	_changeSelectorHighlight(componentData.Tweens, frameName)
 end
 
+-- Toggles the 'Enabled' property of the GUI & destroys any existing modular connections.
 local function _toggleUI(componentData: { [any]: any })
 	isToggled = not isToggled
 
 	if not isToggled then
+		onDestroy(componentData)
 		return
 	end
+
+	UI.Enabled = true
 
 	-- Setup top button tab buttons.
 	for _, componentButton: TextButton in ipairs(Top.Buttons:GetChildren()) do
@@ -135,45 +139,53 @@ local function _toggleUI(componentData: { [any]: any })
 			table.clear(Maid.Children)
 
 			onSetup(componentData)
+
+			if currentOpenFrame == nil then
+				return
+			end
+
+			_safelyLoadModuleAndRun(frameComponents:FindFirstChild(currentOpenFrame.Name), "onDestroy", componentData)
 		end)
 	)
 
 	-- Main frame's dragging mechanics
-	local isDragging = false
-	local startX, startY, startFramePos
-	table.insert(
-		Maid.Children,
-		Top.Drag.MouseButton1Down:Connect(function()
-			isDragging = true
+	do
+		local isDragging = false
+		local startX, startY, startFramePos
+		table.insert(
+			Maid.Children,
+			Top.Drag.MouseButton1Down:Connect(function()
+				isDragging = true
 
-			startX, startY = Mouse.X, Mouse.Y
-			startFramePos = Frame.Position
-		end)
-	)
+				startX, startY = Mouse.X, Mouse.Y
+				startFramePos = Frame.Position
+			end)
+		)
 
-	table.insert(
-		Maid.Children,
-		Top.Drag.MouseButton1Up:Connect(function()
-			isDragging = false
-		end)
-	)
+		table.insert(
+			Maid.Children,
+			Top.Drag.MouseButton1Up:Connect(function()
+				isDragging = false
+			end)
+		)
 
-	table.insert(
-		Maid.Children,
-		Mouse.Move:Connect(function()
-			if not isDragging then
-				return
-			end
+		table.insert(
+			Maid.Children,
+			Mouse.Move:Connect(function()
+				if not isDragging then
+					return
+				end
 
-			local distX, distY = startX - Mouse.X, startY - Mouse.Y
+				local distX, distY = startX - Mouse.X, startY - Mouse.Y
 
-			componentData
-				.Tweens(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-					Position = startFramePos - UDim2.fromOffset(distX, distY),
-				})
-				:Play()
-		end)
-	)
+				componentData
+					.Tweens(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+						Position = startFramePos - UDim2.fromOffset(distX, distY),
+					})
+					:Play()
+			end)
+		)
+	end
 
 	-- Resize mobile user's text size to hopefully fit better.
 	-- I don't want to hear that this is a bad solution.
@@ -190,7 +202,7 @@ local function _toggleUI(componentData: { [any]: any })
 	end
 end
 
-local function onDestroy(componentData: { [any]: any })
+function onDestroy(componentData: { [any]: any })
 	componentData.Disconnect(Maid)
 	table.clear(Maid.Parent)
 	table.clear(Maid.Children)
@@ -199,12 +211,15 @@ end
 function onSetup(componentData: { [any]: any })
 	onDestroy(componentData)
 
+	-- warn(componentData)
+
 	if not UserInputService.TouchEnabled then
 		local Connection
 		Connection = UserInputService.InputBegan:Connect(function(input: InputObject)
+			warn(input.KeyCode.Name, componentData.Data.activationKeybind)
 			if
 				input.UserInputType ~= Enum.UserInputType.Keyboard
-				or componentData.Data.activationKey ~= input.KeyCode
+				or componentData.Data.activationKeybind ~= input.KeyCode.Name
 			then
 				return
 			end

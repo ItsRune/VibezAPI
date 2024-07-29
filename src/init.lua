@@ -3056,8 +3056,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 	end
 
-	warn(self.Settings)
-
 	--/ Configuration Setup \--
 	-- Only add "sticks" command when rank sticks is enabled.
 	if self.Settings.RankSticks.Enabled == true then

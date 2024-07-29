@@ -24,6 +24,10 @@ local function onSetup(componentData: { [any]: any })
 
 	onDestroy(componentData)
 
+	if not componentData.Data.AfkTracker.Status then
+		return
+	end
+
 	local afkDelayOffset = componentData.Data.AfkTracker.Delay
 	local lastCheck = DateTime.now().UnixTimestamp
 	local Counter = 0

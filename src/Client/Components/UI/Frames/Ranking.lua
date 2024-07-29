@@ -1,5 +1,7 @@
+--#selene: allow(unused_variable)
 --// Services \\--
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 --// Variables \\--
 local Player = Players.LocalPlayer
@@ -123,6 +125,7 @@ local function _updateUserSuggestions(
 	end
 end
 
+--selene: allow(unused_variable)
 local function _handleExternalUserSearch(textBox: TextBox, componentData: { [any]: any })
 	local Text = textBox.Text
 	local isOk, userId, realName
@@ -151,7 +154,12 @@ local function onDestroy(Frame: Frame, componentData: { [any]: any })
 	table.clear(selectedUsers)
 
 	for _, userFrame: TextButton in ipairs(Frame.User.Suggestions:GetChildren()) do
-		if userFrame.Name == "Template" or not userFrame:IsA("TextButton") then
+		if not userFrame:IsA("TextButton") then
+			continue
+		end
+
+		if userFrame.Name == "Template" then
+			userFrame.Visible = false
 			continue
 		end
 
@@ -165,7 +173,9 @@ end
 
 local function onSetup(Frame: Frame, componentData: { [any]: any })
 	-- Destroy first, in case there was an issue destroying previously.
+	warn(Frame, componentData)
 	onDestroy(Frame, componentData)
+
 	Maid = {
 		Main = {},
 		suggestionButtons = {},
@@ -197,47 +207,66 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 			end
 
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-				return Target ~= Player
+				-- return Target ~= Player
 			end)
 
 			_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
 		end)
 	)
 
+	local lastText = Frame.User.Username.Text
 	table.insert(
 		Maid.Main,
-		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
+		RunService.RenderStepped:Connect(function()
 			local Text = Frame.User.Username.Text
-			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-				return (
-					Text == ""
-					or string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
-				) and Target ~= Player
-			end)
-
-			_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
-		end)
-	)
-
-	table.insert(
-		Maid.Main,
-		Frame.User.Username.FocusLost:Connect(function()
-			local Text = Frame.User.Username.Text
-			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-				return (
-					Text == ""
-					or string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
-				) and Target ~= Player
-			end)
-
-			warn(filteredPlayers, #filteredPlayers)
-			if #filteredPlayers ~= 0 then
+			if lastText == Text then
 				return
 			end
 
-			_handleExternalUserSearch(Frame.User.Username, componentData)
+			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
+				return string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
+				-- and Target ~= Player
+			end)
+
+			_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
+			lastText = Text
 		end)
 	)
+
+	-- table.insert(
+	-- 	Maid.Main,
+	-- 	Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
+	-- 		local Text = Frame.User.Username.Text
+	-- 		local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
+	-- 			return string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
+	-- 			-- and Target ~= Player
+	-- 		end)
+
+	-- 		_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
+	-- 	end)
+	-- )
+
+	-- This connection handles users outside of the game server. (BROKEN)
+	-- table.insert(
+	-- 	Maid.Main,
+	-- 	Frame.User.Username.FocusLost:Connect(function()
+	-- 		local Text = Frame.User.Username.Text
+	-- 		if Text == "" then
+	-- 			return
+	-- 		end
+
+	-- 		local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
+	-- 			return (string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text))
+	-- 				and Target ~= Player
+	-- 		end)
+
+	-- 		if #filteredPlayers ~= 0 then
+	-- 			return
+	-- 		end
+
+	-- 		_handleExternalUserSearch(Frame.User.Username, componentData)
+	-- 	end)
+	-- )
 
 	table.insert(
 		Maid.Main,
