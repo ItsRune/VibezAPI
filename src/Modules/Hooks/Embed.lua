@@ -245,6 +245,26 @@ function Class:setColor(color: Color3 | string | number): embedTypes.Embed
 end
 
 --[=[
+    Sets the URL of the embed.
+    @param url string
+    @return EmbedBuilder
+
+    @tag Chainable
+    @within EmbedBuilder
+    @since 1.2.0
+]=]
+---
+function Class:setURL(url: string): embedTypes.Embed
+	if string.match(url, "http[s]?://[a-zA-Z0-9]+%.[a-zA-Z0-9]+") == nil then
+		self._api:_warn("Embed URL needs to be a valid link.")
+		return self
+	end
+
+	self.url = url
+	return self
+end
+
+--[=[
     Sets the author of the embed.
     @param name string
     @param url string?
