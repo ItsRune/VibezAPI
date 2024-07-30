@@ -39,8 +39,8 @@ end
 local function _onNotification(componentData: { [any]: any }, Message: string)
 	local Tweens, Table = componentData.Tweens, componentData.Table
 
-	local Settings = HttpService:JSONDecode(Workspace:GetAttribute(script.Name))
-	local notificationSettings = Settings.UI.Notifications
+	local Settings = HttpService:JSONDecode(Workspace:GetAttribute(script.Parent.Parent.Name))
+	local notificationSettings = Settings.Notifications
 
 	Message = _fixNotificationStatus(Message)
 
@@ -134,7 +134,7 @@ local function onSetup(componentData: { [any]: any })
 	local remoteEvent = componentData.remoteEvent
 	remoteEvent.OnClientEvent:Connect(function(Command: string, ...: any)
 		if Command == "Notify" then
-			_onNotification(...)
+			_onNotification(componentData, ...)
 		end
 	end)
 end

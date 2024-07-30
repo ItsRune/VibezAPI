@@ -42,10 +42,6 @@ local function _removeFrames(Frame: Frame, componentData: { [any]: any }, force:
 	end
 end
 
-local function _Refresh(componentData: { [any]: any })
-	return componentData.remoteFunction:InvokeServer("Logs")
-end
-
 local function _fixStringForAction(componentData: { [any]: any }, logInfo: LogInformation): string
 	local userNamesAndIds = componentData.Table.Map(componentData.affectedUsers, function(Target: Player)
 		return string.format("%s (%d)", Target.Name, Target.UserId)
@@ -100,9 +96,11 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		end)
 	)
 
-	local logData = _Refresh(componentData)
-	for i = #logData, 1 do
-		_addLog(logData[i])
+	local logData = componentData.remoteFunction:InvokeServer("Logs")
+	warn(logData)
+
+	for i = #logData, 1, -1 do
+		_addLog(Frame, componentData, logData[i])
 	end
 end
 

@@ -146,9 +146,11 @@ export type vibezSettings = {
 
 	Interface: {
 		Enabled: boolean,
+
 		MinRank: number,
 		MaxRank: number,
 
+		maxUsersToSelectForRanking: number,
 		activationKeybind: Enum.KeyCode | string,
 	},
 

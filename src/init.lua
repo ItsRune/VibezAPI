@@ -35,6 +35,7 @@ local Hooks = require(script.Modules.Hooks)
 local ActivityTracker = require(script.Modules.Activity)
 local RateLimit = require(script.Modules.RateLimit)
 local Table = require(script.Modules.Table)
+local Promise = require(script.Modules.Promise)
 local Utils = require(script.Modules.Utils)
 
 --// Constants \\--
@@ -86,9 +87,11 @@ local baseSettings = {
 
 	Interface = {
 		Enabled = false,
+
 		MinRank = 255,
 		MaxRank = 255,
 
+		maxUsersToSelectForRanking = 5,
 		activationKeybind = Enum.KeyCode.RightShift,
 
 		Allowed = {
@@ -138,6 +141,26 @@ local baseSettings = {
 }
 
 --// Local Functions \\--
+local function getActionFunctionFromInvoke(Action: string)
+	Action = string.lower(Action)
+
+	if Action == "promote" then
+		return "Promote"
+	elseif Action == "demote" then
+		return "Demote"
+	elseif Action == "fire" then
+		return "Fire"
+	elseif Action == "setrank" then
+		return "setRank"
+	elseif Action == "blacklist" then
+		return "addBlacklist"
+	elseif Action == "unblacklist" then
+		return "deleteBlacklist"
+	end
+
+	return nil
+end
+
 local function onServerInvoke(
 	self: Types.vibezApi,
 	Player: Player,
@@ -145,12 +168,16 @@ local function onServerInvoke(
 	Origin: "Interface" | "Sticks" | "Commands",
 	...: any
 )
-	local rankingActions = { "promote", "demote", "fire", "blacklist", "setrank" }
+	local rankingActions = { "promote", "demote", "fire", "setrank", "blacklist", "unblacklist" }
 	local Data = { ... }
 	local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
 
 	if actionIndex ~= nil then
-		local Target = Data[1]
+		local Targets = Data[1]
+
+		if typeof(Targets) ~= "table" then
+			Targets = { Targets }
+		end
 
 		-- Check if UI is enabled or if Player has ranking sticks.
 		if
@@ -161,191 +188,219 @@ local function onServerInvoke(
 			return false
 		end
 
-		-- Prevent user from ranking themself
-		if Player == Target then
-			self:_warn(Player.Name .. "(" .. Player.UserId .. ") attempted to '" .. Action .. "' themselves.")
-			return false
+		local resolvedPromises = table.create(#Targets)
+
+		for _, Target: any in ipairs(Targets) do
+			Promise.new(function(resolve, reject)
+				-- Prevent user from ranking themself
+				if Player == Target then
+					self:_warn(Player.Name .. "(" .. Player.UserId .. ") attempted to '" .. Action .. "' themselves.")
+					return reject("Player and Target are the same.")
+				end
+
+				-- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
+				if typeof(Target) == "number" or typeof(Target) == "string" then
+					local toFetch = (typeof(Target) == "number") and "Name" or "UserId"
+					local oppoFetch = (toFetch == "Name") and "UserId" or "Name"
+
+					local fetched = self:_verifyUser(Target, toFetch)
+					local rememberedOriginalValue = Target
+
+					Target = {
+						[oppoFetch] = rememberedOriginalValue,
+						[toFetch] = fetched,
+					}
+				end
+
+				local userId = self:_getUserIdByName(Target.Name)
+				local fakeTargetInstance = { Name = Target.Name, UserId = userId }
+
+				local targetGroupRank = self:_playerIsValidStaff(fakeTargetInstance)
+				targetGroupRank = (targetGroupRank ~= nil) and targetGroupRank[2]
+					or self:_getGroupFromUser(self.GroupId, fakeTargetInstance.UserId)
+
+				if typeof(targetGroupRank) == "table" then
+					targetGroupRank = targetGroupRank.Rank
+				end
+
+				local callerGroupRank: { [number]: any } = self:_playerIsValidStaff(Player)
+				if not callerGroupRank or callerGroupRank[2] == nil then -- The user calling this function is NOT staff
+					self:_warn(
+						string.format(
+							"%s (%d) attempted to '%s' user %s (%d) when they're not staff!",
+							Player.Name,
+							Player.UserId,
+							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
+							Target.Name,
+							userId
+						)
+					)
+					return reject("Unauthorized")
+				end
+
+				callerGroupRank = callerGroupRank[2] -- THIS IS A NUMBER
+				local minRank, maxRank
+
+				do
+					minRank = (Origin == "Interface") and self.Settings.Interface.MinRank
+						or (Origin == "Sticks" and self.Settings.RankSticks.MinRank)
+						or (Origin == "Commands" and self.Settings.Commands.MinRank)
+						or -1
+					maxRank = (Origin == "Interface") and self.Settings.Interface.MaxRank
+						or (Origin == "Commands" and self.Settings.Commands.MaxRank)
+						or (Origin == "Sticks" and 255)
+						or -1
+				end
+
+				if minRank == -1 or maxRank == -1 then
+					self:_warn(
+						string.format(
+							"Failed to load min/max rank settings for action '%s'",
+							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
+						)
+					)
+					return reject("Settings failed")
+				end
+
+				if callerGroupRank == nil then
+					return reject("Processing failed")
+				end
+
+				if targetGroupRank >= callerGroupRank then -- Prevent lower/equal ranked users from ranking higher/equal members
+					self:_warn(
+						string.format(
+							"Player %s (%d) is lower/equal to the member they're trying to perform action '%s' on!",
+							Player.Name,
+							Player.UserId,
+							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
+						)
+					)
+					self:_notifyPlayer(Player, "Error: That user's rank is higher OR equal to your rank.")
+					return reject("Too high to rank")
+				end
+
+				if callerGroupRank < minRank or callerGroupRank > maxRank then -- Prevent ppl with lower than max rank to use methods (if somehow got access to)
+					self:_warn(
+						string.format(
+							"Player %s (%d) attempted to use '%s' on %s (%d) but was rejected due to either being too low of a rank or too high of a rank!",
+							Player.Name,
+							Player.UserId,
+							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
+							Target.Name,
+							userId
+						)
+					)
+					self:_notifyPlayer(Player, "Error: No.")
+					return reject("Too high to rank")
+				end
+
+				local theirCooldown = self._private.rankingCooldowns[userId]
+				if
+					theirCooldown ~= nil
+					and DateTime.now().UnixTimestamp - theirCooldown < self.Settings.Misc.rankingCooldown
+				then
+					local message = string.format(
+						"%s (%d) still has %d seconds left on their ranking cooldown!",
+						Target.Name,
+						Target.UserId,
+						math.abs(self.Settings.Misc.rankingCooldown - (DateTime.now().UnixTimestamp - theirCooldown))
+					)
+
+					self:_warn(message)
+					self:_notifyPlayer(Player, "Error: " .. message)
+					return reject("Ranking cooldown")
+				end
+
+				local actionFunc = getActionFunctionFromInvoke(Action)
+
+				local result, extraData
+				local logAction = (Action == "blacklist") and "Blacklist"
+					or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
+
+				if actionFunc == "Blacklist" then
+					local reason = Data[2] or "Unspecified"
+					result = self[actionFunc](self, userId, reason, Player)
+					extraData = { Reason = reason }
+				elseif actionFunc == "setRank" then
+					local newRank = Data[2]
+					result = self[actionFunc](self, userId, newRank, { userName = Player.Name, userId = Player.UserId })
+				else
+					result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
+				end
+
+				self:_addLog(Player, logAction, Origin, { Target }, extraData)
+
+				if
+					self._private.Binds[string.lower(actionFunc)] ~= nil
+					and Table.Count(self._private.Binds[string.lower(actionFunc)]) > 0
+				then
+					for _, callback in pairs(self._private.Binds[string.lower(actionFunc)]) do
+						coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
+					end
+				end
+
+				if result["Success"] == false then
+					self:_notifyPlayer(
+						Player,
+						string.format(
+							"Error: Attempting to %s %s (%d) resulted in an internal server error!",
+							actionFunc == "Blacklist" and "blacklist" or "rank",
+							fakeTargetInstance.Name,
+							userId
+						)
+					)
+					self:_warn(
+						string.format("Internal server error: %s", result.errorMessage or result.message or "Unknown.")
+					)
+					return reject("Internal server error")
+				end
+
+				self._private.rankingCooldowns[userId] = DateTime.now().UnixTimestamp
+				resolve(result)
+			end):andThen(function(result: { [any]: any })
+				table.insert(resolvedPromises, result)
+			end, function(err)
+				warn(tostring(err))
+			end)
 		end
 
-		-- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
-		if typeof(Target) == "number" or typeof(Target) == "string" then
-			local toFetch = (typeof(Target) == "number") and "Name" or "UserId"
-			local oppoFetch = (toFetch == "Name") and "UserId" or "Name"
-
-			local fetched = self:_verifyUser(Target, toFetch)
-			local rememberedOriginalValue = Target
-
-			Target = newproxy()
-			Target[oppoFetch] = rememberedOriginalValue
-			Target[toFetch] = fetched
-		end
-
-		local userId = self:_getUserIdByName(Target.Name)
-		local fakeTargetInstance = { Name = Target.Name, UserId = userId }
-
-		local targetGroupRank = self:_playerIsValidStaff(fakeTargetInstance)
-		targetGroupRank = (targetGroupRank ~= nil) and targetGroupRank[2]
-			or self:_getGroupFromUser(self.GroupId, fakeTargetInstance.UserId)
-
-		if typeof(targetGroupRank) == "table" then
-			targetGroupRank = targetGroupRank.Rank
-		end
-
-		local callerGroupRank: { [number]: any } = self:_playerIsValidStaff(Player)
-		if not callerGroupRank or callerGroupRank[2] == nil then -- The user calling this function is NOT staff
-			self:_warn(
-				string.format(
-					"%s (%d) attempted to '%s' user %s (%d) when they're not staff!",
-					Player.Name,
-					Player.UserId,
-					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
-					Target.Name,
-					userId
-				)
-			)
-			return false
-		end
-
-		callerGroupRank = callerGroupRank[2] -- THIS IS A NUMBER
-		local minRank = (Origin == "Interface") and self.Settings.Interface.MinRank
-			or (Origin == "Sticks" and self.Settings.RankSticks.MinRank)
-			or (Origin == "Commands" and self.Settings.Commands.MinRank)
-			or -1
-		local maxRank = (Origin == "Interface") and self.Settings.Interface.MaxRank
-			or (Origin == "Commands" and self.Settings.Commands.MaxRank)
-			or (Origin == "Sticks" and 255)
-			or -1
-
-		if minRank == -1 or maxRank == -1 then
-			self:_warn(
-				string.format(
-					"Failed to load min/max rank settings for action '%s'",
-					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
-				)
-			)
-			return false
-		end
-
-		if callerGroupRank == nil then
-			return false
-		end
-
-		if targetGroupRank >= callerGroupRank then -- Prevent lower/equal ranked users from ranking higher/equal members
-			self:_warn(
-				string.format(
-					"Player %s (%d) is lower/equal to the member they're trying to perform action '%s' on!",
-					Player.Name,
-					Player.UserId,
-					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
-				)
-			)
-			self:_notifyPlayer(Player, "Error: That user's rank is higher OR equal to your rank.")
-			return false
-		end
-
-		if callerGroupRank < minRank or callerGroupRank > maxRank then -- Prevent ppl with lower than max rank to use methods (if somehow got access to)
-			self:_warn(
-				string.format(
-					"Player %s (%d) attempted to use '%s' on %s (%d) but was rejected due to either being too low of a rank or too high of a rank!",
-					Player.Name,
-					Player.UserId,
-					string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
-					Target.Name,
-					userId
-				)
-			)
-			self:_notifyPlayer(Player, "Error: No.")
-			return false
-		end
-
-		local theirCooldown = self._private.rankingCooldowns[userId]
-		if
-			theirCooldown ~= nil
-			and DateTime.now().UnixTimestamp - theirCooldown < self.Settings.Misc.rankingCooldown
-		then
-			local message = string.format(
-				"%s (%d) still has %d seconds left on their ranking cooldown!",
-				Target.Name,
-				Target.UserId,
-				math.abs(self.Settings.Misc.rankingCooldown - (DateTime.now().UnixTimestamp - theirCooldown))
-			)
-
-			self:_warn(message)
-			self:_notifyPlayer(Player, "Error: " .. message)
-			return false
-		end
-
-		local actionFunc
-		Action = string.lower(Action)
-		if Action == "promote" then
-			actionFunc = "Promote"
-		elseif Action == "demote" then
-			actionFunc = "Demote"
-		elseif Action == "fire" then
-			actionFunc = "Fire"
-		elseif Action == "setrank" then
-			actionFunc = "setRank"
-		elseif Action == "blacklist" then
-			actionFunc = "addBlacklist"
-		end
-
-		local result, extraData
-		local logAction = (Action == "blacklist") and "Blacklist"
-			or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
-
-		if actionFunc == "Blacklist" then
-			local reason = Data[2] or "Unspecified"
-			result = self[actionFunc](self, userId, reason, Player)
-			extraData = { Reason = reason }
-		elseif actionFunc == "setRank" then
-			local newRank = Data[2]
-			result = self[actionFunc](self, userId, newRank, { userName = Player.Name, userId = Player.UserId })
-		else
-			result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
-		end
-
-		self:_addLog(Player, logAction, Origin, { Target }, extraData)
-
-		if
-			self._private.Binds[string.lower(actionFunc)] ~= nil
-			and Table.Count(self._private.Binds[string.lower(actionFunc)]) > 0
-		then
-			for _, callback in pairs(self._private.Binds[string.lower(actionFunc)]) do
-				coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
-			end
-		end
-
-		if result["Success"] == false then
-			self:_notifyPlayer(
-				Player,
-				string.format(
-					"Error: Attempting to %s %s (%d) resulted in an internal server error!",
-					actionFunc == "Blacklist" and "blacklist" or "rank",
-					fakeTargetInstance.Name,
-					userId
-				)
-			)
-			self:_warn(string.format("Internal server error: %s", result.errorMessage or result.message or "Unknown."))
-			return false
-		end
-
-		result = result.Body
-		self._private.rankingCooldowns[userId] = DateTime.now().UnixTimestamp
-
-		if actionFunc ~= "blacklist" then
-			self:_notifyPlayer(
-				Player,
-				string.format(
-					"Success: Ranked <b>%s (%d)</b> to role <b>%s (%d)</b>!",
-					fakeTargetInstance.Name,
-					userId,
-					result.data.newRank.name,
-					result.data.newRank.rank
-				)
-			)
+		local actionFunctionName = getActionFunctionFromInvoke(Action)
+		if actionFunctionName == "addBlacklist" or actionFunctionName == "deleteBlacklist" then
 			return true
 		end
 
+		repeat
+			task.wait()
+		until #resolvedPromises == #Targets
+
+		local requiresAndMore = #resolvedPromises > 3
+		local maxResolved = requiresAndMore and 3 or #resolvedPromises
+
+		local fullNotificationString = "Success: Ranked <b>%s</b>."
+		local notificationStringFilledWithUsers = ""
+
+		for i = 1, #resolvedPromises do
+			local this = resolvedPromises[i]
+			local resultingSuccess = false
+
+			for key: string, keyValue: boolean in pairs(this) do
+				if string.lower(key) == "success" and keyValue then
+					resultingSuccess = keyValue
+					break
+				end
+			end
+
+			if not resultingSuccess then
+				maxResolved += 1
+			elseif i >= maxResolved then
+				break
+			end
+		end
+
+		local moreUsersDifference = #resolvedPromises - maxResolved
+		notificationStringFilledWithUsers ..= (moreUsersDifference > 0) and " and " .. moreUsersDifference .. " more" or ""
+
+		self:_notifyPlayer(Player, string.format(fullNotificationString, notificationStringFilledWithUsers))
 		return true
 	elseif Action == "Afk" then
 		Table.ForEach(self._private.Binds._internal.Afk, function(classRouter: (Player: Player) -> ())
@@ -1657,6 +1712,7 @@ function api:_addLog(
 
 	-- Truncate logs to a count of 100 (Expecting a small amount of people to use logs)
 	self._private.actionStorage.Logs = Table.Truncate(self._private.actionStorage.Logs, 100)
+	warn(self._private.actionStorage.Logs)
 end
 
 --[=[
@@ -1669,7 +1725,7 @@ end
 ---
 function api:_buildAttributes()
 	local function convertEnumToString(enum: Enum)
-		if typeof(enum) == "Enum" then
+		if typeof(enum) == "EnumItem" then
 			return enum.Name
 		end
 
@@ -1711,9 +1767,11 @@ function api:_buildAttributes()
 
 		UI = {
 			Status = self.Settings.Interface.Enabled,
+
 			MinRank = self.Settings.Interface.MinRank,
 			MaxRank = self.Settings.Interface.MaxRank,
 
+			maxUsersToSelectForRanking = self.Settings.Interface.maxUsersToSelectForRanking,
 			activationKeybind = convertEnumToString(self.Settings.Interface.activationKeybind),
 		},
 
@@ -2802,7 +2860,7 @@ end
 ]=]
 ---
 function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
-	if RunService:IsClient() then
+	if RunService:IsClient() and not RunService:IsStudio() then
 		Debris:AddItem(script, 0)
 		error("[Vibez]: Cannot fetch API on the client!")
 		return nil

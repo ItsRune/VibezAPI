@@ -1,6 +1,5 @@
 --// Services \\--
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UserService = game:GetService("UserService")
 
 --// Variables \\--
@@ -156,7 +155,6 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 		)
 	end
 
-	warn(filteredPlayers, selectedUsers)
 	for _, Target: Player in ipairs(filteredPlayers) do
 		createTargetTemplate(Target)
 	end
@@ -258,7 +256,7 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		suggestionButtons = {},
 	}
 
-	for _, actionButton: TextButton in ipairs(Frame.Actions:GetChildren()) do
+	for _, actionButton: TextButton in ipairs(Frame.Actions.Body:GetChildren()) do
 		if not actionButton:IsA("TextButton") then
 			continue
 		end
@@ -305,7 +303,7 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 	-- setRank action is in a separate area than the other buttons.
 	table.insert(
 		Maid.Main,
-		Frame.Actions.setRank.Button.MouseButton1Click:Connect(function()
+		Frame.Actions.Body.setRank.Button.MouseButton1Click:Connect(function()
 			local newRank = Frame.Actions.setRank.newRank.Text
 			if newRank == "" or #selectedUsers == 0 then
 				return
