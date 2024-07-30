@@ -145,7 +145,7 @@ local function onServerInvoke(
 	Origin: "Interface" | "Sticks" | "Commands",
 	...: any
 )
-	local rankingActions = { "promote", "demote", "fire", "blacklist", "setRank" }
+	local rankingActions = { "promote", "demote", "fire", "blacklist", "setrank" }
 	local Data = { ... }
 	local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
 
@@ -165,6 +165,19 @@ local function onServerInvoke(
 		if Player == Target then
 			self:_warn(Player.Name .. "(" .. Player.UserId .. ") attempted to '" .. Action .. "' themselves.")
 			return false
+		end
+
+		-- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
+		if typeof(Target) == "number" or typeof(Target) == "string" then
+			local toFetch = (typeof(Target) == "number") and "Name" or "UserId"
+			local oppoFetch = (toFetch == "Name") and "UserId" or "Name"
+
+			local fetched = self:_verifyUser(Target, toFetch)
+			local rememberedOriginalValue = Target
+
+			Target = newproxy()
+			Target[oppoFetch] = rememberedOriginalValue
+			Target[toFetch] = fetched
 		end
 
 		local userId = self:_getUserIdByName(Target.Name)
@@ -276,21 +289,22 @@ local function onServerInvoke(
 			actionFunc = "addBlacklist"
 		end
 
-		local result
-		if actionFunc == "Blacklist" then
-			result = self[actionFunc](self, userId, "Unspecified. (Interface)", Player)
+		local result, extraData
+		local logAction = (Action == "blacklist") and "Blacklist"
+			or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
 
-			-- if Table.Count(self._private.Binds[actionFunc]) > 0 then
-			-- 	for _, callback in pairs(self._private.Binds[actionFunc]) do
-			-- 		coroutine.wrap(callback)((result["Body"] ~= nil) and result.Body or result)
-			-- 	end
-			-- end
+		if actionFunc == "Blacklist" then
+			local reason = Data[2] or "Unspecified"
+			result = self[actionFunc](self, userId, reason, Player)
+			extraData = { Reason = reason }
 		elseif actionFunc == "setRank" then
-			warn(...)
-			-- result = self[actionFunc](self, userId, Data[2], { userName = Player.Name, userId = Player.UserId })
+			local newRank = Data[2]
+			result = self[actionFunc](self, userId, newRank, { userName = Player.Name, userId = Player.UserId })
 		else
 			result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
 		end
+
+		self:_addLog(Player, logAction, Origin, { Target }, extraData)
 
 		if
 			self._private.Binds[string.lower(actionFunc)] ~= nil
@@ -367,6 +381,13 @@ local function onServerInvoke(
 		end
 
 		return tbl
+	elseif Action == "Logs" then
+		local canAccessUI = onServerInvoke(self, Player, "isStaff", "Interface")
+		if not canAccessUI then
+			return {}
+		end
+
+		return self._private
 	else
 		-- Maybe actually log it somewhere... I have no clue where though.
 		self:_warn("Player %s (%d) tried to perform an invalid action with our API.", Player.Name, Player.UserId)
@@ -465,7 +486,7 @@ function api:_setupCommands()
 					onServerInvoke(self, Player, "Promote", "Commands", Target)
 				end
 
-				self:_addLog(Player, "Promote", affectedUsers)
+				self:_addLog(Player, "Promote", "Commands", affectedUsers)
 			end,
 		},
 
@@ -485,7 +506,7 @@ function api:_setupCommands()
 					onServerInvoke(self, Player, "Demote", "Commands", Target)
 				end
 
-				self:_addLog(Player, "Demote", affectedUsers)
+				self:_addLog(Player, "Demote", "Commands", affectedUsers)
 			end,
 		},
 
@@ -505,7 +526,7 @@ function api:_setupCommands()
 					onServerInvoke(self, Player, "Fire", "Commands", Target)
 				end
 
-				self:_addLog(Player, "Fire", affectedUsers)
+				self:_addLog(Player, "Fire", "Commands", affectedUsers)
 			end,
 		},
 
@@ -535,7 +556,7 @@ function api:_setupCommands()
 					self:_warn(res.message)
 				end
 
-				self:_addLog(Player, "Blacklist", affectedUsers, reason)
+				self:_addLog(Player, "Blacklist", "Commands", affectedUsers, { Reason = reason })
 			end,
 		},
 
@@ -566,7 +587,7 @@ function api:_setupCommands()
 					self:_warn(res.message)
 				end
 
-				self:_addLog(Player, "Unblacklist", affectedUsers)
+				self:_addLog(Player, "Unblacklist", "Commands", affectedUsers)
 			end,
 		},
 	}
@@ -1608,10 +1629,6 @@ end
 
 --[=[
 	Adds an entry into the in-game logs.
-	@param calledBy Player
-	@param Action string
-	@param affectedUsers { { Name: string, UserId: number } }
-	@param ... any
 	@return ()
 
 	@private
@@ -1619,9 +1636,17 @@ end
 	@since 0.7.0
 ]=]
 ---
-function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: string, UserId: number } }?, ...: any)
-	table.insert(self._private.commandStorage.Logs, {
-		calledBy = calledBy,
+function api:_addLog(
+	calledBy: Player,
+	Action: string,
+	triggeringAction: "Commands" | "Interface" | "RankSticks",
+	affectedUsers: { { Name: string, UserId: number } }?,
+	...: any
+)
+	table.insert(self._private.actionStorage.Logs, {
+		calledBy = calledBy, -- Player who used an action.
+		triggeredBy = triggeringAction, -- Useful for filtering on the UI.
+
 		affectedCount = (affectedUsers == nil) and 0 or #affectedUsers,
 		affectedUsers = affectedUsers,
 		extraData = { ... },
@@ -1630,7 +1655,8 @@ function api:_addLog(calledBy: Player, Action: string, affectedUsers: { { Name: 
 		Timestamp = DateTime.now().UnixTimestamp,
 	})
 
-	self._private.commandStorage.Logs = Table.Truncate(self._private.commandStorage.Logs, 100)
+	-- Truncate logs to a count of 100 (Expecting a small amount of people to use logs)
+	self._private.actionStorage.Logs = Table.Truncate(self._private.actionStorage.Logs, 100)
 end
 
 --[=[
@@ -2889,7 +2915,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			},
 		},
 
-		commandStorage = {
+		actionStorage = {
 			Bans = {},
 			Logs = {},
 		},
@@ -3076,7 +3102,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			)
 
 			if #foundSticks > 0 then
-				self:_addLog(Player, "RankSticks", nil, "Removed")
+				self:_addLog(Player, "RankSticks", "Commands", nil, "Removed")
 
 				for _, v in pairs(foundSticks) do
 					Debris:AddItem(v, 0)
@@ -3085,7 +3111,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			end
 
 			self:_giveSticks(Player)
-			self:_addLog(Player, "RankSticks", nil, "Given")
+			self:_addLog(Player, "RankSticks", "Commands", nil, "Given")
 		end)
 
 		-- We need to ensure that the module is indeed setting up

@@ -54,12 +54,14 @@ end
 
 local function _openFrame(componentData: { [any]: any }, frameName: string)
 	local newFrame = Content:FindFirstChild(frameName)
-	local tweenOutInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-	local tweenInInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+	local tweenInOutInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
+	-- local tweenOutInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+	-- local tweenInInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
 	local Tweens: Tweens = componentData.Tweens
 
 	-- We can't proceed if there's no frame available.
 	if not newFrame then
+		componentData._warn("UI Error", "No frame could be found with the name '" .. frameName .. "'!")
 		return
 	end
 
@@ -78,7 +80,7 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 			_safelyLoadModuleAndRun(previousFrameModule, "Destroy", newCurrentReference, componentData)
 		end
 
-		Tweens(newCurrentReference, tweenInInfo, {
+		Tweens(newCurrentReference, tweenInOutInfo, {
 			Position = UDim2.fromScale(-0.5, 0.5),
 		}):setCallback(function(playBackState)
 			if playBackState ~= Enum.PlaybackState.Completed then
@@ -89,15 +91,16 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 		end):Play()
 	end
 
-	Tweens(newFrame, tweenOutInfo, {
-		Position = UDim2.fromScale(0.5, 0.5),
-	}):Play()
-
 	local frameModule = frameComponents:FindFirstChild(frameName)
 	if not frameModule or not frameModule:IsA("ModuleScript") then
 		componentData._warn("UI Error", "No module could be found for page '" .. frameName .. "'!")
 		return
 	end
+
+	currentOpenFrame = newFrame
+	Tweens(newFrame, tweenInOutInfo, {
+		Position = UDim2.fromScale(0.5, 0.5),
+	}):Play()
 
 	_safelyLoadModuleAndRun(frameModule, "Setup", newFrame, componentData)
 	_changeSelectorHighlight(componentData.Tweens, frameName)
@@ -137,14 +140,13 @@ local function _toggleUI(componentData: { [any]: any })
 
 			componentData.Disconnect(Maid.Children)
 			table.clear(Maid.Children)
-
 			onSetup(componentData)
 
 			if currentOpenFrame == nil then
 				return
 			end
 
-			_safelyLoadModuleAndRun(frameComponents:FindFirstChild(currentOpenFrame.Name), "onDestroy", componentData)
+			_safelyLoadModuleAndRun(frameComponents:FindFirstChild(currentOpenFrame.Name), "Destroy", componentData)
 		end)
 	)
 
@@ -211,12 +213,9 @@ end
 function onSetup(componentData: { [any]: any })
 	onDestroy(componentData)
 
-	-- warn(componentData)
-
 	if not UserInputService.TouchEnabled then
 		local Connection
 		Connection = UserInputService.InputBegan:Connect(function(input: InputObject)
-			warn(input.KeyCode.Name, componentData.Data.activationKeybind)
 			if
 				input.UserInputType ~= Enum.UserInputType.Keyboard
 				or componentData.Data.activationKeybind ~= input.KeyCode.Name

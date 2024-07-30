@@ -1,11 +1,12 @@
---#selene: allow(unused_variable)
 --// Services \\--
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserService = game:GetService("UserService")
 
 --// Variables \\--
 local Player = Players.LocalPlayer
 local defaultThumbnail = "rbxasset://textures/AvatarCompatibilityPreviewer/user.png"
+local usernameTextBox = nil
 local userCache = {}
 local selectedUsers = {}
 local Maid = {
@@ -32,7 +33,7 @@ local function _getUserInformation(userId: number)
 		return currentCache
 	end
 
-	local isOk, thumbnail, username
+	local isOk, thumbnail, userInfo
 	isOk, thumbnail = pcall(
 		Players.GetUserThumbnailAsync,
 		Players,
@@ -44,28 +45,44 @@ local function _getUserInformation(userId: number)
 		thumbnail = defaultThumbnail
 	end
 
-	isOk, username = pcall(Players.GetNameFromUserIdAsync, Players, userId)
+	isOk, userInfo = pcall(UserService.GetUserInfosByUserIdsAsync, UserService, { userId })
 	if not isOk then
-		username = "Loading..."
+		return nil
 	end
 
-	userCache[userId] = {
-		Name = username,
+	userInfo = userInfo[1]
+
+	-- Ignore me, I prefer this format.
+	userInfo.UserId = userInfo.Id
+	userInfo.Id = nil
+
+	userCache[userInfo.UserId] = {
+		Name = userInfo.Username,
+		UserId = userInfo.UserId,
+		DisplayName = userInfo.DisplayName,
+		isVerified = userInfo.HasVerifiedBadge,
+		isInGame = (Players:GetPlayerByUserId(userInfo.UserId) ~= nil),
 		Thumbnail = thumbnail,
-		Id = userId,
 		lastUpdated = now,
 	}
 
-	return userCache[userId]
+	return userCache[userInfo.UserId]
 end
 
-local function _updateUserSuggestions(
-	textBox: TextBox,
-	componentData: { [any]: any },
-	filteredPlayers: { Player },
-	Tag: string?
-)
-	local suggestionFrame = textBox.Parent.Suggestions
+local function _fullCheckForFilter(Target: Player)
+	local currentText = usernameTextBox.Text
+
+	--stylua: ignore
+	return --Target ~= Player and
+		(
+			currentText == ""
+			or string.sub(string.lower(currentText), 0, #currentText)
+				== string.sub(string.lower(Target.Name), 0, #currentText)
+		)
+end
+
+local function _updateUserSuggestions(componentData: { [any]: any }, filteredPlayers: { Player })
+	local suggestionFrame = usernameTextBox.Parent.Suggestions
 	local templateFrame = suggestionFrame:FindFirstChild("Template")
 
 	componentData.Disconnect(Maid.suggestionButtons)
@@ -84,33 +101,48 @@ local function _updateUserSuggestions(
 		item:Destroy()
 	end
 
-	for _, Target: Player in ipairs(filteredPlayers) do
+	local function createTargetTemplate(Target: Player, layoutOrder: number?)
 		local userInformation = _getUserInformation(Target.UserId)
 		local newTemplate = templateFrame:Clone()
 
-		newTemplate.Name = Target.UserId
+		newTemplate.LayoutOrder = layoutOrder or 99999
 		newTemplate.Left.Information.Username.Text = Target.Name
 		newTemplate.Left.Information.DisplayName.Text = "@" .. Target.DisplayName
 		newTemplate.Left.Thumbnail.Image = userInformation.Thumbnail
-		newTemplate.Right.Tag.Text = (Tag ~= nil) and Tag or ""
+
+		--stylua: ignore
+		newTemplate.Right.Tag.Text = not userInformation.isInGame and '<font color="rgb(225, 50, 50)">[External]</font>' or ""
+		newTemplate.Right.Checkbox.ImageTransparency = (table.find(selectedUsers, Target.UserId) ~= nil) and 0.2 or 1
+
+		newTemplate.Name = Target.UserId
 		newTemplate.Parent = templateFrame.Parent
 		newTemplate.Visible = true
 
 		table.insert(
 			Maid.suggestionButtons,
 			newTemplate.MouseButton1Click:Connect(function()
-				local appendedTableIndex = table.find(selectedUsers, Target)
-				local tweenDirection = appendedTableIndex and 1 or 0.2
+				local hasAppendedTableIndex = table.find(selectedUsers, Target.UserId)
+				local tweenDirection = hasAppendedTableIndex and 1 or 0.2
 
-				if appendedTableIndex then
-					table.remove(selectedUsers, appendedTableIndex)
-					newTemplate.LayoutOrder = 0
+				if hasAppendedTableIndex then
+					table.remove(selectedUsers, hasAppendedTableIndex)
+
+					if
+						userInformation.isInGame == false
+						or table.find(filteredPlayers, Players:GetPlayerByUserId(Target.UserId))
+					then
+						newTemplate:Destroy()
+					end
 				else
-					table.insert(selectedUsers, Target)
+					table.insert(selectedUsers, Target.UserId)
 					newTemplate.LayoutOrder = #selectedUsers
 				end
 
-				textBox.Parent.Selected.Text = string.format("%d User(s) Selected", #selectedUsers)
+				usernameTextBox.Parent.Selected.Text = string.format("%d User(s) Selected", #selectedUsers)
+				if not userInformation.isInGame then
+					return
+				end
+
 				componentData
 					.Tweens(
 						newTemplate.Right.Checkbox,
@@ -123,35 +155,77 @@ local function _updateUserSuggestions(
 			end)
 		)
 	end
+
+	warn(filteredPlayers, selectedUsers)
+	for _, Target: Player in ipairs(filteredPlayers) do
+		createTargetTemplate(Target)
+	end
+
+	for index: number, targetId: number in ipairs(selectedUsers) do
+		local userInfo = _getUserInformation(targetId)
+		if not userInfo then
+			continue
+		end
+
+		createTargetTemplate(userInfo, index)
+	end
+
+	local existingButtons = {}
+	for _, Inst: Instance in ipairs(templateFrame.Parent:GetChildren()) do
+		if not Inst:IsA("TextButton") or Inst.Name == "Template" then
+			continue
+		end
+
+		if table.find(existingButtons, Inst.Left.Information.Username.Text) ~= nil then
+			Inst:Destroy()
+			continue
+		end
+
+		table.insert(existingButtons, Inst.Left.Information.Username.Text)
+	end
 end
 
---selene: allow(unused_variable)
-local function _handleExternalUserSearch(textBox: TextBox, componentData: { [any]: any })
-	local Text = textBox.Text
-	local isOk, userId, realName
+local function _handleExternalUserSearch(componentData: { [any]: any })
+	local Text = usernameTextBox.Text
+	local isOk, userId, userInfo
 
 	isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, Text)
-	warn(isOk, userId)
 	if not isOk or not userId then
 		return
 	end
 
-	isOk, realName = pcall(Players.GetNameFromUserIdAsync, Players, userId)
-	warn(isOk, realName)
-	if not isOk or not realName then
+	isOk, userInfo = pcall(UserService.GetUserInfosByUserIdsAsync, UserService, { userId })
+	if not isOk or (typeof(userInfo) == "table" and not userInfo[1]) then
 		return
 	end
 
-	local fakePlayer = newproxy(false)
-	fakePlayer.Name = realName
-	fakePlayer.UserId = userId
+	local fakePlayers = {}
 
-	_updateUserSuggestions(textBox, componentData, fakePlayer, '<font color="rgb(200, 50, 50)">[External]</font>')
+	for i = 1, #userInfo do
+		local userData = userInfo[i]
+
+		-- Even with external searches, we still have to prevent the local player from trying to rank themselves.
+		if userData.UserId == Player.UserId then
+			continue
+		end
+
+		local fakePlayer = {
+			Name = userInfo[i].Username,
+			UserId = userId,
+			DisplayName = userInfo[i].DisplayName,
+			isVerified = userInfo[i].HasVerifiedBadge,
+		}
+
+		table.insert(fakePlayers, fakePlayer)
+	end
+
+	_updateUserSuggestions(componentData, fakePlayers)
 end
 
 --// Functions \\--
 local function onDestroy(Frame: Frame, componentData: { [any]: any })
 	table.clear(selectedUsers)
+	selectedUsers = {}
 
 	for _, userFrame: TextButton in ipairs(Frame.User.Suggestions:GetChildren()) do
 		if not userFrame:IsA("TextButton") then
@@ -166,14 +240,17 @@ local function onDestroy(Frame: Frame, componentData: { [any]: any })
 		userFrame:Destroy()
 	end
 
+	Frame.User.Selected.Text = "0 User(s) Selected"
 	componentData.Disconnect(Maid)
 	table.clear(Maid)
 	task.wait()
 end
 
 local function onSetup(Frame: Frame, componentData: { [any]: any })
+	local remoteFunction = componentData.remoteFunction
+	usernameTextBox = Frame.User.Username
+
 	-- Destroy first, in case there was an issue destroying previously.
-	warn(Frame, componentData)
 	onDestroy(Frame, componentData)
 
 	Maid = {
@@ -181,7 +258,6 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		suggestionButtons = {},
 	}
 
-	local remoteFunction = componentData.remoteFunction
 	for _, actionButton: TextButton in ipairs(Frame.Actions:GetChildren()) do
 		if not actionButton:IsA("TextButton") then
 			continue
@@ -206,43 +282,55 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 				return
 			end
 
-			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-				-- return Target ~= Player
-			end)
-
-			_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
+			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
+			_updateUserSuggestions(componentData, filteredPlayers)
 		end)
 	)
 
-	local lastText = Frame.User.Username.Text
 	table.insert(
 		Maid.Main,
-		RunService.RenderStepped:Connect(function()
-			local Text = Frame.User.Username.Text
-			if lastText == Text then
+		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
+			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
+
+			if #filteredPlayers == 0 then
+				_handleExternalUserSearch(componentData)
 				return
 			end
 
-			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-				return string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
-				-- and Target ~= Player
-			end)
-
-			_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
-			lastText = Text
+			_updateUserSuggestions(componentData, filteredPlayers)
 		end)
 	)
 
+	-- DEBUG: This connection for some reason causes the script to break?
+	-- setRank action is in a separate area than the other buttons.
+	table.insert(
+		Maid.Main,
+		Frame.Actions.setRank.Button.MouseButton1Click:Connect(function()
+			local newRank = Frame.Actions.setRank.newRank.Text
+			if newRank == "" or #selectedUsers == 0 then
+				return
+			end
+
+			remoteFunction:InvokeServer("SetRank", "Interface", selectedUsers, newRank)
+		end)
+	)
+
+	-- local lastText = Frame.User.Username.Text
 	-- table.insert(
 	-- 	Maid.Main,
-	-- 	Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
+	-- 	RunService.RenderStepped:Connect(function()
 	-- 		local Text = Frame.User.Username.Text
+	-- 		if lastText == Text then
+	-- 			return
+	-- 		end
+
 	-- 		local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
 	-- 			return string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
 	-- 			-- and Target ~= Player
 	-- 		end)
 
-	-- 		_updateUserSuggestions(Frame.User.Username, componentData, filteredPlayers)
+	-- 		_updateUserSuggestions(componentData, filteredPlayers)
+	-- 		lastText = Text
 	-- 	end)
 	-- )
 
@@ -267,18 +355,6 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 	-- 		_handleExternalUserSearch(Frame.User.Username, componentData)
 	-- 	end)
 	-- )
-
-	table.insert(
-		Maid.Main,
-		Frame.Actions.setRank.Button.MouseButton1Click:Connect(function()
-			local newRank = Frame.Actions.setRank.newRank.Text
-			if newRank == "" or #selectedUsers == 0 then
-				return
-			end
-
-			remoteFunction:InvokeServer("SetRank", "Interface", selectedUsers, newRank)
-		end)
-	)
 end
 
 --// Core \\--
