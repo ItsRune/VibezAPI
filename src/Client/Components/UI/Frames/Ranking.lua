@@ -138,7 +138,7 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 				end
 
 				usernameTextBox.Parent.Selected.Text = string.format("%d User(s) Selected", #selectedUsers)
-				if not userInformation.isInGame then
+				if not userInformation.isInGame and hasAppendedTableIndex then
 					return
 				end
 

@@ -1,10 +1,13 @@
---#selene: allow(unused_variable)
 --// Services \\--
+local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 
 --// Types \\--
 type LogInformation = {
 	calledBy: Player,
 	triggeredBy: "Commands" | "Interface" | "RankSticks",
+
+	errorMessage: string?,
 
 	affectedCount: number,
 	affectedUsers: { Player },
@@ -15,33 +18,11 @@ type LogInformation = {
 }
 
 --// Variables \\--
+local hasWarned = false
 local nextLayoutOrder = 999999
 local Maid = {}
 
 --// Functions \\--
-local function _removeFrames(Frame: Frame, componentData: { [any]: any }, force: boolean)
-	for _, logItem: Frame in ipairs(Frame.Scroll:GetChildren()) do
-		if not logItem:IsA("Frame") then
-			continue
-		end
-
-		if force then
-			logItem:Destroy()
-			continue
-		end
-
-		componentData
-			.Tweens(logItem, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-				GroupTransparency = 1,
-			})
-			:onCompleted(function()
-				logItem.Visible = false
-				logItem:Destroy()
-			end)
-			:Play()
-	end
-end
-
 local function _fixStringForAction(componentData: { [any]: any }, logInfo: LogInformation): string
 	local userNamesAndIds = componentData.Table.Map(componentData.affectedUsers, function(Target: Player)
 		return string.format("%s (%d)", Target.Name, Target.UserId)
@@ -60,30 +41,82 @@ local function _fixStringForAction(componentData: { [any]: any }, logInfo: LogIn
 	return baseString .. (extraData ~= nil and extraData or "")
 end
 
+local function _createErrorLog(logData: { [any]: any }, newError)
+	table.insert(logData, {
+		Action = "INTERNAL_ERROR",
+		errorMessage = '<font color="rgb(200,50,50)">' .. newError .. "</font>",
+	})
+end
+
 local function _addLog(Frame: Frame, componentData: { [any]: any }, newLog: LogInformation)
 	local templateFrame = Frame.Scroll.Template
 	local nextNumber = #Frame.Scroll:GetChildren() - 3
 	local newTemplate = templateFrame:Clone()
+	local message = newLog.Action == "INTERNAL_ERROR" and newLog.errorMessage
+		or _fixStringForAction(componentData, newLog)
 
-	newTemplate.Name = nextNumber
-	newTemplate.Text = _fixStringForAction(componentData, newLog)
-	newTemplate.LayoutOrder = nextLayoutOrder
+	local isOk, frameSize = pcall(
+		TextService.GetTextSize,
+		TextService,
+		message,
+		newTemplate.UITextSizeConstraint.MaxTextSize / 1.1,
+		newTemplate.Font,
+		templateFrame.Parent.AbsoluteSize
+	)
+
+	if not isOk then
+		newTemplate:Destroy()
+		return
+	end
+
+	newTemplate.Name = "Log"
+	newTemplate.Size = UDim2.new(1, 0, 0, frameSize.Y)
 	newTemplate.Visible = true
 	newTemplate.Parent = Frame.Scroll
+
+	if newLog.Action == "INTERNAL_ERROR" then
+		newTemplate.Text = message
+		return
+	end
+
+	newTemplate.Name = nextNumber
+	newTemplate.Text = message
+	newTemplate.LayoutOrder = nextLayoutOrder
 
 	nextLayoutOrder -= 1
 end
 
 local function onDestroy(Frame: Frame, componentData: { [any]: any })
 	nextLayoutOrder = 999999
-	_removeFrames(Frame)
 
+	componentData.clearAllChildren(Frame.Scroll, { "UIPadding", "UIListLayout" })
 	componentData.Disconnect(Maid)
 	table.clear(Maid)
 end
 
 local function onSetup(Frame: Frame, componentData: { [any]: any })
-	onDestroy(componentData)
+	onDestroy(Frame, componentData)
+
+	if RunService:IsStudio() and not hasWarned then
+		hasWarned = true
+		Frame.Top.Visible = false
+
+		Frame.Scroll.Size = UDim2.fromScale(1, 1)
+		Frame.Scroll.Position = UDim2.fromScale(0, 0)
+
+		componentData._warn("Filters are currently under construction and cannot be used in production.")
+	end
+
+	local logData = componentData.remoteFunction:InvokeServer("Logs")
+
+	-- Create an error so that the user knows there's no logs yet.
+	if #logData == 0 then
+		_createErrorLog(logData, "No Logs to see yet.")
+	end
+
+	for i = #logData, 1, -1 do
+		_addLog(Frame, componentData, logData[i])
+	end
 
 	table.insert(
 		Maid,
@@ -95,13 +128,6 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 			_addLog(...)
 		end)
 	)
-
-	local logData = componentData.remoteFunction:InvokeServer("Logs")
-	warn(logData)
-
-	for i = #logData, 1, -1 do
-		_addLog(Frame, componentData, logData[i])
-	end
 end
 
 --// Core \\--

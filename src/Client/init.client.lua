@@ -72,6 +72,18 @@ local function _findFirstChildWhichIsAByName(parent: Instance, name: string, cla
 	return _findFirstChildWhichIsAByName(parent, name, class, tries + 1)
 end
 
+local function clearAllChildren(Parent: Instance, excludedClassNames: { string }?): ()
+	excludedClassNames = excludedClassNames or {}
+
+	for _, child: Instance in ipairs(Parent:GetChildren()) do
+		if table.find(excludedClassNames, child.ClassName) ~= nil or child.Name == "Template" then
+			continue
+		end
+
+		child:Destroy()
+	end
+end
+
 local function Disconnect(data: { any } | RBXScriptConnection)
 	if typeof(data) == "table" then
 		for _, v in pairs(data) do
@@ -100,6 +112,7 @@ local function onAttributeChanged()
 
 			Data = data,
 
+			clearAllChildren = clearAllChildren,
 			Disconnect = Disconnect,
 			Tweens = Tweens,
 			Table = Table,

@@ -102,6 +102,11 @@ local baseSettings = {
 		},
 	},
 
+	Logs = {
+		Enabled = true,
+		MinRank = 50,
+	},
+
 	ActivityTracker = {
 		Enabled = false,
 		MinRank = 255,
@@ -437,12 +442,12 @@ local function onServerInvoke(
 
 		return tbl
 	elseif Action == "Logs" then
-		local canAccessUI = onServerInvoke(self, Player, "isStaff", "Interface")
-		if not canAccessUI then
+		local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+		if groupData.Rank == 0 then
 			return {}
 		end
 
-		return self._private
+		return self._private.actionStorage.Logs
 	else
 		-- Maybe actually log it somewhere... I have no clue where though.
 		self:_warn("Player %s (%d) tried to perform an invalid action with our API.", Player.Name, Player.UserId)
