@@ -1,6 +1,7 @@
 --// Services \\--
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
+local UserInputService = game:GetService("UserInputService")
 
 --// Types \\--
 type LogInformation = {
@@ -23,19 +24,49 @@ local nextLayoutOrder = 999999
 local Maid = {}
 
 --// Functions \\--
+local function _applyColorToLogText(logText: string, colorType: "Admin" | "Action" | "Data")
+	local Colors = {
+		["Admin"] = Color3.fromRGB(255, 121, 73),
+		["Action"] = Color3.fromRGB(255, 81, 81),
+		["Data"] = Color3.fromRGB(210, 210, 210),
+	}
+
+	if not Colors[colorType] then
+		return logText
+	end
+
+	local function clampColor(x: number)
+		return math.clamp(math.floor(x), 0, 255)
+	end
+
+	local Color = Colors[colorType]
+	return string.format(
+		'<font color="rgb(%d, %d, %d)">%s</font>',
+		clampColor(Color.R * 255),
+		clampColor(Color.G * 255),
+		clampColor(Color.B * 255),
+		logText
+	)
+end
+
 local function _fixStringForAction(componentData: { [any]: any }, logInfo: LogInformation): string
-	local userNamesAndIds = componentData.Table.Map(componentData.affectedUsers, function(Target: Player)
+	local userNamesAndIds = componentData.Table.Map(logInfo.affectedUsers, function(Target: Player)
 		return string.format("%s (%d)", Target.Name, Target.UserId)
 	end)
 
+	local extraData
 	local fixedString = (#userNamesAndIds > 3) and table.concat(userNamesAndIds, ", ", 1, 3) .. "..."
 		or table.concat(userNamesAndIds, ", ")
 
-	local baseString = string.format("%s used action '%s' on %s", logInfo.calledBy.Name, logInfo.Action, fixedString)
-	local extraData
+	local baseString = string.format(
+		"%s used action '%s' on player(s) '%s'",
+		_applyColorToLogText(logInfo.calledBy.Name, "Admin"),
+		_applyColorToLogText(logInfo.Action, "Action"),
+		_applyColorToLogText(fixedString, "Data")
+	)
 
 	if logInfo.Action == "Blacklist" then
-		extraData = string.format(" for: '%s'", logInfo.extraData.Reason)
+		extraData = string.format(" for: '%s'", logInfo.extraData[1] or "Unknown.")
 	end
 
 	return baseString .. (extraData ~= nil and extraData or "")
@@ -52,26 +83,15 @@ local function _addLog(Frame: Frame, componentData: { [any]: any }, newLog: LogI
 	local templateFrame = Frame.Scroll.Template
 	local nextNumber = #Frame.Scroll:GetChildren() - 3
 	local newTemplate = templateFrame:Clone()
+
 	local message = newLog.Action == "INTERNAL_ERROR" and newLog.errorMessage
 		or _fixStringForAction(componentData, newLog)
 
-	local isOk, frameSize = pcall(
-		TextService.GetTextSize,
-		TextService,
-		message,
-		newTemplate.UITextSizeConstraint.MaxTextSize / 1.1,
-		newTemplate.Font,
-		templateFrame.Parent.AbsoluteSize
-	)
-
-	if not isOk then
-		newTemplate:Destroy()
-		return
+	if UserInputService.TouchEnabled then
+		newTemplate.UITextSizeConstraint.MaxTextSize /= 1.5
 	end
 
 	newTemplate.Name = "Log"
-	newTemplate.Size = UDim2.new(1, 0, 0, frameSize.Y)
-	newTemplate.Visible = true
 	newTemplate.Parent = Frame.Scroll
 
 	if newLog.Action == "INTERNAL_ERROR" then
@@ -83,6 +103,22 @@ local function _addLog(Frame: Frame, componentData: { [any]: any }, newLog: LogI
 	newTemplate.Text = message
 	newTemplate.LayoutOrder = nextLayoutOrder
 
+	local isOk, frameSize = pcall(
+		TextService.GetTextSize,
+		TextService,
+		newTemplate.ContentText,
+		newTemplate.TextBounds.Y / 2,
+		newTemplate.Font,
+		templateFrame.Parent.AbsoluteSize
+	)
+
+	if not isOk then
+		newTemplate:Destroy()
+		return
+	end
+
+	newTemplate.Size = UDim2.new(1, 0, 0, frameSize.Y)
+	newTemplate.Visible = true
 	nextLayoutOrder -= 1
 end
 
@@ -114,7 +150,7 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		_createErrorLog(logData, "No Logs to see yet.")
 	end
 
-	for i = #logData, 1, -1 do
+	for i = 1, #logData do
 		_addLog(Frame, componentData, logData[i])
 	end
 

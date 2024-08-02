@@ -70,7 +70,7 @@ local baseSettings = {
 		Font = Enum.Font.Gotham,
 		FontSize = 16,
 		keyboardFontSizeMultiplier = 1.25, -- Multiplier for fontsize keyboard users
-		delayUntilRemoval = 20, -- Seconds
+		delayUntilRemoval = 10, -- Seconds
 
 		entranceTweenInfo = {
 			Style = Enum.EasingStyle.Quint,
@@ -318,14 +318,15 @@ local function onServerInvoke(
 
 				local actionFunc = getActionFunctionFromInvoke(Action)
 
-				local result, extraData
+				local result, extraData = nil, {}
 				local logAction = (Action == "blacklist") and "Blacklist"
 					or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
 
 				if actionFunc == "Blacklist" then
 					local reason = Data[2] or "Unspecified"
+
 					result = self[actionFunc](self, userId, reason, Player)
-					extraData = { Reason = reason }
+					table.insert(extraData, reason)
 				elseif actionFunc == "setRank" then
 					local newRank = Data[2]
 					result = self[actionFunc](self, userId, newRank, { userName = Player.Name, userId = Player.UserId })
@@ -333,7 +334,7 @@ local function onServerInvoke(
 					result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
 				end
 
-				self:_addLog(Player, logAction, Origin, { Target }, extraData)
+				self:_addLog(Player, logAction, Origin, { Target }, table.unpack(extraData))
 
 				if
 					self._private.Binds[string.lower(actionFunc)] ~= nil
@@ -360,7 +361,9 @@ local function onServerInvoke(
 					return reject("Internal server error")
 				end
 
+				result.Target = Target
 				self._private.rankingCooldowns[userId] = DateTime.now().UnixTimestamp
+
 				resolve(result)
 			end):andThen(function(result: { [any]: any })
 				table.insert(resolvedPromises, result)
@@ -374,6 +377,18 @@ local function onServerInvoke(
 			return true
 		end
 
+		if #Targets > 1 then
+			local avgProcessingSpeedInSeconds = 15
+			self:_notifyPlayer(
+				Player,
+				string.format(
+					"Info: Ranking %d players could take up to %d seconds",
+					#Targets,
+					#Targets * avgProcessingSpeedInSeconds
+				)
+			)
+		end
+
 		repeat
 			task.wait()
 		until #resolvedPromises == #Targets
@@ -381,8 +396,8 @@ local function onServerInvoke(
 		local requiresAndMore = #resolvedPromises > 3
 		local maxResolved = requiresAndMore and 3 or #resolvedPromises
 
-		local fullNotificationString = "Success: Ranked <b>%s</b>."
-		local notificationStringFilledWithUsers = ""
+		local fullNotificationString = "Success: %s <b>%s</b>."
+		local notificationStringFilledWithUsers = {}
 
 		for i = 1, #resolvedPromises do
 			local this = resolvedPromises[i]
@@ -397,15 +412,32 @@ local function onServerInvoke(
 
 			if not resultingSuccess then
 				maxResolved += 1
-			elseif i >= maxResolved then
+				continue
+			end
+
+			table.insert(notificationStringFilledWithUsers, this.Target.Name)
+
+			if i >= maxResolved then
 				break
 			end
 		end
 
+		local firstCharOfAction = string.sub(string.lower(Action), 1, 1)
+		local realActionTitle = (firstCharOfAction == "p") and "Promoted"
+			or (firstCharOfAction == "s") and "Ranked"
+			or (firstCharOfAction == "d") and "Demoted"
+			or (firstCharOfAction == "f") and "Fired"
+			or "Unknown Ranking on"
+
 		local moreUsersDifference = #resolvedPromises - maxResolved
+
+		notificationStringFilledWithUsers = table.concat(notificationStringFilledWithUsers, ", ")
 		notificationStringFilledWithUsers ..= (moreUsersDifference > 0) and " and " .. moreUsersDifference .. " more" or ""
 
-		self:_notifyPlayer(Player, string.format(fullNotificationString, notificationStringFilledWithUsers))
+		self:_notifyPlayer(
+			Player,
+			string.format(fullNotificationString, realActionTitle, notificationStringFilledWithUsers)
+		)
 		return true
 	elseif Action == "Afk" then
 		Table.ForEach(self._private.Binds._internal.Afk, function(classRouter: (Player: Player) -> ())
@@ -2980,7 +3012,22 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		actionStorage = {
 			Bans = {},
-			Logs = {},
+			Logs = {
+				{
+					["Action"] = "Demote",
+					["Timestamp"] = 1722537033,
+					["affectedCount"] = 1,
+					["affectedUsers"] = {
+						[1] = {
+							["Name"] = "DoWhiIe",
+							["UserId"] = 1945330710,
+						},
+					},
+					["calledBy"] = { Name = "ltsRune", UserId = 1 },
+					["extraData"] = "",
+					["triggeredBy"] = "Interface",
+				},
+			},
 		},
 		commandOperations = {},
 		commandOperationCodes = {},

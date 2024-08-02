@@ -202,6 +202,9 @@ local function _toggleUI(componentData: { [any]: any })
 
 		Frame.Size = UDim2.fromScale(1, 0.45)
 	end
+
+	-- Ensure the ranking frame is always the first to open.
+	_openFrame(componentData, "Ranking")
 end
 
 function onDestroy(componentData: { [any]: any })

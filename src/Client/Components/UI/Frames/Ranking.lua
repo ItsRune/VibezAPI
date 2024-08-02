@@ -71,9 +71,8 @@ end
 local function _fullCheckForFilter(Target: Player)
 	local currentText = usernameTextBox.Text
 
-	--stylua: ignore
-	return --Target ~= Player and
-		(
+	return Target ~= Player
+		and (
 			currentText == ""
 			or string.sub(string.lower(currentText), 0, #currentText)
 				== string.sub(string.lower(Target.Name), 0, #currentText)
@@ -312,47 +311,6 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 			remoteFunction:InvokeServer("SetRank", "Interface", selectedUsers, newRank)
 		end)
 	)
-
-	-- local lastText = Frame.User.Username.Text
-	-- table.insert(
-	-- 	Maid.Main,
-	-- 	RunService.RenderStepped:Connect(function()
-	-- 		local Text = Frame.User.Username.Text
-	-- 		if lastText == Text then
-	-- 			return
-	-- 		end
-
-	-- 		local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-	-- 			return string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text)
-	-- 			-- and Target ~= Player
-	-- 		end)
-
-	-- 		_updateUserSuggestions(componentData, filteredPlayers)
-	-- 		lastText = Text
-	-- 	end)
-	-- )
-
-	-- This connection handles users outside of the game server. (BROKEN)
-	-- table.insert(
-	-- 	Maid.Main,
-	-- 	Frame.User.Username.FocusLost:Connect(function()
-	-- 		local Text = Frame.User.Username.Text
-	-- 		if Text == "" then
-	-- 			return
-	-- 		end
-
-	-- 		local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), function(Target: Player)
-	-- 			return (string.sub(string.lower(Text), 0, #Text) == string.sub(string.lower(Target.Name), 0, #Text))
-	-- 				and Target ~= Player
-	-- 		end)
-
-	-- 		if #filteredPlayers ~= 0 then
-	-- 			return
-	-- 		end
-
-	-- 		_handleExternalUserSearch(Frame.User.Username, componentData)
-	-- 	end)
-	-- )
 end
 
 --// Core \\--
