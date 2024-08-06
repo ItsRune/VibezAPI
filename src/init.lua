@@ -501,6 +501,10 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 		end
 
 		self:_onInternalErrorLog(...)
+	elseif Command == "Notifications" then
+		local users = Data[1]
+		local message = Data[2]
+		local staffData = self:_playerIsValidStaff(Player)
 	elseif Command == "Animate" then
 		local Tool = Player.Character:FindFirstChildOfClass("Tool")
 		if Player.Character == nil or Tool == nil or Tool:GetAttribute(self._private.clientScriptName) == nil then
@@ -547,8 +551,7 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 end
 
 local function checkHttp()
-	local success = pcall(HttpService.GetAsync, HttpService, "https://google.com/")
-	return success
+	return pcall(HttpService.GetAsync, HttpService, "https://google.com/")
 end
 
 --// Private Functions \\--
@@ -895,19 +898,20 @@ function api:_http(
 			}
 	end
 
+	local apiToUse = (useOldApi == true) and self._private.oldApiUrl or self._private.newApiUrl
+
 	Route = (typeof(Route) == "string") and Route or "/"
 	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
 	Headers = (typeof(Headers) == "table") and Headers or { ["Content-Type"] = "application/json" }
 	Body = (Method ~= "GET" and Method ~= "HEAD") and Body or nil
 
 	if Body then
-		Body["origin"] = self.Settings.Misc.originLoggerText
+		local extraLoggerInfo = (RunService:IsStudio()) and " `(Studio PlayTest)`" or ""
+		Body["origin"] = self.Settings.Misc.originLoggerText .. extraLoggerInfo
 	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
 	Headers["x-api-key"] = self.Settings.apiKey
-
-	local apiToUse = (useOldApi == true) and self._private.oldApiUrl or self._private.newApiUrl
 
 	-- Prevents sending api key to external URLs
 	-- Remove from 'Route' extra slash that was added
@@ -1092,7 +1096,7 @@ function api:_onPlayerAdded(Player: Player)
 
 	-- Figure out a solution here to check for rank (Prevent rank 0 in validStaff table)
 	if self._private.requestCaches.validStaff[Player.UserId] == nil then
-		self._private.requestCaches.validStaff[Player.UserId] = { Player, theirGroupData.Rank }
+		self._private.requestCaches.validStaff[Player.UserId] = { User = Player, Rank = theirGroupData.Rank }
 	end
 
 	local PlayerGui = Player:WaitForChild("PlayerGui", 10)
@@ -1541,7 +1545,7 @@ function api:giveRankSticks(User: Player | string | number, shouldCheckPermissio
 
 	if shouldCheckPermissions then
 		local staffData = self:_playerIsValidStaff(Player)
-		if not staffData or staffData[2] == nil or staffData[2] < self.Settings.Commands.MinRank then
+		if not staffData or not staffData["Rank"] or staffData.Rank < self.Settings.RankSticks.MinRank then
 			return self
 		end
 	end
@@ -1638,9 +1642,8 @@ function api:_onPlayerChatted(Player: Player, message: string)
 		return
 	end
 
-	local callerStaffData = self._private.requestCaches.validStaff[Player.UserId]
-	-- { Player, groupRank }
-	if not callerStaffData then
+	local callerStaffData = self:_playerIsValidStaff(Player)
+	if not callerStaffData or not callerStaffData["Rank"] or callerStaffData.Rank < self.Settings.Commands.MinRank then
 		return
 	end
 
@@ -1835,7 +1838,7 @@ end
 	@within VibezAPI
 	@since 0.3.0
 ]=]
-function api:_playerIsValidStaff(Player: Player | number | string | { Name: string, UserId: number }): { [number]: any }
+function api:_playerIsValidStaff(Player: Player | number | string | { Name: string, UserId: number }): {}
 	local userId = self:_verifyUser(Player, "UserId")
 	return self._private.requestCaches.validStaff[userId]
 end
@@ -1852,15 +1855,15 @@ end
 ]=]
 function api:_verifyUser(User: Player | number | string, typeToReturn: "UserId" | "Player" | "Name")
 	if typeof(User) == "Instance" and User:IsA("Player") then
-		return (typeToReturn == "UserId") and User.UserId
+		return (typeToReturn == "UserId" or typeToReturn == "Id") and User.UserId
 			or (typeToReturn == "Name") and User.Name
 			or (typeToReturn == "Player") and User
 	elseif typeof(User) == "string" then
-		return (typeToReturn == "UserId") and (tonumber(User) or self:_getUserIdByName(User))
+		return (typeToReturn == "UserId" or typeToReturn == "Id") and (tonumber(User) or self:_getUserIdByName(User))
 			or (typeToReturn == "Player") and Players:FindFirstChild(tostring(User))
 			or (typeToReturn == "Name") and User
 	elseif typeof(User) == "number" then
-		return (typeToReturn == "UserId") and User
+		return (typeToReturn == "UserId" or typeToReturn == "Id") and User
 			or (typeToReturn == "Player") and Players:GetPlayerByUserId(User)
 			or (typeToReturn == "Name") and self:_getNameById(User)
 	end
@@ -1879,6 +1882,9 @@ end
 ]=]
 ---
 function api:getGroupId()
+	-- Rather than adding yet another request on top of the rate limit, why not
+	-- just use the stored group id? Makes more sense in my mind, but we need
+	-- to ensure that the key wasn't recently changed.
 	if self.GroupId ~= -1 and not self._private.recentlyChangedKey then
 		return self.GroupId
 	end
@@ -1973,7 +1979,7 @@ end
 
 --[=[
 	Promotes a player and `whoCalled` (Optional) is used for logging purposes.
-	@param userId string | number
+	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
 
@@ -1983,12 +1989,11 @@ end
 ]=]
 ---
 function api:Promote(
-	userId: string | number,
+	User: Player | string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse | Types.errorResponse
-	userId = self:_verifyUser(userId, "UserId")
-
-	local userName = self:_getNameById(userId)
+	local userId = self:_verifyUser(User, "UserId")
+	local userName = self:_verifyUser(User, "Name")
 
 	if not whoCalled then
 		whoCalled = {
@@ -2022,7 +2027,7 @@ end
 
 --[=[
 	Demotes a player and `whoCalled` (Optional) is used for logging purposes.
-	@param userId string | number
+	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
 
@@ -2032,12 +2037,11 @@ end
 ]=]
 ---
 function api:Demote(
-	userId: string | number,
+	User: Player | string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse | Types.errorResponse
-	userId = self:_verifyUser(userId, "UserId")
-
-	local userName = self:_getNameById(userId)
+	local userId = self:_verifyUser(User, "UserId")
+	local userName = self:_verifyUser(User, "Name")
 
 	if not whoCalled then
 		whoCalled = {
@@ -2071,7 +2075,7 @@ end
 
 --[=[
 	Fires a player and `whoCalled` (Optional) is used for logging purposes.
-	@param userId string | number
+	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
 
@@ -2081,12 +2085,11 @@ end
 ]=]
 ---
 function api:Fire(
-	userId: string | number,
+	User: Player | string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse | Types.errorResponse
-	userId = self:_verifyUser(userId, "UserId")
-
-	local userName = self:_getNameById(userId)
+	local userId = self:_verifyUser(User, "UserId")
+	local userName = self:_verifyUser(User, "Name")
 
 	if not whoCalled then
 		whoCalled = {
@@ -2318,16 +2321,7 @@ end
 ]=]
 ---
 function api:isPlayerABooster(User: number | string | Player): boolean?
-	local userId
-
-	if typeof(User) == "Instance" and User:IsA("Player") then
-		userId = User.UserId
-	elseif typeof(User) == "Instance" then
-		self:_warn(`Class name, "{User.ClassName}", is not supported for ":isPlayerABooster"`)
-		return nil
-	else
-		userId = (typeof(userId) == "number" or tonumber(userId) ~= nil) and tonumber(userId) or self:_get(userId)
-	end
+	local userId = self:_verifyUser(User, "UserId")
 
 	if not userId then
 		self:_warn("UserId is not a valid player.")
@@ -2366,8 +2360,8 @@ end
 ]=]
 ---
 function api:Destroy()
-	local fullMaid = Table.FlatMap(self._private.Maid, function(d)
-		return d
+	local fullMaid = Table.FlatMap(self._private.Maid, function(connectionValue: RBXScriptSignal)
+		return connectionValue
 	end)
 
 	for _, connection: RBXScriptConnection in ipairs(fullMaid) do
@@ -2386,8 +2380,8 @@ function api:Destroy()
 		self._private.Event:Destroy()
 	end
 
-	for _, v in pairs(self._private.usersWithSticks) do
-		local user = Players:GetPlayerByUserId(v)
+	for _, userId: number in pairs(self._private.usersWithSticks) do
+		local user = Players:GetPlayerByUserId(userId)
 
 		if not user then
 			continue
@@ -3436,3 +3430,88 @@ return setmetatable({
 		return rawget(t, "new")(...)
 	end :: Types.vibezConstructor,
 })
+
+--[=[
+	@interface extraOptionsType
+	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
+	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
+	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, activationKey: Enum.KeyCode | string }
+	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
+	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
+	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface groupIdResponse
+	.success boolean
+	.groupId number?
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface errorResponse
+	.success boolean
+	.errorMessage string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface rankResponse
+	.success boolean
+	.message string
+	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface blacklistResponse
+	.success boolean
+	.message string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface fullBlacklists
+	.success boolean
+	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface infoResponse
+	.success boolean
+	.message string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface activityResponse
+	.secondsUserHasSpent number
+	.messagesUserHasSent number
+	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
+	@within VibezAPI
+]=]
+
+--[=[
+	@type responseBody groupIdResponse | errorResponse | rankResponse
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface httpResponse
+	.Body responseBody
+	.Headers { [string]: any }
+	.StatusCode number
+	.StatusMessage string?
+	.Success boolean
+	.rawBody string
+	@within VibezAPI
+]=]
+
+--[=[
+	@interface vibezDebugTools
+	.stringifyTableDeep (tbl: { any }, tabbing: number?) -> string
+	@private
+	@within VibezAPI
+]=]

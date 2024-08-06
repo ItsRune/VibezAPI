@@ -43,13 +43,15 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 <br />
 
 | Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|:---------:|
+|:---------:|:---------:|:---------:|:---------:|
 | Enabled | Boolean | false | Enables/Disables chat commands. |
 | useDefaultNames | Boolean | true | Determines whether default names should be included in the alias list. |
 | Prefix | String | ! | The prefix for chat commands. |
 | MinRank | Number | 255 | The minimum rank required to use chat commands. |
 | MaxRank | Number | 255 | The maximum rank required to use chat commands. |
-| Alias | Array&lt;\{String&lt;commandName&gt;, String&lt;commandAlias&gt;\}&gt; | {} | The aliases for chat commands. |
+
+
+<!-- | Alias | Array&lt;\{String&lt;commandName&gt;, String&lt;commandAlias&gt;\}&gt; | {} | The aliases for chat commands. | -->
 
 </details>
 
@@ -58,7 +60,7 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 <br />
 
 | Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|:---------:|
+|:---------:|:---------:|:---------:|:---------:|
 | Enabled | Boolean | false | Enables/Disables the activity tracker. |
 | MinRank | Number | 255 | The minimum rank required to track activity. |
 | disableInStudio | Boolean | true | Disables activity tracking in studio. |
@@ -74,7 +76,7 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 <br />
 
 | Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|:---------:|
+|:---------:|:---------:|:---------:|:---------:|
 | Enabled | Boolean | false | Enables/Disables the interface. |
 | MinRank | Number | 255 | The minimum rank required to use the interface. |
 | MaxRank | Number | 255 | The maximum rank required to use the interface. |
@@ -86,7 +88,7 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 <br />
 
 | Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|:---------:|
+|:---------:|:---------:|:---------:|:---------:|
 | Enabled | Boolean | false | Enables/Disables rank sticks. |
 | MinRank | Number | 255 | The minimum rank required to use rank sticks. |
 | MaxRank | Number | 255 | The maximum rank required to use rank sticks. |
@@ -100,7 +102,7 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 <br />
 
 | Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|:---------:|
+|:---------:|:---------:|:---------:|:---------:|
 | Enabled | Boolean | false | Enables/Disables notifications. |
 | Font | String | Gotham | The font of the notifications. |
 | FontSize | Number | 16 | The size of the content with notifications (Use sizes for mobile). |
@@ -116,7 +118,7 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 <br />
 
 | Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|:---------:|
+|:---------:|:---------:|:---------:|:---------:|
 | Enabled | Boolean | false | Enables/Disables whether blacklists will be kicked upon joining. |
 | userIsBlacklistedMessage | String | You have been blacklisted from the game for: &lt;BLACKLIST_REASON&gt; | The kick message presented to the user who's blacklisted. |
 
@@ -127,7 +129,7 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 <br />
 
 | Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|:---------:|
+|:---------:|:---------:|:---------:|:---------:|
 | originLoggerText | String | Game | The text used in the origin logger. |
 | rankingCooldown | Number | 30 | Amount of seconds to wait between ranking the same person again. |
 | ignoreWarnings | Boolean | false | Ignores warnings. |

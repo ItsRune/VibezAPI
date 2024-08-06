@@ -14,7 +14,7 @@ local Maid = {
 	suggestionButtons = {},
 }
 
---// Helper Functions \\--
+--// Functions \\--
 local function _truncateUserCache()
 	local MAX_ENTRIES = 250
 
@@ -97,13 +97,11 @@ end
 
 local function _fullCheckForFilter(Target: Player)
 	local currentText = usernameTextBox.Text
-
-	return Target ~= Player
-		and (
-			currentText == ""
-			or string.sub(string.lower(currentText), 0, #currentText)
-				== string.sub(string.lower(Target.Name), 0, #currentText)
-		)
+	return (
+		currentText == ""
+		or string.sub(string.lower(currentText), 0, #currentText)
+			== string.sub(string.lower(Target.Name), 0, #currentText)
+	)
 end
 
 local function _createTargetTemplate(componentData: { [any]: any }, Target: Player, layoutOrder: number?)
@@ -211,103 +209,25 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 	end
 end
 
-local function _handleExternalUserSearch(componentData: { [any]: any })
-	local Text = usernameTextBox.Text
-	local isOk, userId, userInfo
-
-	isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, Text)
-	if not isOk or not userId then
-		return
-	end
-
-	isOk, userInfo = pcall(UserService.GetUserInfosByUserIdsAsync, UserService, { userId })
-	if not isOk or (typeof(userInfo) == "table" and not userInfo[1]) then
-		return
-	end
-
-	local fakePlayers = {}
-
-	for i = 1, #userInfo do
-		local userData = userInfo[i]
-
-		-- Even with external searches, we still have to prevent the local player from trying to rank themselves.
-		if userData.UserId == Player.UserId then
-			continue
-		end
-
-		local fakePlayer = {
-			Name = userInfo[i].Username,
-			UserId = userId,
-			DisplayName = userInfo[i].DisplayName,
-			isVerified = userInfo[i].HasVerifiedBadge,
-		}
-
-		table.insert(fakePlayers, fakePlayer)
-	end
-
-	_updateUserSuggestions(componentData, fakePlayers)
-end
-
---// Functions \\--
 local function onDestroy(Frame: Frame, componentData: { [any]: any })
-	table.clear(selectedUsers)
-	selectedUsers = {}
-
-	for _, userFrame: TextButton in ipairs(Frame.User.Suggestions:GetChildren()) do
-		if not userFrame:IsA("TextButton") then
-			continue
-		end
-
-		if userFrame.Name == "Template" then
-			userFrame.Visible = false
-			continue
-		end
-
-		userFrame:Destroy()
-	end
-
-	Frame.User.Selected.Text = "0 User(s) Selected"
 	componentData.Disconnect(Maid)
 	table.clear(Maid)
-	task.wait()
 end
 
 local function onSetup(Frame: Frame, componentData: { [any]: any })
-	local remoteFunction = componentData.remoteFunction
-	usernameTextBox = Frame.User.Username
-
-	-- Destroy first, in case there was an issue destroying previously.
 	onDestroy(Frame, componentData)
+
+	usernameTextBox = Frame.User.Username
+	Frame.User.Suggestions.Template.Visible = false
 
 	Maid = {
 		Main = {},
 		suggestionButtons = {},
 	}
 
-	for _, actionButton: TextButton in ipairs(Frame.Actions.Body:GetChildren()) do
-		if not actionButton:IsA("TextButton") then
-			continue
-		end
-
-		table.insert(
-			Maid.Main,
-			actionButton.MouseButton1Click:Connect(function()
-				if #selectedUsers == 0 then
-					return
-				end
-
-				remoteFunction:InvokeServer(actionButton.Name, "Interface", selectedUsers)
-			end)
-		)
-	end
-
 	table.insert(
 		Maid.Main,
 		Frame.User.Username.Focused:Connect(function()
-			if Frame.User.Username.Text ~= "" then
-				return
-			end
-
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
 			_updateUserSuggestions(componentData, filteredPlayers)
 		end)
@@ -317,27 +237,19 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		Maid.Main,
 		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
-
-			if #filteredPlayers == 0 then
-				_handleExternalUserSearch(componentData)
-				return
-			end
-
 			_updateUserSuggestions(componentData, filteredPlayers)
 		end)
 	)
 
-	-- DEBUG: This connection for some reason causes the script to break?
-	-- setRank action is in a separate area than the other buttons.
 	table.insert(
 		Maid.Main,
-		Frame.Actions.Body.setRank.Button.MouseButton1Click:Connect(function()
-			local newRank = Frame.Actions.setRank.newRank.Text
-			if newRank == "" or #selectedUsers == 0 then
+		Frame.Actions.Send.MouseButton1Click:Connect(function()
+			local Text = Frame.Actions.Message.Text
+			if Text == "" then
 				return
 			end
 
-			remoteFunction:InvokeServer("SetRank", "Interface", selectedUsers, newRank)
+			componentData.remoteEvent:FireServer("Notifications", selectedUsers, Text)
 		end)
 	)
 end

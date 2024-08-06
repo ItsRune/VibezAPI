@@ -103,11 +103,13 @@ local function _addLog(Frame: Frame, componentData: { [any]: any }, newLog: LogI
 	newTemplate.Text = message
 	newTemplate.LayoutOrder = nextLayoutOrder
 
+	--stylua: ignore
+	local textSize = (newTemplate.TextBounds.Y > newTemplate.UITextSizeConstraint.MaxTextSize) and newTemplate.TextBounds.Y / 2 or newTemplate.TextBounds.Y
 	local isOk, frameSize = pcall(
 		TextService.GetTextSize,
 		TextService,
 		newTemplate.ContentText,
-		newTemplate.TextBounds.Y / 2,
+		textSize,
 		newTemplate.Font,
 		templateFrame.Parent.AbsoluteSize
 	)
@@ -140,7 +142,7 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		Frame.Scroll.Size = UDim2.fromScale(1, 1)
 		Frame.Scroll.Position = UDim2.fromScale(0, 0)
 
-		componentData._warn("Filters are currently under construction and cannot be used in production.")
+		componentData._warn("Vibez Logs", "Filters are currently under construction and cannot be used in production.")
 	end
 
 	local logData = componentData.remoteFunction:InvokeServer("Logs")
