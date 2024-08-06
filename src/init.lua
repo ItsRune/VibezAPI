@@ -495,6 +495,8 @@ end
 local function onServerEvent(self: Types.vibezApi, Player: Player, Command: string, ...: any)
 	local Data = { ... }
 
+	warn(Player, Command, Data)
+
 	if Command == "clientError" then
 		if not self.Settings.Misc.autoReportErrors then
 			return
@@ -505,6 +507,18 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 		local users = Data[1]
 		local message = Data[2]
 		local staffData = self:_playerIsValidStaff(Player)
+
+		if not staffData or not staffData["Rank"] or staffData.Rank < self.Settings.Interface.MinRank then
+			return
+		end
+
+		for _, User: Player in ipairs(users) do
+			if typeof(User) ~= "Instance" or User.ClassName ~= "Player" then
+				continue
+			end
+
+			self._private.remoteEvent:FireClient(User, "Notification", message)
+		end
 	elseif Command == "Animate" then
 		local Tool = Player.Character:FindFirstChildOfClass("Tool")
 		if Player.Character == nil or Tool == nil or Tool:GetAttribute(self._private.clientScriptName) == nil then

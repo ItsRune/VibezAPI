@@ -3,7 +3,6 @@ local Players = game:GetService("Players")
 local UserService = game:GetService("UserService")
 
 --// Variables \\--
-local Player = Players.LocalPlayer
 local defaultThumbnail = "rbxasset://textures/AvatarCompatibilityPreviewer/user.png"
 local usernameTextBox = nil
 local lastPerformedTruncation = 0
@@ -210,8 +209,26 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 end
 
 local function onDestroy(Frame: Frame, componentData: { [any]: any })
+	table.clear(selectedUsers)
+	selectedUsers = {}
+
+	for _, userFrame: TextButton in ipairs(Frame.User.Suggestions:GetChildren()) do
+		if not userFrame:IsA("TextButton") then
+			continue
+		end
+
+		if userFrame.Name == "Template" then
+			userFrame.Visible = false
+			continue
+		end
+
+		userFrame:Destroy()
+	end
+
+	Frame.User.Selected.Text = "0 User(s) Selected"
 	componentData.Disconnect(Maid)
 	table.clear(Maid)
+	task.wait()
 end
 
 local function onSetup(Frame: Frame, componentData: { [any]: any })
@@ -227,6 +244,19 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 
 	table.insert(
 		Maid.Main,
+		Frame.Actions.Send.MouseButton1Click:Connect(function()
+			local Text = Frame.Actions.Message.Text
+			if Text == "" then
+				return
+			end
+
+			warn(componentData)
+			componentData.remoteEvent:FireServer("Notifications", selectedUsers, Text)
+		end)
+	)
+
+	table.insert(
+		Maid.Main,
 		Frame.User.Username.Focused:Connect(function()
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
 			_updateUserSuggestions(componentData, filteredPlayers)
@@ -238,18 +268,6 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
 			_updateUserSuggestions(componentData, filteredPlayers)
-		end)
-	)
-
-	table.insert(
-		Maid.Main,
-		Frame.Actions.Send.MouseButton1Click:Connect(function()
-			local Text = Frame.Actions.Message.Text
-			if Text == "" then
-				return
-			end
-
-			componentData.remoteEvent:FireServer("Notifications", selectedUsers, Text)
 		end)
 	)
 end
