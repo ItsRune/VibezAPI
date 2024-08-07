@@ -1,5 +1,4 @@
 --// Services \\--
-local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 
