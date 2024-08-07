@@ -3380,7 +3380,7 @@ return setmetatable({
 	@interface extraOptionsType
 	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
 	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
-	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, visibleFrames: { string }, Activation: { Keybind: string, iconButtonPosition: "Left" | "Right" | "Center", iconButtonImage: string | number } }
+	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, visibleFrames: { string }, Activation: { Keybind: string, iconToolTip: string, iconButtonPosition: "Left" | "Right" | "Center", iconButtonImage: string | number } }
 	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
 	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
 	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
