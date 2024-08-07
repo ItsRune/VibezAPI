@@ -149,9 +149,23 @@ export type vibezSettings = {
 
 		MinRank: number,
 		MaxRank: number,
-
 		maxUsersToSelectForRanking: number,
-		activationKeybind: Enum.KeyCode | string,
+
+		Activation: {
+			Keybind: string,
+
+			allowMobileUsers: boolean,
+			iconButtonImage: string | number,
+			iconButtonPosition: "Left" | "Right" | "Center",
+			iconToolTip: string,
+		},
+
+		VisibleFrames: { string },
+	},
+
+	Logs: {
+		Enabled: boolean,
+		MinRank: number,
 	},
 
 	ActivityTracker: {

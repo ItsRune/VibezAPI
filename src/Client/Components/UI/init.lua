@@ -26,7 +26,7 @@ local UI = script.Interface
 local Frame = UI.Frame
 local Content, Top = Frame.Content, Frame.Top
 local currentOpenFrame, isToggled = nil, false
-local onSetup, onDestroy
+local onSetup, onDestroy, _toggleUI, topBarButton
 
 --// Functions \\--
 -- Changes the color of the active topbar button to be a brighter white.
@@ -55,8 +55,6 @@ end
 local function _openFrame(componentData: { [any]: any }, frameName: string)
 	local newFrame = Content:FindFirstChild(frameName)
 	local tweenInOutInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
-	-- local tweenOutInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
-	-- local tweenInInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
 	local Tweens: Tweens = componentData.Tweens
 
 	-- We can't proceed if there's no frame available.
@@ -106,8 +104,13 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 	_changeSelectorHighlight(componentData.Tweens, frameName)
 end
 
+-- Safely disconnects and destroys any active frames.
+local function _onExitButtonClicked(componentData: { [any]: any }): ()
+	_toggleUI(componentData)
+end
+
 -- Toggles the 'Enabled' property of the GUI & destroys any existing modular connections.
-local function _toggleUI(componentData: { [any]: any })
+function _toggleUI(componentData: { [any]: any })
 	isToggled = not isToggled
 
 	if not isToggled then
@@ -132,23 +135,7 @@ local function _toggleUI(componentData: { [any]: any })
 	end
 
 	-- Exit button
-	table.insert(
-		Maid.Children,
-		Top.Exit.MouseButton1Click:Connect(function()
-			UI.Enabled = false
-			UI.Frame.Position = UDim2.fromScale(0.5, 0.5)
-
-			componentData.Disconnect(Maid.Children)
-			table.clear(Maid.Children)
-			onSetup(componentData)
-
-			if currentOpenFrame == nil then
-				return
-			end
-
-			_safelyLoadModuleAndRun(frameComponents:FindFirstChild(currentOpenFrame.Name), "Destroy", componentData)
-		end)
-	)
+	table.insert(Maid.Children, Top.Exit.MouseButton1Click:Connect(_onExitButtonClicked))
 
 	-- Main frame's dragging mechanics
 	do
@@ -208,28 +195,45 @@ local function _toggleUI(componentData: { [any]: any })
 end
 
 function onDestroy(componentData: { [any]: any })
-	componentData.Disconnect(Maid)
-	table.clear(Maid.Parent)
+	UI.Enabled = false
+	UI.Frame.Position = UDim2.fromScale(0.5, 0.5)
+
+	componentData.Disconnect(Maid.Children)
 	table.clear(Maid.Children)
+
+	if currentOpenFrame == nil then
+		return
+	end
+
+	_safelyLoadModuleAndRun(frameComponents:FindFirstChild(currentOpenFrame.Name), "Destroy", componentData)
+
+	currentOpenFrame.Position = UDim2.fromScale(1.5, 0.5)
+	currentOpenFrame = nil
 end
 
 function onSetup(componentData: { [any]: any })
 	onDestroy(componentData)
 
-	if not UserInputService.TouchEnabled then
-		local Connection
-		Connection = UserInputService.InputBegan:Connect(function(input: InputObject)
-			if
-				input.UserInputType ~= Enum.UserInputType.Keyboard
-				or componentData.Data.activationKeybind ~= input.KeyCode.Name
-			then
+	local interfaceData = componentData.Data
+	if not componentData.Data.iconAllowMobile or topBarButton ~= nil then
+		return
+	end
+
+	--stylua: ignore
+	componentData.TopbarPlus
+		.new()
+		:setImage(interfaceData.iconImageId)
+		:setCaption(interfaceData.iconToolTip)
+		:align(interfaceData.iconPosition)
+		:bindToggleKey(Enum.KeyCode[interfaceData.iconKeybind])
+		.toggled:Connect(function(state: boolean)
+			if state then
+				_toggleUI(componentData)
 				return
 			end
 
-			Connection:Disconnect()
-			_toggleUI(componentData)
+			_onExitButtonClicked(componentData)
 		end)
-	end
 end
 
 return {

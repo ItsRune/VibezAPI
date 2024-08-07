@@ -36,13 +36,15 @@ local function _fixNotificationStatus(message: string): string
 	return table.concat(words, " ")
 end
 
-local function _onNotification(componentData: { [any]: any }, Message: string)
+local function _onNotification(componentData: { [any]: any }, dontAllowFormatting: boolean, Message: string)
 	local Tweens, Table = componentData.Tweens, componentData.Table
 
 	local Settings = HttpService:JSONDecode(Workspace:GetAttribute(script.Parent.Parent.Name))
 	local notificationSettings = Settings.Notifications
 
-	Message = _fixNotificationStatus(Message)
+	if not dontAllowFormatting then
+		Message = _fixNotificationStatus(Message)
+	end
 
 	local newItem = Instance.new("TextLabel")
 	newItem.Name = "Notification"
@@ -132,9 +134,9 @@ local function onSetup(componentData: { [any]: any })
 	onDestroy(componentData)
 
 	local remoteEvent = componentData.remoteEvent
-	remoteEvent.OnClientEvent:Connect(function(Command: string, ...: any)
+	remoteEvent.OnClientEvent:Connect(function(Command: string, dontAllowFormatting: boolean, ...: any)
 		if Command == "Notify" then
-			_onNotification(componentData, ...)
+			_onNotification(componentData, dontAllowFormatting, ...)
 		end
 	end)
 end

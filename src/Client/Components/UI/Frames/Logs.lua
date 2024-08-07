@@ -135,7 +135,7 @@ end
 local function onSetup(Frame: Frame, componentData: { [any]: any })
 	onDestroy(Frame, componentData)
 
-	if RunService:IsStudio() and not hasWarned then
+	if not hasWarned then
 		hasWarned = true
 		Frame.Top.Visible = false
 
@@ -143,6 +143,16 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 		Frame.Scroll.Position = UDim2.fromScale(0, 0)
 
 		componentData._warn("Vibez Logs", "Filters are currently under construction and cannot be used in production.")
+	end
+
+	local logCompData = componentData.Data.Logs
+	local staffData = componentData.remoteFunction:InvokeServer("staffCheck")
+	if not staffData or logCompData.Status == false or staffData.Rank < logCompData.MinRank then
+		local fakeLogs = {}
+
+		_createErrorLog(fakeLogs, "You don't have permission to view these logs.")
+		_addLog(Frame, componentData, fakeLogs[1])
+		return
 	end
 
 	local logData = componentData.remoteFunction:InvokeServer("Logs")

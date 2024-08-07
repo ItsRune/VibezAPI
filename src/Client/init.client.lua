@@ -46,6 +46,7 @@ local System = {
 --// Modules \\--
 local Table = require(script.Modules.Table)
 local Tweens = require(script.Modules.TweenService)
+local TopbarPlus = require(script.Modules.TopbarPlus)
 
 --// Functions \\--
 local function _warn(starter: string, ...: string)
@@ -112,12 +113,19 @@ local function onAttributeChanged()
 
 			Data = data,
 
+			TopbarPlus = TopbarPlus,
 			clearAllChildren = clearAllChildren,
 			Disconnect = Disconnect,
 			Tweens = Tweens,
 			Table = Table,
+
 			_warn = _warn,
 		}
+
+		if key == "UI" and not componentData.Data.iconAllowMobile then
+			_warn("Vibez Setup", string.format("Ignoring '%s' due to being disabled for mobile players.", key))
+			continue
+		end
 
 		local associatedModule, moduleName
 		for modName: string, moduleData: { [any]: any } in pairs(System.Components) do

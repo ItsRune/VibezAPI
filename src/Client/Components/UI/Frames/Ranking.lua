@@ -142,6 +142,19 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 				end
 			else
 				table.insert(selectedUsers, Target.UserId)
+
+				if
+					#selectedUsers > componentData.Data.maxUsersToSelectForRanking
+					and componentData.Data.maxUsersToSelectForRanking ~= -1
+				then
+					local removedUserId = table.remove(selectedUsers, 1)
+					local existingFrame = templateFrame.Parent:FindFirstChild(tostring(removedUserId))
+
+					if existingFrame then
+						existingFrame:Destroy()
+					end
+				end
+
 				newTemplate.LayoutOrder = #selectedUsers
 			end
 

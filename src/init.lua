@@ -15,7 +15,7 @@
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything.
 ]]
-local _VERSION = "0.11.1"
+local _VERSION = "0.11.0"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -37,113 +37,10 @@ local RateLimit = require(script.Modules.RateLimit)
 local Table = require(script.Modules.Table)
 local Promise = require(script.Modules.Promise)
 local Utils = require(script.Modules.Utils)
+local baseSettings = require(script.Modules.Settings)
 
 --// Constants \\--
 local api = {}
-local baseSettings = {
-	Commands = {
-		Enabled = false,
-		useDefaultNames = true,
-
-		MinRank = 255,
-		MaxRank = 255,
-
-		Prefix = "!",
-		Alias = {},
-		Removed = {},
-	},
-
-	RankSticks = {
-		Enabled = false,
-		Mode = "Default",
-
-		MinRank = 255,
-		MaxRank = 255,
-
-		sticksModel = nil, -- Uses default
-		sticksAnimation = "17837716782|17838471144", -- Uses a very horrible default one.
-	},
-
-	Notifications = {
-		Enabled = true,
-
-		Font = Enum.Font.Gotham,
-		FontSize = 16,
-		keyboardFontSizeMultiplier = 1.25, -- Multiplier for fontsize keyboard users
-		delayUntilRemoval = 10, -- Seconds
-
-		entranceTweenInfo = {
-			Style = Enum.EasingStyle.Quint,
-			Direction = Enum.EasingDirection.InOut,
-			timeItTakes = 1, -- Seconds
-		},
-
-		exitTweenInfo = {
-			Style = Enum.EasingStyle.Quint,
-			Direction = Enum.EasingDirection.InOut,
-			timeItTakes = 1, -- Seconds
-		},
-	},
-
-	Interface = {
-		Enabled = false,
-
-		MinRank = 255,
-		MaxRank = 255,
-
-		maxUsersToSelectForRanking = 5,
-		activationKeybind = Enum.KeyCode.RightShift,
-
-		Allowed = {
-			Ranking = true,
-			Notifications = true,
-			Activity = true,
-			Logs = true,
-		},
-	},
-
-	Logs = {
-		Enabled = true,
-		MinRank = 50,
-	},
-
-	ActivityTracker = {
-		Enabled = false,
-		MinRank = 255,
-
-		disableWhenInStudio = true,
-		disableWhenAFK = false,
-		disableWhenInPrivateServer = false,
-
-		delayBeforeMarkedAFK = 30,
-
-		kickIfFails = false,
-		failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
-	},
-
-	-- Removed due to being in the works. (Maybe)
-	-- Widgets = {
-	-- 	Enabled = false,
-	-- 	useBannerImage = "",
-	-- 	useThumbnailImage = ""
-	-- },
-
-	Blacklists = {
-		Enabled = false,
-		userIsBlacklistedMessage = "You have been blacklisted from the game for: <BLACKLIST_REASON>",
-	},
-
-	Misc = {
-		originLoggerText = game.Name,
-		ignoreWarnings = false,
-		overrideGroupCheckForStudio = false,
-		createGlobalVariables = false,
-		isAsync = false,
-		rankingCooldown = 30, -- 30 Seconds
-		autoReportErrors = false, -- It's best to use this when a developer asks you to within a ticket.
-		-- checkForUpdates = false, -- This check is no longer necessary after finding AI moderation issue. (You can enable if you'd like)
-	},
-}
 
 --// Local Functions \\--
 local function getActionFunctionFromInvoke(Action: string)
@@ -221,7 +118,7 @@ local function onServerInvoke(
 				local fakeTargetInstance = { Name = Target.Name, UserId = userId }
 
 				local targetGroupRank = self:_playerIsValidStaff(fakeTargetInstance)
-				targetGroupRank = (targetGroupRank ~= nil) and targetGroupRank[2]
+				targetGroupRank = (targetGroupRank ~= nil) and targetGroupRank.Rank
 					or self:_getGroupFromUser(self.GroupId, fakeTargetInstance.UserId)
 
 				if typeof(targetGroupRank) == "table" then
@@ -229,7 +126,7 @@ local function onServerInvoke(
 				end
 
 				local callerGroupRank: { [number]: any } = self:_playerIsValidStaff(Player)
-				if not callerGroupRank or callerGroupRank[2] == nil then -- The user calling this function is NOT staff
+				if not callerGroupRank or callerGroupRank.Rank == nil then -- The user calling this function is NOT staff
 					self:_warn(
 						string.format(
 							"%s (%d) attempted to '%s' user %s (%d) when they're not staff!",
@@ -243,7 +140,7 @@ local function onServerInvoke(
 					return reject("Unauthorized")
 				end
 
-				callerGroupRank = callerGroupRank[2] -- THIS IS A NUMBER
+				callerGroupRank = callerGroupRank.Rank
 				local minRank, maxRank
 
 				do
@@ -271,7 +168,8 @@ local function onServerInvoke(
 					return reject("Processing failed")
 				end
 
-				if targetGroupRank >= callerGroupRank then -- Prevent lower/equal ranked users from ranking higher/equal members
+				-- Prevent lower/equal ranked users from ranking higher/equal members
+				if targetGroupRank >= callerGroupRank then
 					self:_warn(
 						string.format(
 							"Player %s (%d) is lower/equal to the member they're trying to perform action '%s' on!",
@@ -284,7 +182,8 @@ local function onServerInvoke(
 					return reject("Too high to rank")
 				end
 
-				if callerGroupRank < minRank or callerGroupRank > maxRank then -- Prevent ppl with lower than max rank to use methods (if somehow got access to)
+				-- Prevent ppl with lower than max rank to use methods (if somehow got access to)
+				if callerGroupRank < minRank or callerGroupRank > maxRank then
 					self:_warn(
 						string.format(
 							"Player %s (%d) attempted to use '%s' on %s (%d) but was rejected due to either being too low of a rank or too high of a rank!",
@@ -317,7 +216,6 @@ local function onServerInvoke(
 				end
 
 				local actionFunc = getActionFunctionFromInvoke(Action)
-
 				local result, extraData = nil, {}
 				local logAction = (Action == "blacklist") and "Blacklist"
 					or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
@@ -473,6 +371,8 @@ local function onServerInvoke(
 		end
 
 		return tbl
+	elseif Action == "staffCheck" then
+		return self:_playerIsValidStaff(Player)
 	elseif Action == "Logs" then
 		local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 		if groupData.Rank == 0 then
@@ -495,8 +395,6 @@ end
 local function onServerEvent(self: Types.vibezApi, Player: Player, Command: string, ...: any)
 	local Data = { ... }
 
-	warn(Player, Command, Data)
-
 	if Command == "clientError" then
 		if not self.Settings.Misc.autoReportErrors then
 			return
@@ -512,12 +410,17 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 			return
 		end
 
-		for _, User: Player in ipairs(users) do
-			if typeof(User) ~= "Instance" or User.ClassName ~= "Player" then
+		for _, userId: number in ipairs(users) do
+			if typeof(userId) ~= "number" then
 				continue
 			end
 
-			self._private.remoteEvent:FireClient(User, "Notification", message)
+			local User = Players:GetPlayerByUserId(userId)
+			if not User then
+				continue
+			end
+
+			self._private.Event:FireClient(User, "Notify", true, message)
 		end
 	elseif Command == "Animate" then
 		local Tool = Player.Character:FindFirstChildOfClass("Tool")
@@ -1376,7 +1279,7 @@ function api:_notifyPlayer(Player: Player, Message: string): ()
 		return
 	end
 
-	self._private.Event:FireClient(Player, "Notify", Message)
+	self._private.Event:FireClient(Player, "Notify", false, Message)
 end
 
 --[=[
@@ -1786,6 +1689,14 @@ function api:_buildAttributes()
 		return enum
 	end
 
+	local function handleImageIds(image: string | number)
+		if string.match(tostring(image), "rbxassetid") ~= nil then
+			return string.match(tostring(image), "[%d]+") or baseSettings.Interface.Activation.iconButtonImage
+		end
+
+		return image
+	end
+
 	local dataToEncode = {
 		ActivityTracker = {
 			AfkTracker = {
@@ -1825,8 +1736,20 @@ function api:_buildAttributes()
 			MinRank = self.Settings.Interface.MinRank,
 			MaxRank = self.Settings.Interface.MaxRank,
 
+			viewableFrames = self.Settings.Interface.visibleFrames,
+
+			Logs = {
+				Status = self.Settings.Logs.Enabled,
+				MinRank = self.Settings.Logs.MinRank,
+			},
+
+			iconAllowMobile = self.Settings.Interface.Activation.allowMobileUsers,
+			iconPosition = self.Settings.Interface.Activation.iconButtonPosition,
+			iconToolTip = self.Settings.Interface.Activation.iconToolTip,
+			iconImageId = handleImageIds(self.Settings.Interface.Activation.iconButtonImage),
+			iconKeybind = convertEnumToString(self.Settings.Interface.Activation.Keybind),
+
 			maxUsersToSelectForRanking = self.Settings.Interface.maxUsersToSelectForRanking,
-			activationKeybind = convertEnumToString(self.Settings.Interface.activationKeybind),
 		},
 
 		RankSticks = {
@@ -1840,19 +1763,23 @@ function api:_buildAttributes()
 		},
 	}
 
+	warn(dataToEncode)
+
 	Workspace:SetAttribute(self._private.clientScriptName, HttpService:JSONEncode(dataToEncode))
 end
 
 --[=[
 	Returns the staff member's cached data.
 	@param Player Player | number | string
-	@return { Player, number } | ()
+	@return { User: Player, Rank: number }?
 
 	@private
 	@within VibezAPI
 	@since 0.3.0
 ]=]
-function api:_playerIsValidStaff(Player: Player | number | string | { Name: string, UserId: number }): {}
+function api:_playerIsValidStaff(
+	Player: Player | number | string | { Name: string, UserId: number }
+): { Rank: number, User: Player }?
 	local userId = self:_verifyUser(Player, "UserId")
 	return self._private.requestCaches.validStaff[userId]
 end
@@ -1896,6 +1823,7 @@ end
 ]=]
 ---
 function api:getGroupId()
+	warn("FIRED", self._private.clientScriptName)
 	-- Rather than adding yet another request on top of the rate limit, why not
 	-- just use the stored group id? Makes more sense in my mind, but we need
 	-- to ensure that the key wasn't recently changed.
@@ -3127,76 +3055,79 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_warn("Extra options have an error associated with them, reverting to default options...")
 	end
 
-	for settingSubCategory, value in pairs(extraOptions) do
-		if self.Settings[settingSubCategory] == nil then
-			self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
-			continue
-		end
-
-		-- Final settings check
-		if typeof(value) == "table" then
-			-- Handle 'nilCheckIgnore' for tables that can be somewhat-wrongly typed.
-			for settingToChange, newSetting in pairs(value) do
-				local currentSettingToChange = self.Settings[settingSubCategory][settingToChange]
-
-				-- 'sticksModel' is nil by default.
-				if currentSettingToChange == nil and settingToChange ~= "sticksModel" then
-					self:_warn(
-						string.format(
-							"Optional key 'Settings.%s.%s' is not a valid option.",
-							settingSubCategory,
-							settingToChange
-						)
-					)
-					continue
-				elseif
-					-- Custom logic to validate feature modes.
-					self.Settings[settingSubCategory] ~= nil
-					and currentSettingToChange ~= nil
-					and settingToChange == "Mode"
-					and typeof(newSetting) == "string"
-				then
-					if not self._private.validModes[settingSubCategory] then
-						self:_warn(
-							string.format(
-								"The 'Mode' setting within '%s' is not correctly validated! Please screenshot this message and send it to @ltsRune!",
-								settingSubCategory
-							)
-						)
-						continue
-					end
-
-					if self._private.validModes[settingSubCategory][string.lower(tostring(newSetting))] == nil then
-						self:_warn(
-							string.format(
-								"Optional mode '%s' for 'Settings.%s' is not a valid, it's been overwritten to the default of '%s'.",
-								newSetting,
-								settingSubCategory,
-								currentSettingToChange
-							)
-						)
-						continue
-					end
-				elseif
-					-- Write in custom logic for 'Instance' types.
-					typeof(currentSettingToChange) ~= typeof(newSetting)
-					and (settingToChange == "sticksModel" and typeof(newSetting) ~= "Instance")
-				then
-					self:_warn(
-						string.format(
-							"Optional key 'Settings.%s.%s' is not the same type as it's default value of '%s'",
-							settingSubCategory,
-							settingToChange,
-							typeof(currentSettingToChange)
-						)
-					)
-					continue
-				end
-
-				self.Settings[settingSubCategory][settingToChange] = newSetting
+	-- Only run the settings check if extra options were changed.
+	if not wereOptionsAttempted then
+		for settingSubCategory, value in pairs(extraOptions) do
+			if self.Settings[settingSubCategory] == nil then
+				self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
+				continue
 			end
-		else
-			self.Settings[settingSubCategory] = value
+
+			-- Final settings check
+			if typeof(value) == "table" then
+				-- Handle 'nilCheckIgnore' for tables that can be somewhat-wrongly typed.
+				for settingToChange, newSetting in pairs(value) do
+					local currentSettingToChange = self.Settings[settingSubCategory][settingToChange]
+
+					-- 'sticksModel' is nil by default.
+					if currentSettingToChange == nil and settingToChange ~= "sticksModel" then
+						self:_warn(
+							string.format(
+								"Optional key 'Settings.%s.%s' is not a valid option.",
+								settingSubCategory,
+								settingToChange
+							)
+						)
+						continue
+					elseif
+						-- Custom logic to validate feature modes.
+						self.Settings[settingSubCategory] ~= nil
+						and currentSettingToChange ~= nil
+						and settingToChange == "Mode"
+						and typeof(newSetting) == "string"
+					then
+						if not self._private.validModes[settingSubCategory] then
+							self:_warn(
+								string.format(
+									"The 'Mode' setting within '%s' is not correctly validated! Please screenshot this message and send it to @ltsRune!",
+									settingSubCategory
+								)
+							)
+							continue
+						end
+
+						if self._private.validModes[settingSubCategory][string.lower(tostring(newSetting))] == nil then
+							self:_warn(
+								string.format(
+									"Optional mode '%s' for 'Settings.%s' is not a valid, it's been overwritten to the default of '%s'.",
+									newSetting,
+									settingSubCategory,
+									currentSettingToChange
+								)
+							)
+							continue
+						end
+					elseif
+						-- Write in custom logic for 'Instance' types.
+						typeof(currentSettingToChange) ~= typeof(newSetting)
+						and (settingToChange == "sticksModel" and typeof(newSetting) ~= "Instance")
+					then
+						self:_warn(
+							string.format(
+								"Optional key 'Settings.%s.%s' is not the same type as it's default value of '%s'",
+								settingSubCategory,
+								settingToChange,
+								typeof(currentSettingToChange)
+							)
+						)
+						continue
+					end
+
+					self.Settings[settingSubCategory][settingToChange] = newSetting
+				end
+			else
+				self.Settings[settingSubCategory] = value
+			end
 		end
 	end
 
@@ -3205,7 +3136,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	if self.Settings.RankSticks.Enabled == true then
 		self:addCommand("sticks", {}, function(Player: Player)
 			local staffData = self:_playerIsValidStaff(Player)
-			if not staffData or staffData[2] == nil or staffData[2] < self.Settings.Commands.MinRank then
+			if not staffData or staffData.Rank == nil or staffData.Rank < self.Settings.Commands.MinRank then
 				return
 			end
 
@@ -3449,7 +3380,7 @@ return setmetatable({
 	@interface extraOptionsType
 	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
 	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
-	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, activationKey: Enum.KeyCode | string }
+	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, visibleFrames: { string }, Activation: { Keybind: string, iconButtonPosition: "Left" | "Right" | "Center", iconButtonImage: string | number } }
 	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
 	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
 	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
