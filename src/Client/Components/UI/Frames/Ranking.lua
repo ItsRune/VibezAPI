@@ -133,12 +133,14 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 		newTemplate.MouseButton1Click:Connect(function()
 			local hasAppendedTableIndex = table.find(selectedUsers, Target.UserId)
 			local tweenDirection = hasAppendedTableIndex and 1 or 0.2
+			local ignoreTween = false
 
 			if hasAppendedTableIndex then
 				table.remove(selectedUsers, hasAppendedTableIndex)
 
-				if userInformation.isInGame == false or not _fullCheckForFilter(Target) then
+				if userInformation.isInGame == false and not _fullCheckForFilter(Target) then
 					newTemplate:Destroy()
+					ignoreTween = true
 				end
 			else
 				table.insert(selectedUsers, Target.UserId)
@@ -152,6 +154,7 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 
 					if existingFrame then
 						existingFrame:Destroy()
+						ignoreTween = true
 					end
 				end
 
@@ -159,7 +162,8 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 			end
 
 			usernameTextBox.Parent.Selected.Text = string.format("%d User(s) Selected", #selectedUsers)
-			if not userInformation.isInGame and hasAppendedTableIndex then
+
+			if ignoreTween then
 				return
 			end
 
@@ -304,6 +308,20 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 
 		table.insert(
 			Maid.Main,
+			actionButton.InputBegan:Connect(function(Input: InputObject)
+				if
+					Input.UserInputType ~= Enum.UserInputType.MouseButton1
+					and Input.UserInputType ~= Enum.UserInputType.Touch
+				then
+					return
+				end
+
+				componentData.buttonClickBubble(actionButton, Input)
+			end)
+		)
+
+		table.insert(
+			Maid.Main,
 			actionButton.MouseButton1Click:Connect(function()
 				if #selectedUsers == 0 then
 					return
@@ -342,15 +360,30 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 
 	-- DEBUG: This connection for some reason causes the script to break?
 	-- setRank action is in a separate area than the other buttons.
+	local setRankButton = Frame.Actions.Body.setRank.Button
 	table.insert(
 		Maid.Main,
-		Frame.Actions.Body.setRank.Button.MouseButton1Click:Connect(function()
-			local newRank = Frame.Actions.setRank.newRank.Text
+		setRankButton.MouseButton1Click:Connect(function()
+			local newRank = setRankButton.Parent.newRank.Text
 			if newRank == "" or #selectedUsers == 0 then
 				return
 			end
 
 			remoteFunction:InvokeServer("SetRank", "Interface", selectedUsers, newRank)
+		end)
+	)
+
+	table.insert(
+		Maid.Main,
+		setRankButton.InputBegan:Connect(function(Input: InputObject)
+			if
+				Input.UserInputType ~= Enum.UserInputType.MouseButton1
+				and Input.UserInputType ~= Enum.UserInputType.Touch
+			then
+				return
+			end
+
+			componentData.buttonClickBubble(setRankButton, Input)
 		end)
 	)
 end

@@ -47,6 +47,7 @@ local System = {
 local Table = require(script.Modules.Table)
 local Tweens = require(script.Modules.TweenService)
 local TopbarPlus = require(script.Modules.TopbarPlus)
+local buttonClickBubble = require(script.Modules.ButtonClickBubble)
 
 --// Functions \\--
 local function _warn(starter: string, ...: string)
@@ -107,10 +108,15 @@ local function onAttributeChanged()
 	end
 
 	for key: string, data: { [any]: any } in pairs(States) do
+		if key == "GroupId" then
+			continue
+		end
+
 		local componentData = {
 			remoteFunction = remoteFunction,
 			remoteEvent = remoteEvent,
 
+			GroupId = States.GroupId,
 			Data = data,
 
 			TopbarPlus = TopbarPlus,
@@ -118,6 +124,7 @@ local function onAttributeChanged()
 			Disconnect = Disconnect,
 			Tweens = Tweens,
 			Table = Table,
+			buttonClickBubble = buttonClickBubble,
 
 			_warn = _warn,
 		}

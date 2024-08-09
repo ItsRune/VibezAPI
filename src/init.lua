@@ -1698,6 +1698,8 @@ function api:_buildAttributes()
 	end
 
 	local dataToEncode = {
+		GroupId = self.Settings.GroupId,
+
 		ActivityTracker = {
 			AfkTracker = {
 				Status = self.Settings.ActivityTracker.disableWhenAFK,
