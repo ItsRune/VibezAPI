@@ -1,6 +1,9 @@
+--!nocheck
+--!nolint
 --// Services \\--
 local Players = game:GetService("Players")
 local UserService = game:GetService("UserService")
+local GroupService = game:GetService("GroupService")
 
 --// Variables \\--
 local Player = Players.LocalPlayer
@@ -8,6 +11,7 @@ local defaultThumbnail = "rbxasset://textures/AvatarCompatibilityPreviewer/user.
 local usernameTextBox = nil
 local lastPerformedTruncation = 0
 local userCache = {}
+local groupCache = {}
 local selectedUsers = {}
 local Maid = {
 	Main = {},
@@ -214,7 +218,7 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 	end
 
 	local existingButtons = {}
-	for _, Inst: Instance in ipairs(templateFrame.Parent:GetChildren()) do
+	for _, Inst: any in ipairs(templateFrame.Parent:GetChildren()) do
 		if not Inst:IsA("TextButton") or Inst.Name == "Template" then
 			continue
 		end
@@ -225,6 +229,20 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 		end
 
 		table.insert(existingButtons, Inst.Left.Information.Username.Text)
+	end
+end
+
+local function _checkTextAfterDelay<A>(
+	textLabel: TextLabel | TextBox,
+	delayedSeconds: number,
+	callback: (...A) -> any,
+	...: A
+)
+	local currentText = textLabel.Text
+	task.wait(delayedSeconds)
+
+	if textLabel.Text == currentText then
+		callback(...)
 	end
 end
 
@@ -252,12 +270,11 @@ local function _handleExternalUserSearch(componentData: { [any]: any })
 			continue
 		end
 
-		local fakePlayer = {
-			Name = userInfo[i].Username,
-			UserId = userId,
-			DisplayName = userInfo[i].DisplayName,
-			isVerified = userInfo[i].HasVerifiedBadge,
-		}
+		local fakePlayer = newproxy(false)
+		fakePlayer.Name = userInfo[i].Username
+		fakePlayer.UserId = userId
+		fakePlayer.DisplayName = userInfo[i].DisplayName
+		fakePlayer.isVerified = userInfo[i].HasVerifiedBadge
 
 		table.insert(fakePlayers, fakePlayer)
 	end
@@ -266,7 +283,7 @@ local function _handleExternalUserSearch(componentData: { [any]: any })
 end
 
 --// Functions \\--
-local function onDestroy(Frame: Frame, componentData: { [any]: any })
+local function onDestroy(Frame: any, componentData: { [any]: any })
 	table.clear(selectedUsers)
 	selectedUsers = {}
 
@@ -289,7 +306,7 @@ local function onDestroy(Frame: Frame, componentData: { [any]: any })
 	task.wait()
 end
 
-local function onSetup(Frame: Frame, componentData: { [any]: any })
+local function onSetup(Frame: any, componentData: { [any]: any })
 	local remoteFunction = componentData.remoteFunction
 	usernameTextBox = Frame.User.Username
 
@@ -350,7 +367,7 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
 
 			if #filteredPlayers == 0 then
-				_handleExternalUserSearch(componentData)
+				_checkTextAfterDelay(Frame.User.Username, 2, _handleExternalUserSearch, componentData)
 				return
 			end
 
@@ -360,6 +377,7 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 
 	-- DEBUG: This connection for some reason causes the script to break?
 	-- setRank action is in a separate area than the other buttons.
+
 	local setRankButton = Frame.Actions.Body.setRank.Button
 	table.insert(
 		Maid.Main,
@@ -386,6 +404,24 @@ local function onSetup(Frame: Frame, componentData: { [any]: any })
 			componentData.buttonClickBubble(setRankButton, Input)
 		end)
 	)
+
+	-- REVIEW: Future idea?
+	-- Add a dropdown for group ranks with the provided attribute "GroupId" on existing attr.
+	-- - Will provide easier use of users within the group along with simple suggestions that'll prevent time spent typing role names.
+	-- - Cache of group ranks to keep things simple.
+	local groupId = tostring(componentData.Data.GroupId)
+	local currentGroupCache = groupCache[groupId]
+
+	if currentGroupCache ~= nil or tonumber(groupId) == nil then
+		return
+	end
+
+	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, tonumber(groupId))
+	if not isOk or typeof(groupInfo) ~= "table" then
+		return
+	end
+
+	groupCache[groupId] = groupInfo
 end
 
 --// Core \\--

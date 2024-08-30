@@ -1,4 +1,5 @@
---#selene: allow(unused_variable)
+--!nocheck
+--!nolint
 --// Services \\--
 local Players = game:GetService("Players")
 

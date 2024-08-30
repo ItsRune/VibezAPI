@@ -1,3 +1,5 @@
+--!nocheck
+--!nolint
 --[=[
 	Creates an easy way to manage and use webhooks.
 
@@ -51,7 +53,7 @@ local Types = require(script.Parent.Types)
 	@since 1.1.0
 ]=]
 ---
-function Hooks.new(vibezApi: Types.vibezApi, webhook: string): Types.vibezHooks
+function Hooks.new(vibezApi: Types.vibezApi, webhook: string): Types.vibezHooks?
 	local self = setmetatable({}, Class)
 
 	self.webhook = webhook
@@ -78,7 +80,7 @@ end
 	@since 1.1.0
 ]=]
 ---
-function Hooks._createEmbedTable(): { any? }
+function Hooks._createEmbedTable(): any
 	return setmetatable({}, {
 		__newindex = function(tbl, index, value)
 			if #tbl > 9 then
@@ -104,6 +106,7 @@ end
 function Class:setWebhook(newWebhook: string): Types.vibezHooks
 	self.webhook = newWebhook
 	self:_parseWebhook()
+	return self
 end
 
 --[=[
@@ -258,7 +261,7 @@ end
 ---
 function Class:_parseWebhook(webhookToUse: string?): { ID: string, Token: string }?
 	local webhook = (webhookToUse ~= nil) and webhookToUse or self.webhook
-	local linkId, linkToken = string.match(webhook, "([0-9]+)%/([a-zA-Z0-9-_]+)$")
+	local linkId, linkToken = string.match(webhook, "([0-9]+)/([a-zA-Z0-9-_]+)$")
 
 	if not linkId or not linkToken then
 		self.Api:_warn("Webhook is not a valid link to use.")

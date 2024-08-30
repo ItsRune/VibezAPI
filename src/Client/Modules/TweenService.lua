@@ -1,3 +1,5 @@
+--!nocheck
+--!nolint
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 
@@ -5,7 +7,25 @@ local runningTweens = {}
 local Class = {}
 Class.__index = Class
 
-local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: table)
+--// Types \\--
+export type tweenService = {
+	_id: string,
+	_instance: Instance,
+	_dontCare: boolean,
+	_tween: Tween,
+	_callback: (state: Enum.PlaybackState?) -> (),
+	_completedCallback: () -> (),
+	_connection: RBXScriptConnection?,
+
+	Play: (self: tweenService) -> tweenService,
+	Cancel: (self: tweenService) -> tweenService,
+	Pause: (self: tweenService) -> tweenService,
+	setCallback: (self: tweenService, callback: (state: Enum.PlaybackState?) -> ()) -> tweenService,
+	onCompleted: (self: tweenService, callback: () -> ()) -> tweenService,
+	Destroy: (self: tweenService) -> (),
+}
+
+local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: { [any]: any }): tweenService
 	local self = setmetatable({}, Class)
 
 	self._id = HttpService:GenerateGUID(false)
@@ -15,8 +35,8 @@ local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: 
 	propertyTable["ignoreCaching"] = nil
 
 	self._tween = TweenService:Create(Inst, tweenInfo, propertyTable)
-	self._callback = function() end
-	self._completedCallback = function() end
+	self._callback = function(...: any) end
+	self._completedCallback = function(...: any) end
 	self._connection = self._tween.Completed:Connect(function(playBackState)
 		if playBackState == Enum.PlaybackState.Completed then
 			runningTweens[self._instance] = nil
@@ -77,7 +97,7 @@ function Class:Destroy()
 	self._connection:Disconnect()
 
 	setmetatable(self, nil)
-	self = nil
+	table.clear(self :: any)
 end
 
 -- Cancels the tween and removes from cache.

@@ -36,10 +36,20 @@ local function _fixNotificationStatus(message: string): string
 	return table.concat(words, " ")
 end
 
+local function _verifyDynamicEnum(parentEnum: any, dynamicProperty: string): any
+	local enumItem = parentEnum[dynamicProperty]
+
+	if not enumItem then
+		return nil
+	end
+
+	return enumItem
+end
+
 local function _onNotification(componentData: { [any]: any }, dontAllowFormatting: boolean, Message: string)
 	local Tweens, Table = componentData.Tweens, componentData.Table
 
-	local Settings = HttpService:JSONDecode(Workspace:GetAttribute(script.Parent.Parent.Name))
+	local Settings = HttpService:JSONDecode(tostring(Workspace:GetAttribute(script.Parent.Parent.Name)))
 	local notificationSettings = Settings.Notifications
 
 	if not dontAllowFormatting then
@@ -78,13 +88,13 @@ local function _onNotification(componentData: { [any]: any }, dontAllowFormattin
 
 	local tweenInInfo = TweenInfo.new(
 		notificationSettings.entranceTweenInfo.timeItTakes,
-		Enum.EasingStyle[notificationSettings.entranceTweenInfo.Style],
-		Enum.EasingDirection[notificationSettings.entranceTweenInfo.Direction]
+		_verifyDynamicEnum(Enum.EasingStyle, notificationSettings.entranceTweenInfo.Style),
+		_verifyDynamicEnum(Enum.EasingDirection, notificationSettings.entranceTweenInfo.Direction)
 	)
 	local tweenOutInfo = TweenInfo.new(
 		notificationSettings.exitTweenInfo.timeItTakes,
-		Enum.EasingStyle[notificationSettings.exitTweenInfo.Style],
-		Enum.EasingDirection[notificationSettings.exitTweenInfo.Direction]
+		_verifyDynamicEnum(Enum.EasingStyle, notificationSettings.exitTweenInfo.Style),
+		_verifyDynamicEnum(Enum.EasingDirection, notificationSettings.exitTweenInfo.Direction)
 	)
 
 	local tweenIn = Tweens(newItem, tweenInInfo, {
@@ -97,7 +107,7 @@ local function _onNotification(componentData: { [any]: any }, dontAllowFormattin
 	tweenIn:Play()
 
 	-- Filter others to move upwards
-	local children = Table.Filter(notifGui.Holder:GetChildren(), function(v)
+	local children = Table.Filter(notifGui.Holder:GetChildren(), function(v: TextLabel)
 		return v ~= newItem
 	end)
 

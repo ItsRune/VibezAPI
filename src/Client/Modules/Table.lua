@@ -857,7 +857,7 @@ end
 	@param callback (value: any, index: any, tbl: {any}) -> ()
 	@return ()
 ]=]
-local function ForEach<T>(tbl: T, callback: (value: any, index: any, tbl: { any }) -> ()): ()
+local function ForEach(tbl: { [any]: any }, callback: (value: any, index: any, tbl: { any }) -> ()): ()
 	for i, v in pairs(tbl) do
 		callback(v, i, tbl)
 	end

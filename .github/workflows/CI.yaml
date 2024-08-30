@@ -9,33 +9,34 @@ on:
     - master
 
 jobs:
-  lint:
-    name: Lint & Style Check
+  analyze:
+    name: Analyze
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Install Foreman
-      uses: Roblox/setup-foreman@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Verify selene.toml exists & Create new if it doesn't
-      run: |
-        if ! test -f selene.toml; then
-          touch selene.toml
-          echo 'std="roblox"' >> selene.toml
-          echo '' >> selene.toml
-          echo "[lints]" >> selene.toml
-          echo 'global_usage="allow"' >> selene.toml
-          echo 'incorrect_standard_library_use="allow"' >> selene.toml
-        fi
-      shell: bash
-    
-    - name: Lint & Stylua Check
-      run: |
-        selene generate-roblox-std
-        selene ./src
-        stylua ./src
-      shell: bash
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0.3.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Wally packages
+        run: sh scripts/install-packages.sh
+
+      - name: Analyze
+        run: sh scripts/analyze.sh
+
+  style:
+    name: Styling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check code style
+        uses: JohnnyMorganz/stylua-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: v0.20.0
+          args: --check src/

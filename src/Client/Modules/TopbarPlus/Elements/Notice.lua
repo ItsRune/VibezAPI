@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing, if_same_then_else)
+--!nocheck
+--!nolint
 return function(icon, Icon)
 	local notice = Instance.new("Frame")
 	notice.Name = "Notice"

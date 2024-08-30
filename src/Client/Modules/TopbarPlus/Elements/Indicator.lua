@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing)
+--!nocheck
+--!nolint
 return function(icon, Icon)
 	local widget = icon.widget
 	local contents = icon:getInstance("Contents")

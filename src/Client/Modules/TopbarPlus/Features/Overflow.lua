@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing)
+--!nocheck
+--!nolint
 -- When designing your game for many devices and screen sizes, icons may occasionally
 -- particularly for smaller devices like phones, overlap with other icons or the bounds
 -- of the screen. The overflow handler solves this challenge by moving the out-of-bounds

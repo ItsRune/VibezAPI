@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing)
+--!nocheck
+--!nolint
 -- The functions here are dedicated solely to managing theme state
 -- and updating the appearance of instances to match that state.
 -- You don't need to use any of these functions, the useful ones

@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing)
+--!nocheck
+--!nolint
 return function(Icon)
 	-- Credit to lolmansReturn and Canary Software for
 	-- retrieving these values

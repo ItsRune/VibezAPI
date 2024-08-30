@@ -1,5 +1,5 @@
--- REMOVE WHEN CONFIRMED --
---# selene: allow(empty_if, unused_variable)
+--!nocheck
+--!nolint
 
 --[[
 	REVIEW:
@@ -164,6 +164,7 @@ function Class:addWidget(base: Part | MeshPart | UnionOperation): boolean
 	})
 
 	table.insert(self._cache.widgetUIs, newWidget)
+	return true
 end
 
 --[=[

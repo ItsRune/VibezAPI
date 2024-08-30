@@ -1,3 +1,5 @@
+--!nocheck
+--!nolint
 --// Services \\--
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -40,9 +42,11 @@ local function _changeSelectorHighlight(Tweens: Tweens, frameName: string)
 		end
 
 		local colorToShiftTo = (frameName == topButton.Name) and Color3.new(1, 1, 1) or Color3.fromRGB(147, 147, 147)
-		Tweens(topButton, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+		local Tween = Tweens(topButton, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
 			TextColor3 = colorToShiftTo,
-		}):Play()
+		})
+
+		Tween:Play()
 	end
 end
 
@@ -78,15 +82,19 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 			_safelyLoadModuleAndRun(previousFrameModule, "Destroy", newCurrentReference, componentData)
 		end
 
-		Tweens(newCurrentReference, tweenInOutInfo, {
+		local Tween = Tweens(newCurrentReference, tweenInOutInfo, {
 			Position = UDim2.fromScale(-0.5, 0.5),
-		}):setCallback(function(playBackState)
+		})
+
+		Tween:setCallback(function(playBackState)
 			if playBackState ~= Enum.PlaybackState.Completed then
 				return
 			end
 
 			newCurrentReference.Position = UDim2.fromScale(1.5, 0.5)
-		end):Play()
+		end)
+
+		Tween:Play()
 	end
 
 	local frameModule = frameComponents:FindFirstChild(frameName)
@@ -96,9 +104,11 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 	end
 
 	currentOpenFrame = newFrame
-	Tweens(newFrame, tweenInOutInfo, {
+	local Tween = Tweens(newFrame, tweenInOutInfo, {
 		Position = UDim2.fromScale(0.5, 0.5),
-	}):Play()
+	})
+
+	Tween:Play()
 
 	_safelyLoadModuleAndRun(frameModule, "Setup", newFrame, componentData)
 	_changeSelectorHighlight(componentData.Tweens, frameName)

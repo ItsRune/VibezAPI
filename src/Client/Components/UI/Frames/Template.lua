@@ -1,9 +1,8 @@
---#selene: allow(unused_variable)
 --// Services \\--
 local Players = game:GetService("Players")
 
 --// Variables \\--
-local Player = Players.LocalPlayer
+local _Player = Players.LocalPlayer
 local Maid = {}
 
 --// Functions \\--
@@ -13,7 +12,7 @@ local function onDestroy(Frame: Frame, componentData: { [any]: any })
 end
 
 local function onSetup(Frame: Frame, componentData: { [any]: any })
-	onDestroy(componentData)
+	onDestroy(Frame, componentData)
 end
 
 --// Core \\--

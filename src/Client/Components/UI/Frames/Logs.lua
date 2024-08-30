@@ -71,14 +71,14 @@ local function _fixStringForAction(componentData: { [any]: any }, logInfo: LogIn
 	return baseString .. (extraData ~= nil and extraData or "")
 end
 
-local function _createErrorLog(logData: { [any]: any }, newError)
+local function _createErrorLog(logData: { [any]: any }, newError: string)
 	table.insert(logData, {
 		Action = "INTERNAL_ERROR",
 		errorMessage = '<font color="rgb(200,50,50)">' .. newError .. "</font>",
 	})
 end
 
-local function _addLog(Frame: Frame, componentData: { [any]: any }, newLog: LogInformation)
+local function _addLog(Frame: any, componentData: { [any]: any }, newLog: LogInformation)
 	local templateFrame = Frame.Scroll.Template
 	local nextNumber = #Frame.Scroll:GetChildren() - 3
 	local newTemplate = templateFrame:Clone()
@@ -123,7 +123,7 @@ local function _addLog(Frame: Frame, componentData: { [any]: any }, newLog: LogI
 	nextLayoutOrder -= 1
 end
 
-local function onDestroy(Frame: Frame, componentData: { [any]: any })
+local function onDestroy(Frame: any, componentData: { [any]: any })
 	nextLayoutOrder = 999999
 
 	componentData.clearAllChildren(Frame.Scroll, { "UIPadding", "UIListLayout" })
@@ -131,7 +131,7 @@ local function onDestroy(Frame: Frame, componentData: { [any]: any })
 	table.clear(Maid)
 end
 
-local function onSetup(Frame: Frame, componentData: { [any]: any })
+local function onSetup(Frame: any, componentData: { [any]: any })
 	onDestroy(Frame, componentData)
 
 	if not hasWarned then

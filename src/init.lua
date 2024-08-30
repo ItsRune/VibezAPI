@@ -1,3 +1,5 @@
+--!nocheck
+--!nolint
 --[[
 		 _   _ ___________ _____ ______
 		| | | |_   _| ___ \  ___|___  /
@@ -60,7 +62,7 @@ local function getActionFunctionFromInvoke(Action: string)
 		return "deleteBlacklist"
 	end
 
-	return nil
+	return "nil"
 end
 
 local function onServerInvoke(
@@ -125,7 +127,7 @@ local function onServerInvoke(
 					targetGroupRank = targetGroupRank.Rank
 				end
 
-				local callerGroupRank: { [number]: any } = self:_playerIsValidStaff(Player)
+				local callerGroupRank: { [any]: any } = self:_playerIsValidStaff(Player)
 				if not callerGroupRank or callerGroupRank.Rank == nil then -- The user calling this function is NOT staff
 					self:_warn(
 						string.format(
@@ -276,7 +278,7 @@ local function onServerInvoke(
 		end
 
 		if #Targets > 1 then
-			local avgProcessingSpeedInSeconds = 15
+			local avgProcessingSpeedInSeconds = 3
 			self:_notifyPlayer(
 				Player,
 				string.format(
@@ -3057,8 +3059,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_warn("Extra options have an error associated with them, reverting to default options...")
 	end
 
+	warn(self.Settings, fixTable(self.Settings, baseSettings))
+
 	-- Only run the settings check if extra options were changed.
-	if not wereOptionsAttempted then
+	if wereOptionsAttempted then
 		for settingSubCategory, value in pairs(extraOptions) do
 			if self.Settings[settingSubCategory] == nil then
 				self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)

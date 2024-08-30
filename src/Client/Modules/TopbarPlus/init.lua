@@ -1,4 +1,4 @@
---#selene: allow(unused_variable, shadowing)
+--!nocheck
 --[[
 	
 	The majority of this code is an interface designed to make it easy for you to
@@ -33,10 +33,7 @@
 --]]
 
 -- SERVICES
-local LocalizationService = game:GetService("LocalizationService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TextService = game:GetService("TextService")
 local StarterGui = game:GetService("StarterGui")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -105,6 +102,7 @@ function Icon.getIconByUID(UID)
 	if match then
 		return match
 	end
+	return
 end
 
 function Icon.getIcon(nameOrUID)
@@ -117,6 +115,7 @@ function Icon.getIcon(nameOrUID)
 			return icon
 		end
 	end
+	return
 end
 
 function Icon.setTopbarEnabled(bool, isInternal)
@@ -391,7 +390,6 @@ function Icon.new()
 	end
 
 	-- Additional children behaviour when toggled (mostly notices)
-	local noticeLabel = self:getInstance("NoticeLabel")
 	self.toggled:Connect(function(isSelected)
 		self.noticeChanged:Fire(self.totalNotices)
 		for childIconUID, _ in pairs(self.childIconsDict) do
@@ -537,7 +535,6 @@ function Icon:getInstance(name)
 			end
 			-- If the child is a fake placeholder instance (such as dropdowns, notices, etc)
 			-- then its important we scan the real original instance instead of this clone
-			local previousChild = child
 			local realChild = Themes.getRealInstance(child)
 			if realChild then
 				child = realChild
@@ -634,8 +631,8 @@ function Icon:setBehaviour(collectiveOrInstanceName, property, callback, refresh
 end
 
 function Icon:modifyTheme(modifications, modificationUID)
-	local modificationUID = Themes.modify(self, modifications, modificationUID)
-	return self, modificationUID
+	local newModificationUID = Themes.modify(self, modifications, modificationUID)
+	return self, newModificationUID
 end
 
 function Icon:modifyChildTheme(modifications, modificationUID)

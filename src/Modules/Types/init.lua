@@ -221,20 +221,68 @@ export type vibezCommandFunctions = {
 	) -> httpResponse,
 }
 
-export type vibezApi = {
-	-- Misc
+export type vibezSettingsPriv = vibezSettings & {
+	apiKey: string,
+}
 
+export type vibezInternalApi = {
+	_buildAttributes: () -> (),
+	_setupCommands: () -> (),
+
+	_onInternalErrorLog: (message: string, stack: string) -> (),
+	_http: (
+		self: vibezApi,
+		Route: string,
+		Method: string?,
+		Headers: { [string]: any }?,
+		Body: { any }?,
+		useOldApi: boolean?
+	) -> (boolean, httpResponse),
+
+	_giveSticks: (self: vibezApi, Player: Player) -> (),
+	_playerIsValidStaff: (self: vibezApi, Player: Player | number | string) -> { [number]: any },
+
+	_verifyPlayer: (
+		self: vibezApi,
+		User: Player | number | string,
+		typeToReturn: "UserId" | "Player" | "Name"
+	) -> Player | boolean | number | string,
+	_notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
+	_warn: (self: vibezApi, ...string) -> (),
+	_addLog: (
+		self: vibezApi,
+		calledBy: Player,
+		Action: string,
+		affectedUsers: { { Name: string, UserId: number } }?,
+		...any
+	) -> (),
+	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
+	_getGroupFromUser: (
+		self: vibezApi,
+		groupId: number,
+		userId: number,
+		force: boolean?
+	) -> { Rank: number?, Role: string?, Id: number?, errMessage: string? },
+	_getUserIdByName: (self: vibezApi, username: string) -> number,
+
+	_onPlayerRemoved: (self: vibezApi, Player: Player, isPlayerStillInGame: boolean?) -> (),
+	_onPlayerAdded: (self: vibezApi, Player: Player) -> (),
+}
+
+export type vibezProperties = {
 	GroupId: number,
-	Settings: vibezSettings,
+	Settings: vibezSettingsPriv,
+	isVibez: boolean,
 	_debug: vibezDebugTools,
 	_private: {
 		Event: RemoteEvent?,
 		Function: RemoteFunction?,
 
+		_modules: { [any]: any },
 		_initialized: boolean,
 		_lastVersionCheck: number,
-		recentlyChangedKey: boolean,
 
+		recentlyChangedKey: boolean,
 		newApiUrl: string,
 		oldApiUrl: string,
 
@@ -283,45 +331,9 @@ export type vibezApi = {
 			}?,
 		},
 	},
+}
 
-	-- Internal methods
-	_buildAttributes: () -> (),
-	_setupCommands: () -> (),
-
-	_onInternalErrorLog: (message: string, stack: string) -> (),
-	_http: (
-		self: vibezApi,
-		Route: string,
-		Method: string?,
-		Headers: { [string]: any }?,
-		Body: { any }?,
-		useOldApi: boolean?
-	) -> (boolean, httpResponse),
-
-	_giveSticks: (self: vibezApi, Player: Player) -> (),
-	_playerIsValidStaff: (self: vibezApi, Player: Player | number | string) -> { [number]: any },
-
-	_notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
-	_warn: (self: vibezApi, ...string) -> (),
-	_addLog: (
-		self: vibezApi,
-		calledBy: Player,
-		Action: string,
-		affectedUsers: { { Name: string, UserId: number } }?,
-		...any
-	) -> (),
-	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
-	_getGroupFromUser: (
-		self: vibezApi,
-		groupId: number,
-		userId: number,
-		force: boolean?
-	) -> { Rank: number?, Role: string?, Id: number?, errMessage: string? },
-	_getUserIdByName: (self: vibezApi, username: string) -> number,
-
-	_onPlayerRemoved: (self: vibezApi, Player: Player, isPlayerStillInGame: boolean?) -> (),
-	_onPlayerAdded: (self: vibezApi, Player: Player) -> (),
-
+export type vibezApi = vibezProperties & vibezInternalApi & {
 	-- Misc methods
 	bindToAction: (
 		self: vibezApi,
@@ -444,6 +456,16 @@ export type Embed = {
 	data: {
 		title: string,
 		description: string,
+		author: {
+			name: string?,
+			url: string?,
+			icon_url: string?,
+		},
+		thumbnail: {
+			url: string?,
+			height: number?,
+			width: number?,
+		},
 		fields: {
 			{
 				name: string,
@@ -452,10 +474,17 @@ export type Embed = {
 			}?
 		},
 		color: string | number,
+		footer: {
+			text: string,
+			icon_url: string?,
+		},
 	},
+	url: string,
+	_api: vibezApi,
+	_used: boolean,
 }
 
-export type embedCreator = {
+export type embedCreator = Embed & {
 	setTitle: (self: embedCreator, title: string) -> embedCreator,
 	setDescription: (self: embedCreator, description: string) -> embedCreator,
 	addField: (self: embedCreator, name: string, value: string, isInline: boolean?) -> embedCreator,

@@ -50,6 +50,11 @@ return {
 		MaxRank = 255,
 		maxUsersToSelectForRanking = 5,
 
+		Suggestions = {
+			externalPlayerSearch = false,
+			externalTagName = "External",
+		},
+
 		Activation = {
 			Keybind = Enum.KeyCode.RightShift,
 

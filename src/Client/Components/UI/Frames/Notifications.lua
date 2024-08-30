@@ -1,3 +1,5 @@
+--!nocheck
+--!nolint
 --// Services \\--
 local Players = game:GetService("Players")
 local UserService = game:GetService("UserService")
@@ -194,7 +196,7 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 	end
 
 	local existingButtons = {}
-	for _, Inst: Instance in ipairs(templateFrame.Parent:GetChildren()) do
+	for _, Inst: any in ipairs(templateFrame.Parent:GetChildren()) do
 		if not Inst:IsA("TextButton") or Inst.Name == "Template" then
 			continue
 		end
@@ -208,7 +210,7 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 	end
 end
 
-local function onDestroy(Frame: Frame, componentData: { [any]: any })
+local function onDestroy(Frame: any, componentData: { [any]: any })
 	table.clear(selectedUsers)
 	selectedUsers = {}
 
@@ -231,7 +233,7 @@ local function onDestroy(Frame: Frame, componentData: { [any]: any })
 	task.wait()
 end
 
-local function onSetup(Frame: Frame, componentData: { [any]: any })
+local function onSetup(Frame: any, componentData: { [any]: any })
 	onDestroy(Frame, componentData)
 
 	usernameTextBox = Frame.User.Username

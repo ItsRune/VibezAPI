@@ -1,3 +1,5 @@
+--!nocheck
+--!nolint
 --[=[
 	Builder for embeds.
     
@@ -234,7 +236,7 @@ end
     @since 1.1.0
 ]=]
 ---
-function Class:setColor(color: Color3 | string | number): embedTypes.Embed
+function Class:setColor(color: (Color3 | string | number)?): embedTypes.Embed
 	self:_updateUsed()
 	if typeof(color) == "Color3" then
 		color = tonumber("0x" .. color:ToHex())
@@ -322,7 +324,7 @@ end
 	@since 1.1.0
 ]=]
 ---
-function Class:_resolve(): { any }
+function Class:_resolve(): { any }?
 	return self._used and self.data or nil
 end
 

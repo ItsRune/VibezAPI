@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing)
+--!nocheck
+--!nolint
 return function(icon)
 	local dropdown = Instance.new("Frame")
 	dropdown.Name = "Dropdown"

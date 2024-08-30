@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing, empty_if)
+--!nocheck
+--!nolint
 -- As the name suggests, this handles everything related to gamepads
 -- (i.e. Xbox or Playstation controllers) and their navigation
 -- I created a separate module for gamepads (and not touchpads or

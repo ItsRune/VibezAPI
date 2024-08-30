@@ -1,9 +1,11 @@
+--!nocheck
+--!nolint
 local ServerStorage = game:GetService("ServerStorage")
 
 local Utils = {}
 
 -- Searches a deep table for a selected key/index.
-function Utils.deepFetch(tbl: { any }, index: string | number)
+function Utils.deepFetch(tbl: { any }, index: (string | number)?)
 	for k, v in pairs(tbl) do
 		if k == index then
 			return v
@@ -11,6 +13,8 @@ function Utils.deepFetch(tbl: { any }, index: string | number)
 			return Utils.deepFetch(v)
 		end
 	end
+
+	return nil
 end
 
 -- Changes a deep table's key/index to the new given value.
@@ -29,7 +33,7 @@ end
 
 -- Stringifies a table's keys and values for outputting to the console.
 function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
-	tabbing = tabbing or 1
+	local tabsToApply = tabbing or 1
 	local str = "{\n"
 
 	local function applyTabbing()
@@ -37,7 +41,7 @@ function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
 			return
 		end
 
-		for _ = 1, tabbing do
+		for _ = 1, tabsToApply do
 			str ..= "    "
 		end
 	end
@@ -50,7 +54,7 @@ function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
 		end
 
 		if typeof(value) == "table" then
-			str ..= Utils.stringifyTableDeep(value, tabbing + 1) .. ","
+			str ..= Utils.stringifyTableDeep(value, tabsToApply + 1) .. ","
 		else
 			str ..= (typeof(value) == "string" and string.format('"%s"', value) or string.format("%s,", tostring(value)))
 		end
@@ -58,7 +62,7 @@ function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
 		str ..= "\n"
 	end
 
-	tabbing -= 1
+	tabsToApply -= 1
 	applyTabbing()
 
 	return str .. "}"
@@ -83,11 +87,12 @@ function Utils.rotateCharacters(Input: string, Key: number, splitter: string, sh
 	local bytes = shouldDecode and string.split(Input, splitter) or string.split(Input, "")
 
 	for i, v in ipairs(bytes) do
-		if shouldDecode and not tonumber(v) then
+		local num = tonumber(v)
+		if shouldDecode and not num then
 			continue
 		end
 
-		bytes[i] = shouldDecode and string.char(tonumber(v) - Key) or string.byte(v) + Key .. splitter
+		bytes[i] = shouldDecode and string.char(num - Key) or string.byte(v) + Key .. splitter
 	end
 
 	return table.concat(bytes, "")

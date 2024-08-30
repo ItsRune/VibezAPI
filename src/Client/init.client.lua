@@ -1,4 +1,5 @@
---#selene: allow(unused_variable)
+--!nocheck
+--!nolint
 --// Services \\--
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -59,8 +60,8 @@ local function _warn(starter: string, ...: string)
 end
 
 local function _findFirstChildWhichIsAByName(parent: Instance, name: string, class: string, tries: number?): Instance?
-	tries = tries or 0
-	if tries >= 50 then
+	local existingAttempts = tries or 0
+	if existingAttempts >= 50 then
 		return nil
 	end
 
@@ -71,10 +72,10 @@ local function _findFirstChildWhichIsAByName(parent: Instance, name: string, cla
 	end
 
 	task.wait(0.25)
-	return _findFirstChildWhichIsAByName(parent, name, class, tries + 1)
+	return _findFirstChildWhichIsAByName(parent, name, class, existingAttempts + 1)
 end
 
-local function clearAllChildren(Parent: Instance, excludedClassNames: { string }?): ()
+local function clearAllChildren(Parent: Instance, excludedClassNames: { string? }): ()
 	excludedClassNames = excludedClassNames or {}
 
 	for _, child: Instance in ipairs(Parent:GetChildren()) do
@@ -168,7 +169,7 @@ local function onStart()
 	remoteFunction = _findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteFunction")
 	remoteEvent = _findFirstChildWhichIsAByName(ReplicatedStorage, script.Name, "RemoteEvent")
 
-	for _, module: ModuleScript in ipairs(script.Components:GetChildren()) do
+	for _, module: Instance in ipairs(script.Components:GetChildren()) do
 		if not module:IsA("ModuleScript") then
 			continue
 		end

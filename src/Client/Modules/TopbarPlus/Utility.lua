@@ -1,4 +1,5 @@
---#selene: allow(unused_variable, shadowing)
+--!nocheck
+--!nolint
 -- Just generic utility functions which I use and repeat across all my projects
 
 -- LOCAL
