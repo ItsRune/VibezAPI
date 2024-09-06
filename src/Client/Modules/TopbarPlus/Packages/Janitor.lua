@@ -1,4 +1,5 @@
 --!nocheck
+--#selene: allow(unused_variable, shadowing, if_same_then_else, empty_if)
 --[[
 -------------------------------------
 This package was modified by ForeverHD.

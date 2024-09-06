@@ -1,5 +1,6 @@
 --!nocheck
 --!nolint
+--#selene: allow(unused_variable, shadowing, if_same_then_else, empty_if)
 -- Just generic utility functions which I use and repeat across all my projects
 
 -- LOCAL

@@ -1,3 +1,4 @@
+--#selene: allow(unused_variable, shadowing, if_same_then_else, empty_if)
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 

@@ -1,5 +1,6 @@
 --!nocheck
 --!nolint
+--#selene: allow(unused_variable, shadowing, if_same_then_else)
 return function(Icon)
 	local GuiService = game:GetService("GuiService")
 	local isOldTopbar = Icon.isOldTopbar

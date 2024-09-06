@@ -1,5 +1,6 @@
 --!nocheck
 --!nolint
+--#selene: allow(unused_variable, shadowing, if_same_then_else)
 return function(icon)
 	local menu = Instance.new("ScrollingFrame")
 	menu.Name = "Menu"

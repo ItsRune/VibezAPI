@@ -1,5 +1,6 @@
 --!nocheck
 --!nolint
+--#selene: allow(unused_variable, shadowing, if_same_then_else, empty_if)
 -- I named this 'Widget' instead of 'Icon' to make a clear difference between the icon *object* and
 -- the icon (aka Widget) instance.
 -- This contains the core components of the icon such as the button, image, label and notice. It's

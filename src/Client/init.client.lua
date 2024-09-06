@@ -1,13 +1,10 @@
 --!nocheck
---!nolint
 --// Services \\--
 local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 --// Variables \\--
-local Player = Players.LocalPlayer
 local remoteFunction, remoteEvent
 local System = {
 	Components = {},

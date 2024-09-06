@@ -1,4 +1,5 @@
 --!nocheck
+--#selene: allow(unused_variable, shadowing, if_same_then_else, empty_if)
 --[[
 	
 	The majority of this code is an interface designed to make it easy for you to
