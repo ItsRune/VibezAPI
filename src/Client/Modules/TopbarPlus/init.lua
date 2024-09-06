@@ -63,7 +63,7 @@ local Overflow = require(iconModule.Features.Overflow)
 local Icon = {}
 Icon.__index = Icon
 
---- LOCAL
+-- LOCAL
 local localPlayer = Players.LocalPlayer
 local themes = iconModule.Features.Themes
 local playerGui = localPlayer:WaitForChild("PlayerGui")
@@ -162,7 +162,7 @@ function Icon.new()
 	local self = {}
 	setmetatable(self, Icon)
 
-	--- Janitors (for cleanup)
+	-- Janitors (for cleanup)
 	local janitor = Janitor.new()
 	self.janitor = janitor
 	self.themesJanitor = janitor:add(Janitor.new())

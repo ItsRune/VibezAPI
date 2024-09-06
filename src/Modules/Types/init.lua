@@ -1,7 +1,6 @@
 -- If you're reading this... Don't even ask..
 
--- Local Types
-type RateLimit = {
+export type RateLimit = {
 	isLimited: boolean,
 	_retryAfter: number,
 	_counter: number,
@@ -11,7 +10,7 @@ type RateLimit = {
 	Check: (self: RateLimit) -> (boolean, string?),
 }
 
-type userBlacklistResponse = {
+export type userBlacklistResponse = {
 	success: boolean,
 	data: {
 		blacklisted: boolean,
@@ -19,14 +18,13 @@ type userBlacklistResponse = {
 	},
 }
 
-type fullBlacklists = {
+export type fullBlacklists = {
 	success: boolean,
 	blacklists: { [number | string]: { reason: string, blacklistedBy: number } },
 }
 
-type userType = Player | string | number
+export type userType = Player | string | number
 
--- Exported Types
 export type vibezDebugTools = {
 	stringifyTableDeep: (tbl: { any }, tabbing: number?) -> string,
 }
@@ -96,7 +94,7 @@ export type httpResponse = {
 	StatusCode: number,
 	StatusMessage: string?,
 	Success: boolean,
-	rawBody: string,
+	rawBody: string?,
 }
 
 export type vibezSettings = {
@@ -200,15 +198,6 @@ export type vibezSettings = {
 	},
 }
 
-export type httpFunction = (
-	self: vibezApi,
-	Route: string,
-	Method: string?,
-	Headers: { [string]: any },
-	Body: { [string]: any },
-	useOldApi: boolean?
-) -> (boolean, httpResponse)
-
 export type vibezCommandFunctions = {
 	getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
 	getGroupFromUser: (self: vibezApi, groupId: number, userId: number) -> { any }?,
@@ -221,40 +210,53 @@ export type vibezCommandFunctions = {
 	) -> httpResponse,
 }
 
-export type vibezSettingsPriv = vibezSettings & {
-	apiKey: string,
-}
-
 export type vibezInternalApi = {
-	_buildAttributes: () -> (),
-	_setupCommands: () -> (),
+	__index: vibezApi,
+	_initialize: (self: vibezApi, apiKey: string) -> (),
+	_buildAttributes: (self: vibezApi) -> (),
+	_setupCommands: (self: vibezApi) -> (),
+	_createRemote: (self: vibezApi) -> (),
+	_getNameById: (self: vibezApi, userId: number) -> (),
+	_setupGlobals: (self: vibezApi) -> (),
+	_fixFormattedString: (
+		self: vibezApi,
+		String: string,
+		Player: { Name: string, UserId: number } | Player,
+		Custom: { onlyApplyCustom: boolean, Codes: { { code: string, equates: string } } }
+	) -> (),
 
-	_onInternalErrorLog: (message: string, stack: string) -> (),
+	_getRoleIdFromRank: (self: vibezApi, rank: number | string) -> number?,
+
+	_onInternalErrorLog: (self: vibezApi, message: string, stack: string) -> (),
 	_http: (
 		self: vibezApi,
 		Route: string,
-		Method: string?,
-		Headers: { [string]: any }?,
-		Body: { any }?,
+		Method: any,
+		Headers: { [string]: any },
+		Body: { [any]: any }?,
 		useOldApi: boolean?
 	) -> (boolean, httpResponse),
 
-	_giveSticks: (self: vibezApi, Player: Player) -> (),
-	_playerIsValidStaff: (self: vibezApi, Player: Player | number | string) -> { [number]: any },
-
-	_verifyPlayer: (
+	_onPlayerChatted: (self: vibezApi, Player: Player, message: string) -> (),
+	_checkPlayerForRankChange: (self: vibezApi, userId: number) -> (),
+	_verifyUser: (
 		self: vibezApi,
 		User: Player | number | string,
-		typeToReturn: "UserId" | "Player" | "Name"
-	) -> Player | boolean | number | string,
+		typeToReturn: "UserId" | "Player" | "Name" | "Id"
+	) -> (Player | number | string)?,
+
+	_giveSticks: (self: vibezApi, Player: Player) -> (),
+	_removeSticks: (self: vibezApi, Player: Player) -> (),
+	_playerIsValidStaff: (self: vibezApi, Player: any) -> { [any]: any },
 	_notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
-	_warn: (self: vibezApi, ...string) -> (),
+	_warn: (self: vibezApi, ...any) -> (),
 	_addLog: (
 		self: vibezApi,
 		calledBy: Player,
 		Action: string,
-		affectedUsers: { { Name: string, UserId: number } }?,
-		...any
+		triggeringAction: "Commands" | "Interface" | "RankSticks",
+		affectedUsers: { { Name: string, UserId: number } },
+		extraData: any?
 	) -> (),
 	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
 	_getGroupFromUser: (
@@ -269,71 +271,111 @@ export type vibezInternalApi = {
 	_onPlayerAdded: (self: vibezApi, Player: Player) -> (),
 }
 
-export type vibezProperties = {
-	GroupId: number,
-	Settings: vibezSettingsPriv,
-	isVibez: boolean,
-	_debug: vibezDebugTools,
-	_private: {
-		Event: RemoteEvent?,
-		Function: RemoteFunction?,
+export type vibezPrivate = {
+	Event: RemoteEvent,
+	Function: RemoteFunction,
 
-		_modules: { [any]: any },
-		_initialized: boolean,
-		_lastVersionCheck: number,
+	_initialized: boolean,
+	_lastVersionCheck: number,
+	_rotateIndex: number,
+	_modules: { [any]: any },
 
-		recentlyChangedKey: boolean,
-		newApiUrl: string,
-		oldApiUrl: string,
+	recentlyChangedKey: boolean,
+	newApiUrl: string,
+	oldApiUrl: string,
 
-		clientScriptName: string,
-		rateLimiter: RateLimit,
+	clientScriptName: string,
+	rateLimiter: RateLimit,
 
-		externalConfigCheckDelay: number,
-		lastLoadedExternalConfig: number,
+	externalConfigCheckDelay: number,
+	lastLoadedExternalConfig: number,
 
-		inGameLogs: { {}? },
-		Maid: { RBXScriptConnection? },
-		rankingCooldowns: {},
-		Binds: { [string]: { [string]: (result: responseBody) -> () } },
+	Maid: { RBXScriptConnection? },
+	rankingCooldowns: {},
 
-		usersWithSticks: { number? },
-		stickTypes: string,
+	usersWithSticks: { number? },
+	stickTypes: string,
 
-		requestCaches: {
-			validStaff: { { any } },
-			nitro: { number? },
-			groupInfo: { [number]: { any }? },
+	requestCaches: {
+		validStaff: { { any } },
+		nitro: { number? },
+		groupInfo: { [number]: { any }? },
+	},
+
+	Binds: {
+		promote: { [any]: any },
+		demote: { [any]: any },
+		fire: { [any]: any },
+		setrank: { [any]: any },
+		addblacklist: { [any]: any },
+		_internal: { Afk: { [any]: any } },
+	},
+
+	validModes: {
+		RankSticks: {
+			detectioninfront: "DetectionInFront",
+			clickonplayer: "ClickOnPlayer",
 		},
+	},
 
-		commandOperations: {
+	actionStorage: {
+		Bans: { [any]: any },
+		Logs: {
 			{
-				Name: string,
-				Alias: { string? },
-				Enabled: boolean,
-				Execute: (
-					Player: Player,
-					Args: { string },
-					addLog: (
-						calledBy: Player,
-						Action: string,
-						affectedUsers: { Player }?,
-						...any
-					) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }
-				) -> (),
-			}?
+				Action: string,
+				Timestamp: number,
+				affectedCount: number,
+				affectedUsers: {
+					[number]: {
+						Name: string,
+						UserId: number,
+					},
+				},
+				calledBy: { Name: string, UserId: number },
+				extraData: any,
+				triggeredBy: string,
+			}
 		},
-		commandOperationCodes: {
-			[string]: {
-				Code: string,
-				isExternal: boolean?,
-				Execute: (Player: Player, playerToCheck: Player, incomingArgument: string) -> boolean,
-			}?,
-		},
+	},
+
+	commandOperations: {
+		{
+			Name: string,
+			Alias: { string? },
+			Enabled: boolean,
+			Execute: (
+				Player: Player,
+				Args: { string },
+				addLog: (
+					calledBy: Player,
+					Action: string,
+					affectedUsers: { Player }?,
+					...any
+				) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }
+			) -> (),
+		}?
+	},
+	commandOperationCodes: {
+		[string]: {
+			Code: string,
+			isExternal: boolean?,
+			Execute: (Player: Player, playerToCheck: Player, incomingArgument: string) -> boolean,
+		}?,
 	},
 }
 
-export type vibezApi = vibezProperties & vibezInternalApi & {
+export type vibezProperties = {
+	GroupId: number,
+	isVibez: boolean,
+	Settings: vibezSettings & {
+		apiKey: string,
+	},
+
+	_debug: vibezDebugTools,
+	_private: vibezPrivate,
+}
+
+export type vibezPublicApi = {
 	-- Misc methods
 	bindToAction: (
 		self: vibezApi,
@@ -348,15 +390,23 @@ export type vibezApi = vibezProperties & vibezInternalApi & {
 	updateKey: (self: vibezApi, newApiKey: string) -> boolean,
 	Destroy: (self: vibezApi) -> nil,
 
+	setRankStickTool: (self: vibezApi, tool: any) -> vibezApi,
+	getGroupId: (self: vibezApi) -> number,
+
+	isPlayerABooster: (self: vibezApi, User: number | string | Player) -> boolean?,
+
 	-- Blacklists
 	addBlacklist: (
 		self: vibezApi,
-		userToBlacklist: userType,
+		userToBlacklist: Player | string | number,
 		Reason: string?,
-		blacklistExecutedBy: userType?
-	) -> blacklistResponse | errorResponse,
-	deleteBlacklist: (self: vibezApi, userToDelete: userType) -> blacklistResponse | errorResponse,
-	getBlacklists: (self: vibezApi, userId: userType) -> blacklistResponse | errorResponse,
+		blacklistExecutedBy: Player | string | number
+	) -> (blacklistResponse | errorResponse | infoResponse)?,
+	deleteBlacklist: (
+		self: vibezApi,
+		userToDelete: Player | string | number
+	) -> (blacklistResponse | errorResponse | infoResponse)?,
+	getBlacklists: (self: vibezApi, userId: userType) -> (blacklistResponse | errorResponse | infoResponse)?,
 	isUserBlacklisted: (self: vibezApi, userId: number | string) -> ...any,
 
 	-- Ranking
@@ -390,20 +440,20 @@ export type vibezApi = vibezProperties & vibezInternalApi & {
 	removeActivity: (self: vibezApi, userId: userType) -> boolean,
 	saveActivity: (
 		self: vibezApi,
-		userId: userType,
+		userId: string | number,
 		userRank: number,
 		secondsSpent: number?,
 		messagesSent: (number | { string })?,
 		shouldFetchGroupRank: boolean?
-	) -> infoResponse | errorResponse,
-	getActivity: (self: vibezApi, userId: userType?) -> activityResponse | errorResponse,
+	) -> (infoResponse | errorResponse)?,
+	getActivity: (self: vibezApi, userId: string | number) -> activityResponse?,
 
 	-- Commands
 	getUsersForCommands: (self: vibezApi, playerWhoCalled: Player, usernames: { string | number }) -> { Player },
 	addCommand: (
 		self: vibezApi,
 		commandName: string,
-		commandAlias: { string }?,
+		commandAliases: { string },
 		commandOperation: (
 			Player: Player,
 			Args: { string },
@@ -412,22 +462,25 @@ export type vibezApi = vibezProperties & vibezInternalApi & {
 				Action: string,
 				affectedUsers: { Player }?,
 				...any
-			) -> {
-				calledBy: Player,
-				affectedusers: { Player }?,
-				affectedCount: number?,
-				Metadata: any,
-			}
+			) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }
 		) -> ()
 	) -> boolean,
 	addArgumentPrefix: (
 		self: vibezApi,
 		operationName: string,
 		operationCode: string,
-		operationFunction: (playerToCheck: Player, incomingArgument: string) -> boolean
+		operationFunction: (
+			playerWhoExecuted: Player,
+			otherPlayer: Player,
+			incomingArgument: string,
+			internalFunctions: vibezCommandFunctions
+		) -> boolean,
+		metaData: { [string]: boolean }?
 	) -> vibezApi,
 	removeArgumentPrefix: (self: vibezApi, operationName: string) -> vibezApi,
 }
+
+export type vibezApi = any
 
 export type vibezHooks = {
 	Api: { any },

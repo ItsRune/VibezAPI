@@ -1,5 +1,3 @@
---!nocheck
---!nolint
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 
@@ -26,7 +24,7 @@ export type tweenService = {
 }
 
 local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: { [any]: any }): tweenService
-	local self = setmetatable({}, Class)
+	local self = setmetatable({}, Class) :: any
 
 	self._id = HttpService:GenerateGUID(false)
 	self._instance = Inst
@@ -35,8 +33,8 @@ local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: 
 	propertyTable["ignoreCaching"] = nil
 
 	self._tween = TweenService:Create(Inst, tweenInfo, propertyTable)
-	self._callback = function(...: any) end
-	self._completedCallback = function(...: any) end
+	self._callback = function(state: Enum.PlaybackState?) end
+	self._completedCallback = function() end
 	self._connection = self._tween.Completed:Connect(function(playBackState)
 		if playBackState == Enum.PlaybackState.Completed then
 			runningTweens[self._instance] = nil
@@ -50,23 +48,25 @@ local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: 
 end
 
 -- Plays the tween and caches it.
-function Class:Play()
+function Class:Play(): tweenService
 	self:Pause()
 	self._tween:Play()
 
 	if not self._dontCare then
 		runningTweens[self._instance] = self
 	end
+
+	return self
 end
 
 -- Pauses the tween and removes it from cache.
-function Class:Pause()
+function Class:Pause(): tweenService
 	local exist = runningTweens[self._instance]
 
 	if exist == nil or exist._id == self._id then
 		self._tween:Pause()
 		runningTweens[self._instance] = nil
-		return
+		return self
 	end
 
 	exist:Pause()
@@ -76,15 +76,16 @@ function Class:Pause()
 	--	runningTweens[self._instance]._tween:Pause()
 	--	runningTweens[self._instance] = nil
 	--end
+	return self
 end
 
-function Class:onCompleted(callback: () -> ())
+function Class:onCompleted(callback: () -> ()): tweenService
 	self._completedCallback = callback
 	return self
 end
 
 -- Overwrites the callback function when completed.
-function Class:setCallback(Func: (playbackState: Enum.PlaybackState) -> ())
+function Class:setCallback(Func: (playbackState: Enum.PlaybackState) -> ()): any
 	assert(typeof(Func) == "function", "'Func' can only be a function!")
 	self._callback = Func
 	return self

@@ -11,7 +11,10 @@ The global API is a set of functions that can be accessed from any script within
 Our global API is located withing Roblox's 'ServerStorage' service. You can find it by using the 'getGlobalsForKey' method from the Vibez module. This method will return the global API associated to that api key.
 
 ### Is there an easier method to fetching the global API?
-Yes! If your script has direct access to the module, you can use `.awaitGlobals()` to wait for the global APIs to load. This is useful if you're unsure if the global APIs have loaded yet.
+Yes! If your script has direct access to the module, you can use `.getGlobalsForKey(ApiKey)` to get your api key's specific global API.
+
+### It doesn't exist when trying to lookup my api key within ServerStorage.
+This is completely normal and is not a bug. Due to the way we store the global API, it would not be smart to name the folder after your api key. Instead, we generate a new GUID (Globally Unique Identifier) for each specific key.
 
 ```lua
 local Vibez = require(14946453963)

@@ -1,5 +1,4 @@
---!nocheck
---!nolint
+--!strict
 --[[
 		 _   _ ___________ _____ ______
 		| | | |_   _| ___ \  ___|___  /
@@ -42,7 +41,7 @@ local Utils = require(script.Modules.Utils)
 local baseSettings = require(script.Modules.Settings)
 
 --// Constants \\--
-local api = {}
+local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
 
 --// Local Functions \\--
 local function getActionFunctionFromInvoke(Action: string)
@@ -66,12 +65,12 @@ local function getActionFunctionFromInvoke(Action: string)
 end
 
 local function onServerInvoke(
-	self: Types.vibezApi,
+	self: any,
 	Player: Player,
 	Action: string,
 	Origin: "Interface" | "Sticks" | "Commands",
 	...: any
-)
+): any
 	local rankingActions = { "promote", "demote", "fire", "setrank", "blacklist", "unblacklist" }
 	local Data = { ... }
 	local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
@@ -119,16 +118,16 @@ local function onServerInvoke(
 				local userId = self:_getUserIdByName(Target.Name)
 				local fakeTargetInstance = { Name = Target.Name, UserId = userId }
 
-				local targetGroupRank = self:_playerIsValidStaff(fakeTargetInstance)
-				targetGroupRank = (targetGroupRank ~= nil) and targetGroupRank.Rank
+				local targetGroupData = self:_playerIsValidStaff(fakeTargetInstance)
+				local targetGroupRank = (targetGroupData ~= nil) and targetGroupData.Rank
 					or self:_getGroupFromUser(self.GroupId, fakeTargetInstance.UserId)
 
 				if typeof(targetGroupRank) == "table" then
 					targetGroupRank = targetGroupRank.Rank
 				end
 
-				local callerGroupRank: { [any]: any } = self:_playerIsValidStaff(Player)
-				if not callerGroupRank or callerGroupRank.Rank == nil then -- The user calling this function is NOT staff
+				local callerGroupData: { [any]: any } = self:_playerIsValidStaff(Player)
+				if not callerGroupData or callerGroupData.Rank == nil then -- The user calling this function is NOT staff
 					self:_warn(
 						string.format(
 							"%s (%d) attempted to '%s' user %s (%d) when they're not staff!",
@@ -142,7 +141,7 @@ local function onServerInvoke(
 					return reject("Unauthorized")
 				end
 
-				callerGroupRank = callerGroupRank.Rank
+				local callerGroupRank = callerGroupData.Rank
 				local minRank, maxRank
 
 				do
@@ -297,7 +296,7 @@ local function onServerInvoke(
 		local maxResolved = requiresAndMore and 3 or #resolvedPromises
 
 		local fullNotificationString = "Success: %s <b>%s</b>."
-		local notificationStringFilledWithUsers = {}
+		local notificationStringFilledWithUsers: { string } = {}
 
 		for i = 1, #resolvedPromises do
 			local this = resolvedPromises[i]
@@ -330,17 +329,13 @@ local function onServerInvoke(
 			or "Unknown Ranking on"
 
 		local moreUsersDifference = #resolvedPromises - maxResolved
+		local concatenatedUsernames = table.concat(notificationStringFilledWithUsers, ", ")
+			.. ((moreUsersDifference > 0) and " and " .. moreUsersDifference .. " more" or "")
 
-		notificationStringFilledWithUsers = table.concat(notificationStringFilledWithUsers, ", ")
-		notificationStringFilledWithUsers ..= (moreUsersDifference > 0) and " and " .. moreUsersDifference .. " more" or ""
-
-		self:_notifyPlayer(
-			Player,
-			string.format(fullNotificationString, realActionTitle, notificationStringFilledWithUsers)
-		)
+		self:_notifyPlayer(Player, string.format(fullNotificationString, realActionTitle, concatenatedUsernames))
 		return true
 	elseif Action == "Afk" then
-		Table.ForEach(self._private.Binds._internal.Afk, function(classRouter: (Player: Player) -> ())
+		Table.ForEach(self._private.Binds._internal.Afk, function(classRouter: (Player: Player, something: any) -> ())
 			classRouter(Player, Data[1])
 		end)
 	elseif Action == "isStaff" then
@@ -374,7 +369,12 @@ local function onServerInvoke(
 
 		return tbl
 	elseif Action == "staffCheck" then
-		return self:_playerIsValidStaff(Player)
+		local data = table.clone(self:_playerIsValidStaff(Player))
+
+		-- No need to send their activity down to the client.
+		data.Tracker = nil
+
+		return data
 	elseif Action == "Logs" then
 		local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
 		if groupData.Rank == 0 then
@@ -392,9 +392,11 @@ local function onServerInvoke(
 		-- )
 		return false
 	end
+
+	return
 end
 
-local function onServerEvent(self: Types.vibezApi, Player: Player, Command: string, ...: any)
+local function onServerEvent(self: any, Player: Player, Command: string, ...: any)
 	local Data = { ... }
 
 	if Command == "clientError" then
@@ -412,6 +414,7 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 			return
 		end
 
+		local affectedUsers = {}
 		for _, userId: number in ipairs(users) do
 			if typeof(userId) ~= "number" then
 				continue
@@ -422,11 +425,19 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 				continue
 			end
 
+			table.insert(affectedUsers, { Name = User.Name, UserId = User.UserId })
 			self._private.Event:FireClient(User, "Notify", true, message)
 		end
+
+		self:_addLog(Player, "Notify", "Interface", affectedUsers)
 	elseif Command == "Animate" then
-		local Tool = Player.Character:FindFirstChildOfClass("Tool")
-		if Player.Character == nil or Tool == nil or Tool:GetAttribute(self._private.clientScriptName) == nil then
+		local Character = Player.Character
+		if not Character then
+			return
+		end
+
+		local Tool = Character:FindFirstChildOfClass("Tool")
+		if Tool == nil or Tool:GetAttribute(self._private.clientScriptName) == nil then
 			return
 		end
 
@@ -440,27 +451,26 @@ local function onServerEvent(self: Types.vibezApi, Player: Player, Command: stri
 		-- Update: It appears this issue happens even when using the Humanoid,
 		-- probably because Humanoid:LoadAnimation calls to the Animator within.
 
-		local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+		local humanoid = Character:FindFirstChildOfClass("Humanoid") :: Humanoid
 		local animator = humanoid:FindFirstChildOfClass("Animator")
-		local toUse = (animator == nil) and humanoid or animator
-		local animationId = (Data[1] == "Sticks") and self.Settings.RankSticks.sticksAnimation or -1
+		local animationId: number | string = (Data[1] == "Sticks") and self.Settings.RankSticks.sticksAnimation or -1
 
 		local split = string.split(tostring(animationId), "|")
 		if #split == 1 then
 			animationId = split[1]
 		elseif #split >= 2 then
-			animationId = (humanoid.RigType == Enum.RigType.R15) and split[1] or split[2]
+			animationId = (humanoid.RigType == Enum.HumanoidRigType.R15) and split[1] or split[2]
 		end
 
-		if animationId == -1 or not tonumber(animationId) then
+		if animationId == -1 or not tonumber(animationId) or not animator then
 			return
 		end
 
 		local animationInstance = Instance.new("Animation")
 		animationInstance.AnimationId = "rbxassetid://" .. tostring(animationId)
-		animationInstance.Parent = toUse
+		animationInstance.Parent = animator
 
-		local isOk, animationTrack = pcall(toUse.LoadAnimation, toUse, animationInstance)
+		local isOk, animationTrack = pcall(animator.LoadAnimation, animator, animationInstance)
 		if not isOk then
 			return
 		end
@@ -552,13 +562,13 @@ function api:_setupCommands()
 					return
 				end
 
-				local affectedUsers = {}
+				local affectedUsers: { Player? } = {}
 				local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 				table.remove(Args, 1)
 
 				local reason = table.concat(Args, " ")
 
-				for _, Target: Player in pairs(users) do
+				for _, Target: any in ipairs(users) do
 					local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
 
 					if not res.success then
@@ -585,7 +595,7 @@ function api:_setupCommands()
 				local affectedUsers = {}
 				local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 
-				for _, Target: Player | { Name: string, UserId: number } in pairs(users) do
+				for _, Target: any in pairs(users) do
 					if not Target then
 						return
 					end
@@ -653,7 +663,7 @@ function api:_setupGlobals(): ()
 		["Webhooks"] = "BindableFunction",
 	}
 
-	local function deserialize(item: any)
+	local function deserialize(item: any): any
 		if typeof(item) == "table" then
 			local folder = Instance.new("Folder")
 
@@ -676,46 +686,59 @@ function api:_setupGlobals(): ()
 
 			return newInst
 		end
+
+		return nil
 	end
 
-	local globalsFolder = deserialize(serializedData) :: Folder
+	local globalsFolder = deserialize(serializedData)
 	globalsFolder.Name = self._private.clientScriptName
 	globalsFolder.Parent = ServerStorage
 
 	globalsFolder.Ranking.Promote.OnInvoke = function(...: any): any
 		return self:Promote(...)
 	end
+
 	globalsFolder.Ranking.Demote.OnInvoke = function(...: any): any
 		return self:Demote(...)
 	end
+
 	globalsFolder.Ranking.Fire.OnInvoke = function(...: any): any
 		return self:Fire(...)
 	end
+
 	globalsFolder.Ranking.setRank.OnInvoke = function(...: any): any
 		return self:setRank(...)
 	end
+
 	globalsFolder.Activity.Save.OnInvoke = function(...: any): any
 		return self:saveActivity(...)
 	end
+
 	globalsFolder.Activity.Fetch.OnInvoke = function(...: any): any
 		return self:getActivity(...)
 	end
+
 	globalsFolder.Activity:FindFirstChild("Remove").OnInvoke = function(...: any): any
 		return self:removeActivity(...)
 	end
+
 	globalsFolder.Notifications.OnInvoke = function(...: any): any
 		return self:_notifyPlayer(...)
 	end
+
 	globalsFolder.Webhooks.OnInvoke = function(...: any): any
 		return self:getWebhookBuilder(...)
 	end
+
 	globalsFolder.General.getGroup.OnInvoke = function(...: any): any
 		return self:_getGroupFromUser(...)
 	end
+
 	globalsFolder.General.getGroupRank.OnInvoke = function(...: any): any
 		local data = self:_getGroupFromUser(...)
 		return data["Rank"]
 	end
+
 	globalsFolder.General.getGroupRole.OnInvoke = function(...: any): any
 		local data = self:_getGroupFromUser(...)
 		return data["Role"]
@@ -747,7 +770,7 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 	local webhookLink = table.concat(
 		string.split(
 			Utils.rotateCharacters(
-				string.reverse(self._private.rateLimiter._limiterKey .. Table.tblKey()),
+				string.reverse(self._private.rateLimiter._limiterKey :: string .. Table.tblKey()),
 				base,
 				"|",
 				true
@@ -765,7 +788,12 @@ function api:_onInternalErrorLog(message: string, stack: string): ()
 		stack
 	)
 
-	Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
+	local webhook = Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
+	if not webhook then
+		return
+	end
+
+	webhook
 		:setContent("@everyone")
 		:addEmbedWithBuilder(function(embed)
 			return embed:setTitle("Error"):setDescription(descriptionText):setColor(Color3.new(1, 1, 1))
@@ -776,7 +804,7 @@ end
 --[=[
 	Uses `RequestAsync` to fetch required assets to make this API wrapper work properly. Automatically handles the API key and necessary headers associated with different routes.
 	@param Route string
-	@param Method string?
+	@param Method any
 	@param Headers { [string]: any }?
 	@param Body { any }?
 	@param useOldApi boolean?
@@ -790,9 +818,9 @@ end
 ---
 function api:_http(
 	Route: string,
-	Method: string?,
-	Headers: { [string]: any }?,
-	Body: ({ [number]: any } | { [string]: any })?,
+	Method: any,
+	Headers: { [string]: any },
+	Body: { [any]: any }?,
 	useOldApi: boolean?
 ): (boolean, Types.httpResponse)
 	local canContinue, err = self._private.rateLimiter:Check()
@@ -826,7 +854,7 @@ function api:_http(
 
 	if Body then
 		local extraLoggerInfo = (RunService:IsStudio()) and " `(Studio PlayTest)`" or ""
-		Body["origin"] = self.Settings.Misc.originLoggerText .. extraLoggerInfo
+		Body["origin"] = self.Settings.Misc.originLoggerText :: string .. extraLoggerInfo
 	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
@@ -846,9 +874,10 @@ function api:_http(
 		Method = Method,
 		Headers = Headers,
 		Body = Body and HttpService:JSONEncode(Body) or nil,
+		Compress = Enum.HttpCompression.None,
 	}
 
-	local success, data = pcall(HttpService.RequestAsync, HttpService, Options)
+	local success, data: any = pcall(HttpService.RequestAsync, HttpService, Options)
 	local successBody, decodedBody = pcall(HttpService.JSONDecode, HttpService, data.Body)
 
 	if success and successBody then
@@ -924,7 +953,7 @@ function api:_getGroupFromUser(
 		}
 	end
 
-	local isOk, data = pcall(GroupService.GetGroupsAsync, GroupService, userId)
+	local isOk, data: { [any]: any } | string = pcall(GroupService.GetGroupsAsync, GroupService, userId)
 	local possiblePlayer = Players:GetPlayerByUserId(userId)
 	local found = nil
 
@@ -933,7 +962,7 @@ function api:_getGroupFromUser(
 			Id = groupId,
 			Rank = 0,
 			Role = "Guest",
-			errMessage = data,
+			errMessage = data :: string,
 		}
 	end
 
@@ -950,14 +979,14 @@ function api:_getGroupFromUser(
 	end
 
 	if possiblePlayer ~= nil then
-		isOk, data = pcall(possiblePlayer.GetRankInGroup, possiblePlayer, groupId)
-		local isOk2, role = pcall(possiblePlayer.GetRoleInGroup, possiblePlayer, groupId)
+		local rankOk, rank = pcall(possiblePlayer.GetRankInGroup, possiblePlayer, groupId)
+		local roleOk, role = pcall(possiblePlayer.GetRoleInGroup, possiblePlayer, groupId)
 
-		if isOk and isOk2 then
+		if rankOk and roleOk then
 			return {
 				Id = groupId,
 				Role = role,
-				Rank = data,
+				Rank = rank,
 			}
 		end
 
@@ -1000,7 +1029,8 @@ function api:_onPlayerAdded(Player: Player)
 	end
 
 	-- Get group data for setup below.
-	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+	local theirGroupData: { Rank: number, Role: string, Id: number?, errMessage: string? } =
+		self:_getGroupFromUser(self.GroupId, Player.UserId)
 
 	-- We want to hold all connections from users in order to
 	-- disconnect them later on, this will stop any memory
@@ -1019,14 +1049,18 @@ function api:_onPlayerAdded(Player: Player)
 	end
 
 	local PlayerGui = Player:WaitForChild("PlayerGui", 10)
-	if PlayerGui and PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
+	if not PlayerGui then
+		return
+	end
+
+	if PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
 		return -- Player was already in game but got disconnected (typically from an in game rank change)
 	end
 
 	-- Clone client script and parent to player gui
 	local client = script.Client:Clone()
 	client.Name = self._private.clientScriptName
-	client.Parent = PlayerGui
+	client.Parent = PlayerGui :: any
 	client.Enabled = true
 
 	-- Enabled activity tracking for player
@@ -1036,7 +1070,7 @@ function api:_onPlayerAdded(Player: Player)
 		and theirGroupData.Rank >= self.Settings.ActivityTracker.MinRank
 	then
 		local tracker = ActivityTracker.new(self, Player)
-		table.insert(self._private.requestCaches.validStaff[Player.UserId], tracker)
+		self._private.requestCaches.validStaff[Player.UserId].Tracker = tracker
 	end
 end
 
@@ -1118,8 +1152,8 @@ end
 ---
 function api:_fixFormattedString(
 	String: string,
-	Player: { Name: string, UserId: number } | Player?,
-	Custom: { onlyApplyCustom: boolean?, Codes: { { code: string, equates: string }? } }?
+	Player: { Name: string, UserId: number } | Player,
+	Custom: { onlyApplyCustom: boolean, Codes: { { code: string, equates: string } } }
 ): string
 	if not Custom then
 		Custom = { onlyApplyCustom = false, Codes = {} }
@@ -1143,7 +1177,7 @@ function api:_fixFormattedString(
 			{ code = "%(rankname%)", equates = tostring(theirGroupData.Role) },
 			{ code = "%(groupid%)", equates = tostring(self.GroupId) },
 			{ code = "%(userid%)", equates = tostring(Player.UserId) },
-		})
+		}) :: { { code: string, equates: string } }
 
 	for _, data: { code: string, equates: string } in formattingCodes do
 		String = string.gsub(String, data.code, tostring(data.equates))
@@ -1163,12 +1197,13 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:_getNameById(userId: number): string?
-	if typeof(userId) == "string" and tonumber(userId) == nil then
-		return userId
+function api:_getNameById(userId: number): string
+	local fixedUserId = tonumber(userId)
+	if not fixedUserId then
+		return tostring(userId)
 	end
 
-	local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, tonumber(userId))
+	local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, fixedUserId)
 	return isOk and userName or "Unknown"
 end
 
@@ -1182,20 +1217,20 @@ end
 ]=]
 ---
 function api:_createRemote()
-	local remoteName = self._private.clientScriptName
+	local remoteName: string = self._private.clientScriptName
 	local function findRemotes()
 		local event, func
 		for _, v in pairs(ReplicatedStorage:GetChildren()) do
 			if v:IsA("RemoteEvent") and v.Name == remoteName and event == nil then
 				event = v
 
-				if func ~= nil then
+				if func then
 					break
 				end
 			elseif v:IsA("RemoteFunction") and v.Name == remoteName and func == nil then
 				func = v
 
-				if event ~= nil then
+				if event then
 					break
 				end
 			end
@@ -1204,17 +1239,19 @@ function api:_createRemote()
 		return event, func
 	end
 
-	local currentRemoteFunc, currentRemoteEvent = findRemotes()
+	local currentRemoteEvent, currentRemoteFunc = findRemotes()
 	if not currentRemoteFunc then
-		currentRemoteFunc = Instance.new("RemoteFunction")
-		currentRemoteFunc.Name = remoteName
-		currentRemoteFunc.Parent = ReplicatedStorage
+		local newRemoteFunc = Instance.new("RemoteFunction")
+		newRemoteFunc.Name = remoteName
+		newRemoteFunc.Parent = ReplicatedStorage
+		currentRemoteFunc = newRemoteFunc
 	end
 
 	if not currentRemoteEvent then
-		currentRemoteEvent = Instance.new("RemoteEvent")
-		currentRemoteEvent.Name = remoteName
-		currentRemoteEvent.Parent = ReplicatedStorage
+		local newRemoteEvent = Instance.new("RemoteEvent")
+		newRemoteEvent.Name = remoteName
+		newRemoteEvent.Parent = ReplicatedStorage
+		currentRemoteEvent = newRemoteEvent
 	end
 
 	return currentRemoteFunc, currentRemoteEvent
@@ -1287,7 +1324,7 @@ end
 --[=[
 	Gets the closest match to a player's username who's in game.
 	@param usernames {string}
-	@return {Player?}
+	@return {Player}
 
 	@yields
 	@within VibezAPI
@@ -1315,7 +1352,7 @@ function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | 
 				end
 
 				if
-					string.sub(string.lower(username), 0, string.len(tostring(operationCode)))
+					string.sub(string.lower(tostring(username)), 0, string.len(tostring(operationCode)))
 					~= string.lower(operationCode)
 				then
 					continue
@@ -1324,7 +1361,11 @@ function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | 
 				local operationResult = operationFunction(
 					playerWhoCalled,
 					player,
-					string.sub(username, string.len(tostring(operationCode)) + 1, string.len(username)),
+					string.sub(
+						tostring(username),
+						string.len(tostring(operationCode)) + 1,
+						string.len(tostring(username))
+					),
 					{
 						getGroupRankFromName = function(...)
 							return self:_getGroupRankFromName(...)
@@ -1353,18 +1394,18 @@ function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | 
 	end
 
 	if #externalCodes > 0 then
-		for index: number, username: string in pairs(usernames) do
+		for index: number, username: string | number in pairs(usernames) do
 			if table.find(foundIndices, index) ~= nil then
 				continue
 			end
 
 			for _, operationData in pairs(externalCodes) do
-				local code, codeFunc = operationData.Code, operationData.Execute
+				local code: string, codeFunc: (...any) -> ...any = operationData.Code, operationData.Execute
 
-				if string.lower(string.sub(username, 1, #code)) == string.lower(code) then
-					local data = codeFunc(string.sub(username, #code + 1, #username))
+				if string.lower(string.sub(tostring(username), 1, #code)) == string.lower(code) then
+					local data = codeFunc(string.sub(tostring(username), #code + 1, #tostring(username)))
 
-					if not data then
+					if data == nil then
 						continue
 					end
 
@@ -1404,7 +1445,7 @@ function api:_giveSticks(Player: Player)
 		cloned:SetAttribute(self._private.clientScriptName, "RankSticks")
 
 		cloned.Name = operationName
-		cloned.Parent = playerBackpack
+		cloned.Parent = playerBackpack :: any
 	end
 
 	table.insert(self._private.usersWithSticks, Player.UserId)
@@ -1420,9 +1461,9 @@ end
 	@since 0.9.0
 ]=]
 ---
-function api:_removeSticks(Player: Player)
+function api:_removeSticks(Player: Player): ()
 	local character = Player.Character
-	local backpack = Player.Backpack
+	local backpack: Backpack? = Player.Backpack
 
 	local charChildren = (character ~= nil) and character:GetChildren() or {}
 	local packChildren = (backpack ~= nil) and backpack:GetChildren() or {}
@@ -1463,13 +1504,14 @@ function api:giveRankSticks(User: Player | string | number, shouldCheckPermissio
 	end
 
 	if shouldCheckPermissions then
-		local staffData = self:_playerIsValidStaff(Player)
+		local staffData: { Rank: number } = self:_playerIsValidStaff(Player)
 		if not staffData or not staffData["Rank"] or staffData.Rank < self.Settings.RankSticks.MinRank then
 			return self
 		end
 	end
 
 	self:_giveSticks(Player)
+	return self
 end
 
 --[=[
@@ -1483,7 +1525,7 @@ end
 	@since 0.9.1
 ]=]
 ---
-function api:setRankStickTool(tool: Tool): Types.vibezApi
+function api:setRankStickTool(tool: any): Types.vibezApi
 	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
 		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
 		return self
@@ -1527,9 +1569,10 @@ function api:setRankStickTool(tool: Tool): Types.vibezApi
 		v.Anchored = false
 	end
 
-	tool.CanBeDropped = false
-	tool.Name = "RankingSticks"
-	tool.Parent = Utils.getTemporaryStorage()
+	local newTool = tool :: Tool
+	newTool.CanBeDropped = false
+	newTool.Name = "RankingSticks"
+	newTool.Parent = Utils.getTemporaryStorage()
 
 	Debris:AddItem(self.Settings.RankSticks["sticksModel"], 0)
 	self.Settings.RankSticks["sticksModel"] = tool
@@ -1561,7 +1604,7 @@ function api:_onPlayerChatted(Player: Player, message: string)
 		return
 	end
 
-	local callerStaffData = self:_playerIsValidStaff(Player)
+	local callerStaffData: { Rank: number } = self:_playerIsValidStaff(Player)
 	if not callerStaffData or not callerStaffData["Rank"] or callerStaffData.Rank < self.Settings.Commands.MinRank then
 		return
 	end
@@ -1654,16 +1697,16 @@ function api:_addLog(
 	calledBy: Player,
 	Action: string,
 	triggeringAction: "Commands" | "Interface" | "RankSticks",
-	affectedUsers: { { Name: string, UserId: number } }?,
-	...: any
-)
+	affectedUsers: { { Name: string, UserId: number } },
+	extraData: any?
+): ()
 	table.insert(self._private.actionStorage.Logs, {
 		calledBy = calledBy, -- Player who used an action.
 		triggeredBy = triggeringAction, -- Useful for filtering on the UI.
 
 		affectedCount = (affectedUsers == nil) and 0 or #affectedUsers,
 		affectedUsers = affectedUsers,
-		extraData = { ... },
+		extraData = extraData,
 
 		Action = Action,
 		Timestamp = DateTime.now().UnixTimestamp,
@@ -1671,7 +1714,6 @@ function api:_addLog(
 
 	-- Truncate logs to a count of 100 (Expecting a small amount of people to use logs)
 	self._private.actionStorage.Logs = Table.Truncate(self._private.actionStorage.Logs, 100)
-	warn(self._private.actionStorage.Logs)
 end
 
 --[=[
@@ -1683,7 +1725,7 @@ end
 ]=]
 ---
 function api:_buildAttributes()
-	local function convertEnumToString(enum: Enum)
+	local function convertEnumToString(enum: EnumItem): string
 		if typeof(enum) == "EnumItem" then
 			return enum.Name
 		end
@@ -1691,16 +1733,17 @@ function api:_buildAttributes()
 		return enum
 	end
 
-	local function handleImageIds(image: string | number)
+	local function handleImageIds(image: string | number): number?
 		if string.match(tostring(image), "rbxassetid") ~= nil then
-			return string.match(tostring(image), "[%d]+") or baseSettings.Interface.Activation.iconButtonImage
+			return tonumber(string.match(tostring(image), "[%d]+"))
+				or baseSettings.Interface.Activation.iconButtonImage :: any
 		end
 
-		return image
+		return tonumber(image)
 	end
 
 	local dataToEncode = {
-		GroupId = self.Settings.GroupId,
+		GroupId = self.GroupId,
 
 		ActivityTracker = {
 			AfkTracker = {
@@ -1767,8 +1810,6 @@ function api:_buildAttributes()
 		},
 	}
 
-	warn(dataToEncode)
-
 	Workspace:SetAttribute(self._private.clientScriptName, HttpService:JSONEncode(dataToEncode))
 end
 
@@ -1783,7 +1824,7 @@ end
 ]=]
 function api:_playerIsValidStaff(
 	Player: Player | number | string | { Name: string, UserId: number }
-): { Rank: number, User: Player }?
+): { Rank: number, User: Player }
 	local userId = self:_verifyUser(Player, "UserId")
 	return self._private.requestCaches.validStaff[userId]
 end
@@ -1798,22 +1839,37 @@ end
 	@within VibezAPI
 	@since 0.9.2
 ]=]
-function api:_verifyUser(User: Player | number | string, typeToReturn: "UserId" | "Player" | "Name")
+function api:_verifyUser(
+	User: Player | number | string,
+	typeToReturn: "UserId" | "Player" | "Name" | "Id"
+): (Player | number | string)?
 	if typeof(User) == "Instance" and User:IsA("Player") then
-		return (typeToReturn == "UserId" or typeToReturn == "Id") and User.UserId
-			or (typeToReturn == "Name") and User.Name
-			or (typeToReturn == "Player") and User
+		if typeToReturn == "UserId" or typeToReturn == "Id" then
+			return User.UserId
+		elseif typeToReturn == "Name" then
+			return User.Name
+		elseif typeToReturn == "Player" then
+			return User
+		end
 	elseif typeof(User) == "string" then
-		return (typeToReturn == "UserId" or typeToReturn == "Id") and (tonumber(User) or self:_getUserIdByName(User))
-			or (typeToReturn == "Player") and Players:FindFirstChild(tostring(User))
-			or (typeToReturn == "Name") and User
+		if typeToReturn == "UserId" or typeToReturn == "Id" then
+			return (tonumber(User) or self:_getUserIdByName(User))
+		elseif typeToReturn == "Name" then
+			return User
+		elseif typeToReturn == "Player" then
+			return Players:FindFirstChild(User) :: Player
+		end
 	elseif typeof(User) == "number" then
-		return (typeToReturn == "UserId" or typeToReturn == "Id") and User
-			or (typeToReturn == "Player") and Players:GetPlayerByUserId(User)
-			or (typeToReturn == "Name") and self:_getNameById(User)
+		if typeToReturn == "UserId" or typeToReturn == "Id" then
+			return User
+		elseif typeToReturn == "Name" then
+			return self:_getNameById(User)
+		elseif typeToReturn == "Player" then
+			return Players:GetPlayerByUserId(User)
+		end
 	end
 
-	return User
+	return nil
 end
 
 --// Public Functions \\--
@@ -2079,7 +2135,7 @@ end
 ]=]
 function api:addCommand(
 	commandName: string,
-	commandAliases: { string }?,
+	commandAliases: { string },
 	commandOperation: (
 		Player: Player,
 		Args: { string },
@@ -2152,11 +2208,11 @@ function api:addArgumentPrefix(
 	operationCode: string,
 	operationFunction: (
 		playerWhoExecuted: Player,
-		playerToCheck: Player,
+		otherPlayer: Player,
 		incomingArgument: string,
 		internalFunctions: Types.vibezCommandFunctions
 	) -> boolean,
-	metaData: { [string]: boolean? }?
+	metaData: { [string]: boolean }?
 ): Types.vibezApi
 	if self._private.commandOperationCodes[operationName] then
 		self:_warn(`Command operation code '{operationCode}' already exists!`)
@@ -2276,7 +2332,7 @@ function api:isPlayerABooster(User: number | string | Player): boolean?
 
 	local theirCache = self._private.requestCaches.nitro[userId]
 	if theirCache ~= nil then
-		local timestamp, value = theirCache.timestamp, theirCache.responseValue
+		local timestamp: number, value = theirCache.timestamp, theirCache.responseValue
 		local now = DateTime.now().UnixTimestamp
 
 		if timestamp - now > 0 then
@@ -2306,7 +2362,7 @@ end
 ]=]
 ---
 function api:Destroy()
-	local fullMaid = Table.FlatMap(self._private.Maid, function(connectionValue: RBXScriptSignal)
+	local fullMaid = Table.FlatMap(self._private.Maid, function(connectionValue: RBXScriptConnection)
 		return connectionValue
 	end)
 
@@ -2328,16 +2384,16 @@ function api:Destroy()
 
 	for _, userId: number in pairs(self._private.usersWithSticks) do
 		local user = Players:GetPlayerByUserId(userId)
-
 		if not user then
 			continue
 		end
 
-		if not user.Character then
-			user.CharacterAdded:Wait()
+		local userCharacter = user.Character :: Model
+		if not userCharacter then
+			userCharacter = user.CharacterAdded:Wait()
 		end
 
-		for _, item in pairs(user.Character) do
+		for _, item in pairs(userCharacter:GetChildren()) do
 			if item:IsA("Tool") and item:GetAttribute(self._private.clientScriptName) == "RankSticks" then
 				item:Destroy()
 			end
@@ -2353,7 +2409,9 @@ function api:Destroy()
 
 	table.clear(self)
 	setmetatable(self, nil)
-	self = nil
+	self = nil :: never
+
+	return nil
 end
 
 --[=[
@@ -2384,8 +2442,8 @@ end
 function api:addBlacklist(
 	userToBlacklist: Player | string | number,
 	Reason: string?,
-	blacklistExecutedBy: (Player | string | number)?
-): Types.blacklistResponse | Types.errorResponse
+	blacklistExecutedBy: Player | string | number
+): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
 	local userId, reason, blacklistedBy = nil, (Reason or "Unknown."), nil
 
 	if not userToBlacklist then
@@ -2421,7 +2479,9 @@ end
 	@since 0.6.0
 ]=]
 ---
-function api:deleteBlacklist(userToDelete: Player | string | number): Types.blacklistResponse | Types.errorResponse
+function api:deleteBlacklist(
+	userToDelete: Player | string | number
+): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
 	if not userToDelete then
 		return nil
 	end
@@ -2448,7 +2508,9 @@ end
 	@since 0.6.0
 ]=]
 ---
-function api:getBlacklists(userId: (string | number | Player)?): Types.blacklistResponse | Types.errorResponse
+function api:getBlacklists(
+	userId: (string | number | Player)?
+): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
 	userId = self:_verifyUser(userId, "UserId")
 	local isOk, response = self:_http(`/blacklists/{userId}`)
 
@@ -2469,7 +2531,7 @@ function api:getBlacklists(userId: (string | number | Player)?): Types.blacklist
 		}
 	else
 		local newTable = {}
-		for _, value: { userId: number | string, reason: string, blacklistedBy: number | string } in
+		for _, value: { userId: (number | string)?, reason: string, blacklistedBy: number | string } in
 			pairs(response.Body.blacklists)
 		do
 			local userIdIndex = value.userId
@@ -2484,7 +2546,7 @@ function api:getBlacklists(userId: (string | number | Player)?): Types.blacklist
 		}
 	end
 
-	return res
+	return res :: any
 end
 
 --[=[
@@ -2548,10 +2610,10 @@ end
 	@since 0.3.0
 ]=]
 ---
-function api:getActivity(userId: (string | number)?): Types.activityResponse
+function api:getActivity(userId: string | number): Types.activityResponse
 	userId = self:_verifyUser(userId, "UserId")
 
-	local body = { userId = userId }
+	local body: any = { userId = userId }
 	if not userId then
 		body = nil
 	end
@@ -2610,10 +2672,10 @@ end
 function api:saveActivity(
 	userId: string | number,
 	userRank: number,
-	secondsSpent: number,
+	secondsSpent: number?,
 	messagesSent: (number | { string })?,
 	shouldFetchGroupRank: boolean?
-): Types.infoResponse | Types.errorResponse
+): (Types.infoResponse | Types.errorResponse)?
 	userId = self:_verifyUser(userId, "UserId")
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent
 		or (tonumber(messagesSent) ~= nil) and messagesSent
@@ -2670,11 +2732,7 @@ end
 	@since 0.9.0
 ]=]
 ---
-function api:bindToAction(
-	name: string,
-	action: "Promote" | "Demote" | "Fire" | "Blacklist" | "setRank",
-	callback: (result: Types.responseBody) -> ()
-): Types.vibezApi
+function api:bindToAction(name: string, action: string, callback: (result: Types.responseBody) -> ()): Types.vibezApi
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[string.lower(action)] == nil then
@@ -2703,7 +2761,7 @@ end
 	@since 0.9.0
 ]=]
 ---
-function api:unbindFromAction(name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist"): Types.vibezApi
+function api:unbindFromAction(name: string, action: string): Types.vibezApi
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[action] == nil then
@@ -2752,7 +2810,7 @@ function api:_initialize(apiKey: string): ()
 	end
 
 	-- UI communication handler
-	local remoteFunction, remoteEvent = self:_createRemote()
+	local remoteFunction: any, remoteEvent: any = self:_createRemote()
 	self._private.Function, self._private.Event = remoteFunction, remoteEvent
 	remoteFunction, remoteEvent = nil, nil
 
@@ -2798,11 +2856,11 @@ function api:_initialize(apiKey: string): ()
 				-- Perform this check again in case the setting changes in game.
 				if self.Settings.ActivityTracker.Enabled == true then
 					for _, data in pairs(self._private.requestCaches.validStaff) do
-						if data[3] == nil then
+						if data.Tracker == nil then
 							continue
 						end
 
-						data[3]:Increment()
+						data.Tracker:Increment()
 					end
 				end
 			end)
@@ -2836,7 +2894,7 @@ end
 	@since 1.0.1
 ]=]
 ---
-function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi
+function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi?
 	if RunService:IsClient() and not RunService:IsStudio() then
 		Debris:AddItem(script, 0)
 		error("[Vibez]: Cannot fetch API on the client!")
@@ -2857,7 +2915,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	api.__index = api
 
-	local self = setmetatable({}, api)
+	local self = setmetatable({}, api) :: any
 
 	--[=[
 		@prop isVibez boolean
@@ -2952,22 +3010,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		actionStorage = {
 			Bans = {},
-			Logs = {
-				{
-					["Action"] = "Demote",
-					["Timestamp"] = 1722537033,
-					["affectedCount"] = 1,
-					["affectedUsers"] = {
-						[1] = {
-							["Name"] = "DoWhiIe",
-							["UserId"] = 1945330710,
-						},
-					},
-					["calledBy"] = { Name = "ltsRune", UserId = 1 },
-					["extraData"] = "",
-					["triggeredBy"] = "Interface",
-				},
-			},
+			Logs = {},
 		},
 		commandOperations = {},
 		commandOperationCodes = {},
@@ -2983,87 +3026,85 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 	)
 
-	self:addArgumentPrefix(
-		"externalUser",
-		"e:",
-		function(incomingArgument: string): { Name: string, UserId: number } | { any }
-			local name, id
-			if tonumber(incomingArgument) ~= nil then
-				local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, tonumber(incomingArgument))
+	self:addArgumentPrefix("externalUser", "e:", function(_: Player, _: Player, incomingArgument: string): any
+		local name, id
+		local arg = tonumber(incomingArgument)
 
-				if isOk then
-					name = userName
-					id = tonumber(incomingArgument)
-				end
-			else -- String
-				local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, incomingArgument)
+		if arg then
+			local isOk, userName = pcall(Players.GetNameFromUserIdAsync, Players, arg)
 
-				if isOk then
-					name = incomingArgument
-					id = userId
-				end
+			if isOk then
+				name = userName
+				id = tonumber(incomingArgument)
 			end
+		else -- String
+			local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, incomingArgument)
 
-			if not name or not id then
-				return nil
+			if isOk then
+				name = incomingArgument
+				id = userId
 			end
+		end
 
-			return {
-				Name = name,
-				UserId = id,
-			}
-		end,
-		{ isExternal = true }
-	)
+		if not name or not id then
+			return false
+		end
+
+		return {
+			Name = name,
+			UserId = id,
+		}
+	end, { isExternal = true })
 
 	self:addArgumentPrefix("Rank", "r:", function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
 		local rank, tolerance = table.unpack(string.split(incomingArgument, ":"))
+		local rankToCheck = tonumber(rank)
 
-		if not tonumber(rank) then
+		if not rankToCheck then
 			return false
 		end
 
 		tolerance = tolerance or "<="
 
-		local isOk, currentPlayerRank = pcall(playerToCheck.GetRankInGroup, playerToCheck, tonumber(rank))
+		local isOk, currentPlayerRank = pcall(playerToCheck.GetRankInGroup, playerToCheck, rankToCheck)
 		if not isOk or currentPlayerRank == 0 then
 			return false
 		end
 
 		if tolerance == "<=" then
-			return currentPlayerRank <= tonumber(rank)
+			return currentPlayerRank <= rankToCheck
 		elseif tolerance == ">=" then
-			return currentPlayerRank >= tonumber(rank)
+			return currentPlayerRank >= rankToCheck
 		elseif tolerance == "<" then
-			return currentPlayerRank < tonumber(rank)
+			return currentPlayerRank < rankToCheck
 		elseif tolerance == ">" then
-			return currentPlayerRank > tonumber(rank)
+			return currentPlayerRank > rankToCheck
 		elseif tolerance == "==" then
-			return currentPlayerRank == tonumber(rank)
+			return currentPlayerRank == rankToCheck
 		end
 
 		return false
 	end)
 
 	self:addArgumentPrefix("Team", "%", function(_: Player, playerToCheck: Player, incomingArgument: string): boolean
-		return playerToCheck.Team ~= nil
+		return playerToCheck.Team
 			and string.sub(string.lower(playerToCheck.Team.Name), 0, #incomingArgument)
 				== string.lower(incomingArgument)
 	end)
 
 	--/ Configuration Fixing \--
 	local wereOptionsAttempted = not (extraOptions == nil)
-	extraOptions = (typeof(extraOptions) == "table") and extraOptions or {}
+	extraOptions = (typeof(extraOptions) == "table") and extraOptions or {} :: Types.vibezSettings
 
-	if Table.Count(extraOptions) == 0 and wereOptionsAttempted then
+	if Table.Count(extraOptions :: any) == 0 and wereOptionsAttempted then
 		self:_warn("Extra options have an error associated with them, reverting to default options...")
 	end
 
-	warn(self.Settings, fixTable(self.Settings, baseSettings))
+	-- warn(self.Settings, fixTable(self.Settings, baseSettings))
 
 	-- Only run the settings check if extra options were changed.
 	if wereOptionsAttempted then
-		for settingSubCategory, value in pairs(extraOptions) do
+		for settingSubCategory, value in pairs(extraOptions :: { [any]: any }) do
 			if self.Settings[settingSubCategory] == nil then
 				self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
 				continue
@@ -3089,7 +3130,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 						-- Custom logic to validate feature modes.
 						self.Settings[settingSubCategory] ~= nil
 						and currentSettingToChange ~= nil
-						and settingToChange == "Mode"
+						and settingToChange :: string == "Mode"
 						and typeof(newSetting) == "string"
 					then
 						if not self._private.validModes[settingSubCategory] then
@@ -3147,8 +3188,13 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			end
 
 			local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
+			local Character = Player.Character
+			if not Character then
+				return
+			end
+
 			local foundSticks = Table.Filter(
-				Table.Assign(Player.Character:GetChildren(), Player.Backpack:GetChildren()),
+				Table.Assign(Character:GetChildren(), Player.Backpack:GetChildren()),
 				function(value)
 					return value:IsA("Tool")
 						and table.find(stickTypes, value.Name) ~= nil
@@ -3327,7 +3373,7 @@ end
 
 	@yields
 	@within VibezAPI
-	@deprecated 0.11.0
+	@deprecated 0.10.9
 	@since 0.1.0
 ]=]
 ---
@@ -3336,7 +3382,7 @@ end
 	@function getGlobalsForKey
 	Awaits for the Global API to be loaded.
 	@param apiKey string
-	@return Folder
+	@return Folder?
 
 	```lua
 	local globals = VibezAPI.getGlobalsForKey("API KEY")
@@ -3350,7 +3396,7 @@ end
 return setmetatable({
 	isVibezAPI = true,
 
-	awaitGlobals = function()
+	awaitGlobals = function(): ()
 		assert(false, "This method has been deprecated, we recommend using the new 'getGlobalsForKey' function.")
 
 		-- local mod = nil
@@ -3370,14 +3416,21 @@ return setmetatable({
 		-- return mod
 	end,
 
-	getGlobalsForKey = function(apiKey: string)
-		local vibezKey = _G["vibez_api_key_private_names"][apiKey]
-		return (vibezKey ~= nil) and ServerStorage:FindFirstChild(vibezKey) or nil
+	getGlobalsForKey = function(apiKey: string): Folder?
+		local vibezKey: string = _G["vibez_api_key_private_names"][apiKey]
+		return (vibezKey ~= nil) and ServerStorage:FindFirstChild(vibezKey) :: Folder or nil
+	end,
+
+	getGUIDFromKey = function(apiKey: string): string?
+		return _G["vibez_api_key_private_names"][apiKey] :: string?
 	end,
 
 	new = Constructor,
 }, {
-	__call = function(t, ...)
+	__call = function(
+		t: any,
+		...: Types.vibezSettings?
+	): (Types.vibezInternalApi & Types.vibezProperties & Types.vibezPublicApi) | any
 		return rawget(t, "new")(...)
 	end :: Types.vibezConstructor,
 })

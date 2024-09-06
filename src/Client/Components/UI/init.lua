@@ -36,7 +36,7 @@ local function _changeSelectorHighlight(Tweens: Tweens, frameName: string)
 	-- Selected color: 255, 255, 255
 	-- Unselected color: 147, 147, 147
 
-	for _, topButton: TextButton in ipairs(Top.Buttons:GetChildren()) do
+	for _, topButton: Instance in ipairs(Top.Buttons:GetChildren()) do
 		if not topButton:IsA("TextButton") then
 			continue
 		end

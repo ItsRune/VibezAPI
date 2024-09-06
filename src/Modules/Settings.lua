@@ -18,6 +18,8 @@ return {
 		MinRank = 255,
 		MaxRank = 255,
 
+		blacklistedMethods = {}, -- Won't insert if the name is in this table.
+
 		sticksModel = nil, -- Uses default
 		sticksAnimation = "17837716782|17838471144", -- Uses a very horrible default one.
 	},

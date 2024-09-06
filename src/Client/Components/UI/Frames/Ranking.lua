@@ -1,5 +1,4 @@
 --!nocheck
---!nolint
 --// Services \\--
 local Players = game:GetService("Players")
 local UserService = game:GetService("UserService")
@@ -11,7 +10,6 @@ local defaultThumbnail = "rbxasset://textures/AvatarCompatibilityPreviewer/user.
 local usernameTextBox = nil
 local lastPerformedTruncation = 0
 local userCache = {}
-local groupCache = {}
 local selectedUsers = {}
 local Maid = {
 	Main = {},
@@ -81,7 +79,7 @@ local function _getUserInformation(userId: number)
 
 	userInfo = userInfo[1]
 
-	-- Ignore me, I prefer this format.
+	-- Ignore, I prefer this format.
 	userInfo.UserId = userInfo.Id
 	userInfo.Id = nil
 
@@ -270,11 +268,19 @@ local function _handleExternalUserSearch(componentData: { [any]: any })
 			continue
 		end
 
-		local fakePlayer = newproxy(false)
-		fakePlayer.Name = userInfo[i].Username
-		fakePlayer.UserId = userId
-		fakePlayer.DisplayName = userInfo[i].DisplayName
-		fakePlayer.isVerified = userInfo[i].HasVerifiedBadge
+		local fakePlayer = newproxy(true)
+		local Metatable = getmetatable(fakePlayer)
+		local Internal = {}
+
+		Internal.Name = userInfo[i].Username
+		Internal.UserId = userId
+		Internal.DisplayName = userInfo[i].DisplayName
+		Internal.isVerified = userInfo[i].HasVerifiedBadge
+
+		Metatable.__index = Internal
+		Metatable.__tostring = function(self: Player): string
+			return rawget(self, "Name")
+		end
 
 		table.insert(fakePlayers, fakePlayer)
 	end
@@ -367,7 +373,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
 
 			if #filteredPlayers == 0 then
-				_checkTextAfterDelay(Frame.User.Username, 2, _handleExternalUserSearch, componentData)
+				_checkTextAfterDelay(Frame.User.Username, 1, _handleExternalUserSearch, componentData)
 				return
 			end
 
@@ -375,10 +381,8 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		end)
 	)
 
-	-- DEBUG: This connection for some reason causes the script to break?
-	-- setRank action is in a separate area than the other buttons.
-
-	local setRankButton = Frame.Actions.Body.setRank.Button
+	local setRankFrame = Frame.Actions.Body.setRank
+	local setRankButton = setRankFrame.Button
 	table.insert(
 		Maid.Main,
 		setRankButton.MouseButton1Click:Connect(function()
@@ -409,19 +413,65 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 	-- Add a dropdown for group ranks with the provided attribute "GroupId" on existing attr.
 	-- - Will provide easier use of users within the group along with simple suggestions that'll prevent time spent typing role names.
 	-- - Cache of group ranks to keep things simple.
-	local groupId = tostring(componentData.Data.GroupId)
-	local currentGroupCache = groupCache[groupId]
-
-	if currentGroupCache ~= nil or tonumber(groupId) == nil then
-		return
-	end
-
+	local groupId = componentData.GroupId
+	local rankTextBox = setRankFrame.newRank
+	local suggestionLabel = rankTextBox.Suggestion
+	local rankIdSuggestionLabel = rankTextBox.numSuggestion
 	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, tonumber(groupId))
+
 	if not isOk or typeof(groupInfo) ~= "table" then
 		return
 	end
 
-	groupCache[groupId] = groupInfo
+	table.insert(
+		Maid.Main,
+		rankTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+			if rankTextBox.Text == "" then
+				suggestionLabel.Text = ""
+				rankIdSuggestionLabel.Text = ""
+				return
+			end
+
+			if tonumber(rankTextBox.Text) then
+				local filteredByRank = componentData.Table.Filter(groupInfo.Roles, function(role: any)
+					return role.Rank == tonumber(rankTextBox.Text) or role.Id == tonumber(rankTextBox.Text)
+				end)
+
+				if #filteredByRank == 0 then
+					rankIdSuggestionLabel.Text = '<font color="rgb(255,55,55)">(Unknown Rank)</font>'
+					return
+				end
+
+				rankIdSuggestionLabel.Text = string.format("(%s)", filteredByRank[1].Name)
+				return
+			end
+
+			local filteredByName = componentData.Table.Filter(groupInfo.Roles, function(role: any)
+				return string.sub(string.lower(role.Name), 1, #rankTextBox.Text) == string.lower(rankTextBox.Text)
+			end)
+
+			if #filteredByName == 0 then
+				local erroringLetter = string.sub(rankTextBox.Text, #rankTextBox.Text, #rankTextBox.Text)
+				suggestionLabel.Text = string.sub(rankTextBox.Text, 1, #rankTextBox.Text - 1)
+					.. '<font color="rgb(255,55,55)">'
+					.. erroringLetter
+					.. "</font>"
+				return
+			end
+
+			suggestionLabel.Text = rankTextBox.Text
+				.. string.sub(filteredByName[1].Name, #rankTextBox.Text + 1, #filteredByName[1].Name)
+		end)
+	)
+
+	table.insert(
+		Maid.Main,
+		rankTextBox.FocusLost:Connect(function()
+			if suggestionLabel.Text ~= "" then
+				rankTextBox.Text = suggestionLabel.ContentText
+			end
+		end)
+	)
 end
 
 --// Core \\--

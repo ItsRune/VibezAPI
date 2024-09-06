@@ -71,11 +71,11 @@ local function _fixStringForAction(componentData: { [any]: any }, logInfo: LogIn
 	return baseString .. (extraData ~= nil and extraData or "")
 end
 
-local function _createErrorLog(logData: { [any]: any }, newError: string)
-	table.insert(logData, {
+local function _createErrorLog(newError: string)
+	return {
 		Action = "INTERNAL_ERROR",
 		errorMessage = '<font color="rgb(200,50,50)">' .. newError .. "</font>",
-	})
+	}
 end
 
 local function _addLog(Frame: any, componentData: { [any]: any }, newLog: LogInformation)
@@ -92,11 +92,6 @@ local function _addLog(Frame: any, componentData: { [any]: any }, newLog: LogInf
 
 	newTemplate.Name = "Log"
 	newTemplate.Parent = Frame.Scroll
-
-	if newLog.Action == "INTERNAL_ERROR" then
-		newTemplate.Text = message
-		return
-	end
 
 	newTemplate.Name = nextNumber
 	newTemplate.Text = message
@@ -146,11 +141,10 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 
 	local logCompData = componentData.Data.Logs
 	local staffData = componentData.remoteFunction:InvokeServer("staffCheck")
-	if not staffData or logCompData.Status == false or staffData.Rank < logCompData.MinRank then
-		local fakeLogs = {}
 
-		_createErrorLog(fakeLogs, "You don't have permission to view these logs.")
-		_addLog(Frame, componentData, fakeLogs[1])
+	if not staffData or logCompData.Status == false or staffData.Rank < logCompData.MinRank then
+		local fakeError: any = _createErrorLog("You don't have permission to view these logs.")
+		_addLog(Frame, componentData, fakeError)
 		return
 	end
 
@@ -158,7 +152,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 
 	-- Create an error so that the user knows there's no logs yet.
 	if #logData == 0 then
-		_createErrorLog(logData, "No Logs to see yet.")
+		table.insert(logData, _createErrorLog("No Logs to see yet."))
 	end
 
 	for i = 1, #logData do

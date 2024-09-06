@@ -53,7 +53,7 @@ local Types = require(script.Parent.Types)
 	@since 1.1.0
 ]=]
 ---
-function Hooks.new(vibezApi: Types.vibezApi, webhook: string): Types.vibezHooks?
+function Hooks.new(vibezApi: any, webhook: string): Types.vibezHooks
 	local self = setmetatable({}, Class)
 
 	self.webhook = webhook

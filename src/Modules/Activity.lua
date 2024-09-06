@@ -141,7 +141,7 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 			override = not existingClass.isAfk
 		end
 
-		existingClass:changeAfkState(override)
+		existingClass.isAfk = override
 	end)
 
 	table.remove(Activity.Processing, table.find(Activity.Processing, forPlayer.UserId))
@@ -168,7 +168,7 @@ function Class:Increment()
 		self._afkCounter += 1
 
 		if self._afkCounter ~= 0 and self._afkCounter % 30 == 0 then
-			self._api:_warn(self._player.Name .. " has been marked AFK for " .. self.self._afkCounter .. " seconds!")
+			self._api:_warn(self._player.Name .. " has been marked AFK for " .. self._afkCounter .. " seconds!")
 		end
 		return
 	end
