@@ -105,6 +105,8 @@ local function onAttributeChanged()
 		return
 	end
 
+	System.isWarningsAllowed = not States.Misc.ignoreWarnings
+
 	for key: string, data: { [any]: any } in pairs(States) do
 		if key == "GroupId" then
 			continue

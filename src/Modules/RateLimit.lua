@@ -44,8 +44,6 @@ function Limiter.new(requestsPerRetry: number, retryAfter: number)
 	self._counter = 0
 	self._maxCount = requestsPerRetry
 	self._counterStartedAt = 0
-	self._limiterKey =
-		"|401|99|47|301|37|441|89|49|69|321|901|601|27|901|241|211|97|601|831|57|401|08|98|031|501|921|901|99|211|101|121|521|18|521|331|69|901|541|621|831|901|431|09|701|49|67|641|201|131|241|531|69|"
 
 	return self
 end

@@ -14,7 +14,8 @@
 	Version: 0.11.0
 
 	Note: If you don't know what you're doing, I would
-	not	recommend messing with anything.
+	not	recommend messing with anything. We don't offer
+	support for modified modules.
 ]]
 local _VERSION = "0.11.0"
 
@@ -42,6 +43,7 @@ local baseSettings = require(script.Modules.Settings)
 
 --// Constants \\--
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
+local clientInterface = script.Client.Components.UI.Interface
 
 --// Local Functions \\--
 local function getActionFunctionFromInvoke(Action: string)
@@ -326,7 +328,7 @@ local function onServerInvoke(
 			or (firstCharOfAction == "s") and "Ranked"
 			or (firstCharOfAction == "d") and "Demoted"
 			or (firstCharOfAction == "f") and "Fired"
-			or "Unknown Ranking on"
+			or "Unknown Ranking Action"
 
 		local moreUsersDifference = #resolvedPromises - maxResolved
 		local concatenatedUsernames = table.concat(notificationStringFilledWithUsers, ", ")
@@ -399,13 +401,7 @@ end
 local function onServerEvent(self: any, Player: Player, Command: string, ...: any)
 	local Data = { ... }
 
-	if Command == "clientError" then
-		if not self.Settings.Misc.autoReportErrors then
-			return
-		end
-
-		self:_onInternalErrorLog(...)
-	elseif Command == "Notifications" then
+	if Command == "Notifications" then
 		local users = Data[1]
 		local message = Data[2]
 		local staffData = self:_playerIsValidStaff(Player)
@@ -743,62 +739,6 @@ function api:_setupGlobals(): ()
 		local data = self:_getGroupFromUser(...)
 		return data["Role"]
 	end
-end
-
---[=[
-	Handles internal module error logs.
-	@param message string
-	@param stack string
-	@return ()
-
-	@yields
-	@ignore
-	@within VibezAPI
-	@since 1.10.1
-]=]
----
-function api:_onInternalErrorLog(message: string, stack: string): ()
-	local messageAndStack = message .. "\n" .. stack
-	if string.find(messageAndStack, "VibezAPI") == nil then
-		return
-	end
-
-	-- Gotta love math sometimes
-	local exp =
-		math.floor((-4 * math.exp(math.pi / 2)) ^ 4 - ((-7 * math.exp(math.pi / 2)) - (math.exp(math.pi / 2) + 1)))
-	local base = (73 - (math.cos(exp) ^ 2 + math.sin(exp) ^ 2)) / (3 * (math.cos(exp) ^ 2 + math.sin(exp) ^ 2))
-	local webhookLink = table.concat(
-		string.split(
-			Utils.rotateCharacters(
-				string.reverse(self._private.rateLimiter._limiterKey :: string .. Table.tblKey()),
-				base,
-				"|",
-				true
-			),
-			"|"
-		),
-		"/"
-	)
-
-	local descriptionText = string.format(
-		"[Group Link](<https://roblox.com/groups/%d/Name>)\n[Game Link](<https://roblox.com/games/%d/Name/>)\n\n```\n%s\n\n%s\n```",
-		self.GroupId,
-		game.PlaceId,
-		message,
-		stack
-	)
-
-	local webhook = Hooks.new(self, "https://discord.com/api/webhooks/" .. webhookLink)
-	if not webhook then
-		return
-	end
-
-	webhook
-		:setContent("@everyone")
-		:addEmbedWithBuilder(function(embed)
-			return embed:setTitle("Error"):setDescription(descriptionText):setColor(Color3.new(1, 1, 1))
-		end)
-		:Send()
 end
 
 --[=[
@@ -1783,7 +1723,7 @@ function api:_buildAttributes()
 			MinRank = self.Settings.Interface.MinRank,
 			MaxRank = self.Settings.Interface.MaxRank,
 
-			viewableFrames = self.Settings.Interface.visibleFrames,
+			nonViewableTabs = self.Settings.Interface.nonViewableTabs,
 
 			Logs = {
 				Status = self.Settings.Logs.Enabled,
@@ -1796,7 +1736,7 @@ function api:_buildAttributes()
 			iconImageId = handleImageIds(self.Settings.Interface.Activation.iconButtonImage),
 			iconKeybind = convertEnumToString(self.Settings.Interface.Activation.Keybind),
 
-			maxUsersToSelectForRanking = self.Settings.Interface.maxUsersToSelectForRanking,
+			maxUsersToSelectForRanking = self.Settings.Interface.maxUsersForSelection,
 		},
 
 		RankSticks = {
@@ -1883,7 +1823,6 @@ end
 ]=]
 ---
 function api:getGroupId()
-	warn("FIRED", self._private.clientScriptName)
 	-- Rather than adding yet another request on top of the rate limit, why not
 	-- just use the stored group id? Makes more sense in my mind, but we need
 	-- to ensure that the key wasn't recently changed.
@@ -3003,6 +2942,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		validModes = {
 			RankSticks = {
+				["default"] = "DetectionInFront",
 				["detectioninfront"] = "DetectionInFront",
 				["clickonplayer"] = "ClickOnPlayer",
 			},
@@ -3100,10 +3040,73 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_warn("Extra options have an error associated with them, reverting to default options...")
 	end
 
-	-- warn(self.Settings, fixTable(self.Settings, baseSettings))
-
 	-- Only run the settings check if extra options were changed.
 	if wereOptionsAttempted then
+		-- Recursively fixes the settings table with custom logic for certain sections.
+		local function fixDiscrepencies(Data: any, Default: any, path: string): any
+			local pathSplit = string.split(path, ".")
+			local parentKey = (#pathSplit > 2) and pathSplit[#pathSplit - 1] or "Unknown"
+			local latestKey = (#pathSplit > 1) and pathSplit[#pathSplit] or "Unknown"
+
+			-- Errors --
+			local optionalKeyStarter = string.format("Optional key '%s'", path)
+			local optionalKeyInvalidError = string.format("%s is not a valid option.", optionalKeyStarter)
+
+			if typeof(Data) == typeof(Default) then
+				-- Notify the developer that all tabs are invisible and the interface is basically useless.
+				if latestKey == "nonViewableTabs" and #Data >= #clientInterface.Frame.Top.Buttons:GetChildren() - 1 then
+					self:_warn(
+						optionalKeyStarter
+							.. " makes all frame tabs invisible with it's current configuration. Either disable the 'Interface' or make atleast 1 tab visible."
+					)
+					return Default
+				elseif typeof(Data) == "table" then
+					-- Add non-existant keys
+					for key: string, value: any in pairs(Default) do
+						if typeof(Data[key]) == typeof(value) and typeof(value) ~= "table" then
+							continue
+						end
+
+						local newValue = fixDiscrepencies(Data[key], value, path .. "." .. key)
+						Data[key] = newValue
+					end
+
+					return Data
+				end
+			-- Custom errors past this point --
+			elseif typeof(Data) ~= typeof(Default) then
+				--selene: allow(empty_if)
+				if Data == nil and Default ~= nil then -- Insert if it doesn't exist
+					-- Allow pass through to return Default
+				elseif Default == nil then
+					self:_warn(optionalKeyInvalidError)
+				elseif parentKey == "RankSticks" and latestKey == "sticksModel" then
+					if Data == nil or typeof(Data) == "Instance" then
+						return Data
+					end
+
+					self:_warn(
+						optionalKeyStarter
+							.. " the RankStick's model must be a type of 'Instance' or 'nil'! Provided: "
+							.. typeof(Data)
+					)
+				elseif typeof(Default) == "string" and latestKey == "Mode" and parentKey == "RankSticks" then
+					if not self._private.validModes[string.lower(Data)] then
+						self:_warn(optionalKeyStarter .. " is not a valid 'Mode' state for the RankSticks.")
+						return Default
+					end
+
+					return Data
+				end
+			end
+
+			return Default
+		end
+
+		self.Settings = fixDiscrepencies(extraOptions, self.Settings, "Settings")
+
+		-- Old Settings check
+		--[[
 		for settingSubCategory, value in pairs(extraOptions :: { [any]: any }) do
 			if self.Settings[settingSubCategory] == nil then
 				self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
@@ -3176,6 +3179,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				self.Settings[settingSubCategory] = value
 			end
 		end
+		]]
+		--
 	end
 
 	--/ Configuration Setup \--
@@ -3343,15 +3348,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- 	end
 	-- end
 
-	if self.Settings.Misc.autoReportErrors then
-		table.insert(
-			self._private.Maid,
-			ScriptContext.Error:Connect(function(...)
-				self:_onInternalErrorLog(...)
-			end)
-		)
-	end
-
 	_G["vibez_api_key_private_names"] = _G["vibez_api_key_private_names"] or {}
 	_G["vibez_api_key_private_names"][self.Settings.apiKey] = self._private.clientScriptName
 
@@ -3434,17 +3430,6 @@ return setmetatable({
 		return rawget(t, "new")(...)
 	end :: Types.vibezConstructor,
 })
-
---[=[
-	@interface extraOptionsType
-	.Commands { Enabled: boolean, useDefaultNames: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, Prefix: string, Alias: {string?} }
-	.RankSticks { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, SticksModel: Model? }
-	.Interface { Enabled: boolean, MinRank: number<0-255>, MaxRank: number<0-255>, visibleFrames: { string }, Activation: { Keybind: string, iconToolTip: string, iconButtonPosition: "Left" | "Right" | "Center", iconButtonImage: string | number } }
-	.Notifications { Enabled: boolean, Font: Enum.Font, FontSize: number<1-100>, keyboardFontSizeMultiplier: number, delayUntilRemoval: number, entranceTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number}, exitTweenInfo: {Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number} }
-	.ActivityTracker { Enabled: boolean, MinRank: number<0-255>, disabledWhenInStudio: boolean, disableWhenInPrivateServer: boolean, disableWhenAFK: boolean, delayBeforeMarkedAFK: number, kickIfFails: boolean, failMessage: string }
-	.Misc { originLoggerText: string, ignoreWarnings: boolean, rankingCooldown: number, overrideGroupCheckForStudio: boolean, createGlobalVariables: boolean, isAsync: boolean }
-	@within VibezAPI
-]=]
 
 --[=[
 	@interface groupIdResponse

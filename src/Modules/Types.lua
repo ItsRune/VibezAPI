@@ -1,5 +1,3 @@
--- If you're reading this... Don't even ask..
-
 export type RateLimit = {
 	isLimited: boolean,
 	_retryAfter: number,
@@ -118,7 +116,7 @@ export type vibezSettings = {
 		MaxRank: number,
 
 		sticksModel: Model?,
-		sticksAnimation: number?,
+		sticksAnimation: string?,
 	},
 
 	Notifications: {
@@ -150,7 +148,7 @@ export type vibezSettings = {
 		maxUsersToSelectForRanking: number,
 
 		Activation: {
-			Keybind: string,
+			Keybind: string | Enum.KeyCode,
 
 			allowMobileUsers: boolean,
 			iconButtonImage: string | number,
@@ -158,7 +156,7 @@ export type vibezSettings = {
 			iconToolTip: string,
 		},
 
-		VisibleFrames: { string },
+		nonViewableTabs: { string? },
 	},
 
 	Logs: {
@@ -498,7 +496,7 @@ export type vibezHooks = {
 	Destroy: (self: vibezHooks) -> nil,
 }
 
-export type ActivityTracker = {
+export type ActivityTracker = typeof(setmetatable({}, {})) & {
 	changeAfkState: (self: ActivityTracker, override: boolean?) -> ActivityTracker,
 	Left: (self: ActivityTracker) -> nil,
 	Increment: (self: ActivityTracker) -> nil,

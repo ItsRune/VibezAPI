@@ -132,7 +132,7 @@ function _toggleUI(componentData: { [any]: any })
 
 	-- Setup top button tab buttons.
 	for _, componentButton: TextButton in ipairs(Top.Buttons:GetChildren()) do
-		if not componentButton:IsA("TextButton") then
+		if not componentButton:IsA("TextButton") or not componentButton.Visible then
 			continue
 		end
 
@@ -200,8 +200,17 @@ function _toggleUI(componentData: { [any]: any })
 		Frame.Size = UDim2.fromScale(1, 0.45)
 	end
 
-	-- Ensure the ranking frame is always the first to open.
-	_openFrame(componentData, "Ranking")
+	local foundFrameThatsVisible = componentData.Table.Find(Top.Buttons:GetChildren(), function(button: GuiBase2d)
+		return button:IsA("TextButton") and button.Visible == true
+	end)
+
+	if not foundFrameThatsVisible then
+		return -- Odd, why enable the UI if you have no tabs to open?
+	end
+
+	-- CANCEL: Ensure the ranking frame is always the first to open.
+	-- - If developers can remove tabs, why hard-code 'Ranking' frame?
+	_openFrame(componentData, foundFrameThatsVisible.Name)
 end
 
 function onDestroy(componentData: { [any]: any })
@@ -227,6 +236,14 @@ function onSetup(componentData: { [any]: any })
 	local interfaceData = componentData.Data
 	if not componentData.Data.iconAllowMobile or topBarButton ~= nil then
 		return
+	end
+
+	for _, viewableTab: string in ipairs(componentData.Data.nonViewableTabs) do
+		for _, tab: GuiLabel in ipairs(Top.Buttons:GetChildren()) do
+			if string.lower(viewableTab) == string.lower(tab.Name) then
+				tab.Visible = false
+			end
+		end
 	end
 
 	--stylua: ignore
