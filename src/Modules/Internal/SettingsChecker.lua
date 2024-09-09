@@ -1,3 +1,5 @@
+-- REVIEW: Maybe make this module a folder and add custom errors underneath for better organization?
+
 --// Services \\--
 local HttpService = game:GetService("HttpService")
 
@@ -75,7 +77,8 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 				return Data
 			end
 
-			self:_warn(optionalKeyStarter .. " received '%s'; expected type 'Model', 'Tool', or 'nil'!" .. typeof(Data))
+			local errMessage = string.format(" received '%s'; expected type 'Model', 'Tool', or 'nil'!", typeof(Data))
+			self:_warn(optionalKeyStarter .. errMessage)
 
 			return Default
 		elseif typeof(Data) == "string" and latestKey == "Mode" and parentKey == "RankSticks" then

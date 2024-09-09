@@ -40,7 +40,7 @@ local Class = {}
 Class.__index = Class
 
 local embedClass = require(script.Embed)
-local Types = require(script.Parent.Types)
+local Types = require(script.Parent.Internal.Types)
 
 --[=[
 	Creates the hook class.

@@ -9,7 +9,7 @@ local Embed = {}
 local Class = {}
 Class.__index = Class
 
-local embedTypes = require(script.Parent.Parent.Types)
+local embedTypes = require(script.Parent.Parent.Internal.Types)
 
 --// Local Functions \\--
 local function checkCharLimit(value: string, charLimit: number): boolean

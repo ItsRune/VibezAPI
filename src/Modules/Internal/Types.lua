@@ -199,10 +199,10 @@ export type vibezSettings = {
 		ignoreWarnings: boolean,
 		overrideGroupCheckForStudio: boolean,
 		createGlobalVariables: boolean,
-		isAsync: boolean,
 		rankingCooldown: number,
-		checkForUpdates: boolean,
-		autoReportErrors: boolean,
+		-- isAsync: boolean,
+		-- checkForUpdates: boolean,
+		-- autoReportErrors: boolean,
 	},
 }
 
@@ -556,7 +556,8 @@ export type embedCreator = Embed & {
 	-- setTimestamp: (self: embedCreator, timeStamp: number | "Auto") -> embedCreator,
 }
 
-export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi
+export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi?
+export type vibezConstructorCall = (t: { [any]: any }, apiKey: string, extraOptions: vibezSettings?) -> vibezApi
 
 export type widgetTypes = "" -- Add more if we decide to add more. (Social media platforms)
 

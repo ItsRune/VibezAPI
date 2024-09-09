@@ -43,6 +43,7 @@ local baseSettings = require(script.Modules.Settings)
 
 --// Constants \\--
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
+local _privateKeys = {} :: { [string]: string? }
 
 --// Local Functions \\--
 local function getActionFunctionFromInvoke(Action: string)
@@ -427,8 +428,6 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 		self:_addLog(Player, "Notify", "Interface", affectedUsers)
 	elseif Command == "Animate" then
 		local Character = Player.Character
-
-		self:_warn(Command, Character)
 		if not Character then
 			return
 		end
@@ -493,7 +492,13 @@ function api:_setupCommands()
 			Name = "promote",
 			Alias = {},
 			Func = function(Player: Player, Args: { string })
-				if not Args[1] then
+				local staffData = self:_playerIsValidStaff(Player)
+				if
+					not staffData
+					or not staffData.Rank
+					or staffData.Rank < self.Settings.Commands.MinRank
+					or not Args[1]
+				then
 					return
 				end
 
@@ -513,7 +518,13 @@ function api:_setupCommands()
 			Name = "demote",
 			Alias = {},
 			Func = function(Player: Player, Args: { string })
-				if not Args[1] then
+				local staffData = self:_playerIsValidStaff(Player)
+				if
+					not staffData
+					or not staffData.Rank
+					or staffData.Rank < self.Settings.Commands.MinRank
+					or not Args[1]
+				then
 					return
 				end
 
@@ -533,7 +544,13 @@ function api:_setupCommands()
 			Name = "fire",
 			Alias = {},
 			Func = function(Player: Player, Args: { string })
-				if not Args[1] then
+				local staffData = self:_playerIsValidStaff(Player)
+				if
+					not staffData
+					or not staffData.Rank
+					or staffData.Rank < self.Settings.Commands.MinRank
+					or not Args[1]
+				then
 					return
 				end
 
@@ -553,7 +570,13 @@ function api:_setupCommands()
 			Name = "blacklist",
 			Alias = {},
 			Func = function(Player: Player, Args: { string })
-				if not Args[1] then
+				local staffData = self:_playerIsValidStaff(Player)
+				if
+					not staffData
+					or not staffData.Rank
+					or staffData.Rank < self.Settings.Commands.MinRank
+					or not Args[1]
+				then
 					return
 				end
 
@@ -582,7 +605,13 @@ function api:_setupCommands()
 			Name = "unblacklist",
 			Alias = {},
 			Func = function(Player: Player, Args: { string })
-				if not Args[1] then
+				local staffData = self:_playerIsValidStaff(Player)
+				if
+					not staffData
+					or not staffData.Rank
+					or staffData.Rank < self.Settings.Commands.MinRank
+					or not Args[1]
+				then
 					return
 				end
 
@@ -1546,19 +1575,18 @@ end
 function api:_onPlayerChatted(Player: Player, message: string)
 	-- Check for activity tracker to increment messages sent.
 	local token = self._private._modules.Utils.rotateCharacters(string.reverse(self.apiKey), 128)
-	local existingTracker = ActivityTracker.Keys[token][Player.UserId]
+	local existingTracker = (ActivityTracker.Keys[token] ~= nil) and ActivityTracker.Keys[token][Player.UserId] or nil
 	if existingTracker then
 		existingTracker:Chatted()
 	end
 
 	-- Commands handler
-	warn(self.Settings.RankSticks)
 	if self.Settings.Commands.Enabled == false and self.Settings.RankSticks.Enabled == false then
 		return
 	end
 
 	local callerStaffData: { Rank: number } = self:_playerIsValidStaff(Player)
-	if not callerStaffData or not callerStaffData["Rank"] or callerStaffData.Rank < self.Settings.Commands.MinRank then
+	if not callerStaffData or not callerStaffData["Rank"] then
 		return
 	end
 
@@ -1764,7 +1792,6 @@ function api:_buildAttributes()
 
 		Misc = {
 			ignoreWarnings = self.Settings.Misc.ignoreWarnings,
-			autoReportErrors = self.Settings.Misc.autoReportErrors,
 		},
 	}
 
@@ -2539,6 +2566,8 @@ end
 ]=]
 ---
 function api:waitUntilLoaded(): Types.vibezApi?
+	self:_warn("Method 'waitUntilLoaded' is deprecated and shouldn't be used in newer games.")
+
 	if self.Loaded == true then
 		return self
 	end
@@ -3066,7 +3095,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	if self.Settings.RankSticks.Enabled == true then
 		self:addCommand("sticks", {}, function(Player: Player)
 			local staffData = self:_playerIsValidStaff(Player)
-			if not staffData or staffData.Rank == nil or staffData.Rank < self.Settings.Commands.MinRank then
+			if not staffData or staffData.Rank == nil or staffData.Rank < self.Settings.RankSticks.MinRank then
 				return
 			end
 
@@ -3097,6 +3126,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self:_giveSticks(Player)
 			self:_addLog(Player, "RankSticks", "Commands", nil, "Given")
 		end)
+
+		-- Remove the other commands, that way sticks is the only command possible.
+		if not self.Settings.Commands.Enabled then
+			self.Settings.Commands.Removed = { "Promote", "Demote", "Fire", "Blacklist", "Unblacklist" }
+		end
 
 		-- We need to ensure that the module is indeed setting up
 		-- commands, otherwise sticks can never be given.
@@ -3151,15 +3185,16 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end)()
 	end
 
+	-- (DEPRECATED)
 	-- Useful for when you want to require at the top of a script
 	-- and you don't want it to yield as it gathers necessary api data.
 	-- ie, fetching group data & external-config
-	if self.Settings.Misc.isAsync then
-		self:_warn("Setting 'isAsync' has been marked deprecated, it is not recommended to use this method.")
-		coroutine.wrap(self._initialize)(self, apiKey)
-	else
-		self:_initialize(apiKey)
-	end
+	-- if self.Settings.Misc.isAsync then
+	-- 	coroutine.wrap(self._initialize)(self, apiKey)
+	-- else
+	-- 	self:_initialize(apiKey)
+	-- end
+	self:_initialize(apiKey)
 
 	if Table.Count(self) == 0 then
 		return
@@ -3226,9 +3261,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- 	end
 	-- end
 
-	_G["vibez_api_key_private_names"] = _G["vibez_api_key_private_names"] or {}
-	_G["vibez_api_key_private_names"][self.Settings.apiKey] = self._private.clientScriptName
-
+	_privateKeys[self.apiKey] = self._private.clientScriptName
 	TestService:Message(string.format("Vibez v%s has successfully been loaded into this server!", _VERSION))
 
 	-- Cast to the Vibez API Type.
@@ -3271,8 +3304,9 @@ return setmetatable({
 	isVibezAPI = true,
 
 	awaitGlobals = function(): ()
-		assert(false, "This method has been deprecated, we recommend using the new 'getGlobalsForKey' function.")
+		warn("[Vibez]: Method 'awaitGlobals' is deprecated, please use 'getGlobalsForKey' instead.")
 
+		-- _G Api is removed in this version.
 		-- local mod = nil
 		-- local counter = 0
 
@@ -3291,22 +3325,19 @@ return setmetatable({
 	end,
 
 	getGlobalsForKey = function(apiKey: string): Folder?
-		local vibezKey: string = _G["vibez_api_key_private_names"][apiKey]
+		local vibezKey: string? = _privateKeys[apiKey]
 		return (vibezKey ~= nil) and ServerStorage:FindFirstChild(vibezKey) :: Folder or nil
 	end,
 
 	getGUIDFromKey = function(apiKey: string): string?
-		return _G["vibez_api_key_private_names"][apiKey] :: string?
+		return _privateKeys[apiKey] :: string?
 	end,
 
 	new = Constructor,
 }, {
-	__call = function(
-		t: any,
-		...: Types.vibezSettings?
-	): (Types.vibezInternalApi & Types.vibezProperties & Types.vibezPublicApi) | any
-		return rawget(t, "new")(...)
-	end :: Types.vibezConstructor,
+	__call = function(t: { [any]: any }, apiKey: string, options: Types.vibezSettings?): Types.vibezApi?
+		return rawget(t, "new")(apiKey, options)
+	end :: Types.vibezConstructorCall,
 })
 
 --[=[

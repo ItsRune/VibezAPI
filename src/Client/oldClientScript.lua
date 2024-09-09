@@ -5,13 +5,13 @@ local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ScriptContext = game:GetService("ScriptContext")
 local TextService = game:GetService("TextService")
 local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local StarterPlayerScripts = game:GetService("StarterPlayer").StarterPlayerScripts
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- local ScriptContext = game:GetService("ScriptContext")
 
 --// Constants \\--
 local Player = Players.LocalPlayer
@@ -638,16 +638,16 @@ local function onAttributeChanged()
 		undoRankSticks()
 	end
 
-	if States.MISC.autoReportErrors then
-		ScriptContext.Error:Connect(function(message: string, stack: string)
-			local conjoined = message .. "\n" .. stack
-			if string.find(conjoined, "VibezAPI") == nil then
-				return
-			end
+	-- if States.MISC.autoReportErrors then
+	-- 	ScriptContext.Error:Connect(function(message: string, stack: string)
+	-- 		local conjoined = message .. "\n" .. stack
+	-- 		if string.find(conjoined, "VibezAPI") == nil then
+	-- 			return
+	-- 		end
 
-			remoteEvent:FireServer("clientError", message, stack)
-		end)
-	end
+	-- 		remoteEvent:FireServer("clientError", message, stack)
+	-- 	end)
+	-- end
 
 	afkDelayOffset = States.AFK.Delay
 end

@@ -54,7 +54,7 @@ Class.__index = Class
     @within ActivityTracker
 ]=]
 
-local Types = require(script.Parent.Types)
+local Types = require(script.Parent.Internal.Types)
 
 --[=[
 	Creates a new activity object for the player.

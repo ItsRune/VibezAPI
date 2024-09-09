@@ -181,7 +181,6 @@ local function onSetup(componentData: { [any]: any })
 		Character.ChildAdded:Connect(function(child: Instance)
 			if child:GetAttribute(custScriptName) == "RankSticks" and child:IsA("Tool") then
 				local actionName = child.Name
-				warn(actionName)
 
 				Maid[actionName] = {
 					child.Activated:Connect(function()
@@ -191,7 +190,6 @@ local function onSetup(componentData: { [any]: any })
 
 						stickDebounce = true
 						componentData.remoteEvent:FireServer("Animate")
-						warn("HI")
 
 						local succeeded = handleStickMode(actionName, child)
 						if not succeeded then
