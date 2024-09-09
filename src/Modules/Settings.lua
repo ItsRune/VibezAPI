@@ -19,9 +19,9 @@
 	.Mode "Default" | "ClickOnPlayer" | "DetectionInFront"
 	.MinRank number<0-255>
 	.MaxRank number<0-255>
-	.blacklistedMethods {string?}
 	.sticksModel (Model | Tool)?
-	.sticksAnimation string | number
+	.Removed {string?}
+	.Animation { R6: number, R15: number }
 	@private
 	@within VibezAPI
 ]=]
@@ -104,15 +104,15 @@
 
 return {
 	Commands = {
-		Enabled = false,
-		useDefaultNames = true,
+		Enabled = false, -- Toggles the Commands module.
+		useDefaultNames = true, -- Uses default 'promote', 'demote', 'fire' command names.
 
-		MinRank = 255,
-		MaxRank = 255,
+		MinRank = 255, -- Minimum rank
+		MaxRank = 255, -- Maximum rank
 
-		Prefix = "!",
-		Alias = {},
-		Removed = {},
+		Prefix = "!", -- Prefix to use when using commands.
+		Alias = {}, -- Command aliases.
+		Removed = {}, -- Removes specified commands.
 	},
 
 	RankSticks = {
@@ -122,10 +122,13 @@ return {
 		MinRank = 255,
 		MaxRank = 255,
 
-		blacklistedMethods = {}, -- Won't insert if the name is in this table.
-
 		sticksModel = nil, -- Uses default
-		sticksAnimation = "17837716782|17838471144", -- Uses a very horrible default one.
+		Removed = {}, -- Won't insert if the name is in this table.
+
+		Animation = {
+			R6 = 17838471144,
+			R15 = 17837716782,
+		},
 	},
 
 	Notifications = {
@@ -191,13 +194,6 @@ return {
 		-- Message displayed to the player when kicked and their tracker fails to initialize.
 		failMessage = "Uh oh! Looks like there was an issue initializing the activity tracker for you. Please try again later!",
 	},
-
-	-- Removed due to being in the works. (Maybe)
-	-- Widgets = {
-	-- 	Enabled = false,
-	-- 	useBannerImage = "",
-	-- 	useThumbnailImage = ""
-	-- },
 
 	Blacklists = {
 		Enabled = false, -- Toggles the Blacklists module.

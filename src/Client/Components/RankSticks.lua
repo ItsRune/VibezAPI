@@ -34,8 +34,7 @@ local function onDestroy(componentData: { [any]: any })
 end
 
 local function onSetup(componentData: { [any]: any })
-	local _warn, remoteEvent, remoteFunction =
-		componentData._warn, componentData.remoteEvent, componentData.remoteFunction
+	local _warn, remoteFunction = componentData._warn, componentData.remoteFunction
 
 	local custScriptName = string.split(script.Parent.Parent.Name, "-")[1]
 	local Character = Player.Character or Player.CharacterAdded:Wait()
@@ -51,7 +50,7 @@ local function onSetup(componentData: { [any]: any })
 			local primaryPart = Character.PrimaryPart
 
 			if not primaryPart then
-				return
+				return false
 			end
 
 			newPart.Name = actionName .. "_Checker"
@@ -112,7 +111,7 @@ local function onSetup(componentData: { [any]: any })
 			Debris:AddItem(newPart, 0)
 
 			if not hasReceived or child:IsDescendantOf(Player) then
-				return
+				return false
 			end
 
 			for _, target: Player in pairs(closestTargets) do
@@ -147,38 +146,34 @@ local function onSetup(componentData: { [any]: any })
 			)
 
 			if closestTarget == nil then
-				task.wait(0.25)
-				stickDebounce = false
-				return -- No one close enough
+				return false
 			end
 
 			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
+			return true
 		elseif componentData.rankStickMode == "ClickOnPlayer" then
 			local mouse = Player:GetMouse()
 			local mouseTarget = mouse.Target
 			local primPart = Character.PrimaryPart
 
 			if not primPart or (mouseTarget and (primPart.Position - mouseTarget.Position).Magnitude > 20) then
-				stickDebounce = false
-				return
+				return false
 			end
 
 			if not mouseTarget then
-				stickDebounce = false
-				return
+				return false
 			end
 
 			local player = Players:GetPlayerFromCharacter(mouseTarget.Parent)
 			if not player or player == Player then
-				stickDebounce = false
-				return
+				return false
 			end
 
 			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", player)
+			return true
 		end
 
-		task.wait(0.25)
-		stickDebounce = false
+		return false
 	end
 
 	table.insert(
@@ -186,16 +181,23 @@ local function onSetup(componentData: { [any]: any })
 		Character.ChildAdded:Connect(function(child: Instance)
 			if child:GetAttribute(custScriptName) == "RankSticks" and child:IsA("Tool") then
 				local actionName = child.Name
+				warn(actionName)
 
 				Maid[actionName] = {
 					child.Activated:Connect(function()
 						if stickDebounce then
 							return
 						end
-						stickDebounce = true
 
-						remoteEvent:FireServer("Animate", "Sticks")
-						handleStickMode(actionName, child)
+						stickDebounce = true
+						componentData.remoteEvent:FireServer("Animate")
+						warn("HI")
+
+						local succeeded = handleStickMode(actionName, child)
+						if not succeeded then
+							stickDebounce = false
+							return
+						end
 
 						task.wait(0.25)
 						stickDebounce = false

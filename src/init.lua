@@ -26,13 +26,13 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ScriptContext = game:GetService("ScriptContext")
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 local TestService = game:GetService("TestService")
 
 --// Modules \\--
-local Types = require(script.Modules.Types)
+local Types = require(script.Modules.Internal.Types)
+local settingsCheck = require(script.Modules.Internal.SettingsChecker)
 local Hooks = require(script.Modules.Hooks)
 local ActivityTracker = require(script.Modules.Activity)
 local RateLimit = require(script.Modules.RateLimit)
@@ -43,7 +43,6 @@ local baseSettings = require(script.Modules.Settings)
 
 --// Constants \\--
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
-local clientInterface = script.Client.Components.UI.Interface
 
 --// Local Functions \\--
 local function getActionFunctionFromInvoke(Action: string)
@@ -428,6 +427,8 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 		self:_addLog(Player, "Notify", "Interface", affectedUsers)
 	elseif Command == "Animate" then
 		local Character = Player.Character
+
+		self:_warn(Command, Character)
 		if not Character then
 			return
 		end
@@ -447,18 +448,15 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 		-- Update: It appears this issue happens even when using the Humanoid,
 		-- probably because Humanoid:LoadAnimation calls to the Animator within.
 
-		local humanoid = Character:FindFirstChildOfClass("Humanoid") :: Humanoid
-		local animator = humanoid:FindFirstChildOfClass("Animator")
-		local animationId: number | string = (Data[1] == "Sticks") and self.Settings.RankSticks.sticksAnimation or -1
-
-		local split = string.split(tostring(animationId), "|")
-		if #split == 1 then
-			animationId = split[1]
-		elseif #split >= 2 then
-			animationId = (humanoid.RigType == Enum.HumanoidRigType.R15) and split[1] or split[2]
+		local humanoid: Humanoid? = Character:FindFirstChildOfClass("Humanoid")
+		if not humanoid then
+			return
 		end
 
-		if animationId == -1 or not tonumber(animationId) or not animator then
+		local animator = humanoid:FindFirstChildOfClass("Animator")
+		local animationId: number? = self.Settings.RankSticks.Animation[humanoid.RigType.Name]
+
+		if not animationId or not tonumber(animationId) or not animator then
 			return
 		end
 
@@ -489,11 +487,12 @@ end
 ]=]
 ---
 function api:_setupCommands()
-	local baseCommands: { [number]: { [number]: string | { any } | (Player: Player, Args: { string }) -> () } } = {
+	type commandBase = { [number]: { Name: string, Alias: { string? }, Func: (Player: Player, Args: { string }) -> () } }
+	local baseCommands: commandBase = {
 		{
-			"promote",
-			{},
-			function(Player: Player, Args: { string })
+			Name = "promote",
+			Alias = {},
+			Func = function(Player: Player, Args: { string })
 				if not Args[1] then
 					return
 				end
@@ -511,9 +510,9 @@ function api:_setupCommands()
 		},
 
 		{
-			"demote",
-			{},
-			function(Player: Player, Args: { string })
+			Name = "demote",
+			Alias = {},
+			Func = function(Player: Player, Args: { string })
 				if not Args[1] then
 					return
 				end
@@ -531,9 +530,9 @@ function api:_setupCommands()
 		},
 
 		{
-			"fire",
-			{},
-			function(Player: Player, Args: { string })
+			Name = "fire",
+			Alias = {},
+			Func = function(Player: Player, Args: { string })
 				if not Args[1] then
 					return
 				end
@@ -551,14 +550,14 @@ function api:_setupCommands()
 		},
 
 		{
-			"blacklist",
-			{},
-			function(Player: Player, Args: { string })
+			Name = "blacklist",
+			Alias = {},
+			Func = function(Player: Player, Args: { string })
 				if not Args[1] then
 					return
 				end
 
-				local affectedUsers: { Player? } = {}
+				local affectedUsers: { any } = {}
 				local users = self:getUsersForCommands(Player, string.split(Args[1], ","))
 				table.remove(Args, 1)
 
@@ -566,14 +565,13 @@ function api:_setupCommands()
 
 				for _, Target: any in ipairs(users) do
 					local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
-
-					if not res.success then
+					if not res or not res.success then
 						self:_warn("Blacklist resulted in an error, please try again later.")
 						return
 					end
 
 					table.insert(affectedUsers, Target)
-					self:_warn(res.message)
+					self:_warn(res)
 				end
 
 				self:_addLog(Player, "Blacklist", "Commands", affectedUsers, { Reason = reason })
@@ -581,9 +579,9 @@ function api:_setupCommands()
 		},
 
 		{
-			"unblacklist",
-			{},
-			function(Player: Player, Args: { string })
+			Name = "unblacklist",
+			Alias = {},
+			Func = function(Player: Player, Args: { string })
 				if not Args[1] then
 					return
 				end
@@ -596,9 +594,8 @@ function api:_setupCommands()
 						return
 					end
 
-					local res = self:deleteBlacklist(Target.UserId)
-
-					if not res.success then
+					local res: any = self:deleteBlacklist(Target.UserId)
+					if not res or not res.success then
 						self:_notifyPlayer(Player, "Error: " .. res.errorMessage)
 						continue
 					end
@@ -613,11 +610,11 @@ function api:_setupCommands()
 	}
 
 	for _, commandData in ipairs(baseCommands) do
-		if table.find(self.Settings.Commands.Removed, commandData[1]) then
+		if table.find(self.Settings.Commands.Removed, commandData.Name) then
 			continue
 		end
 
-		self:addCommand(table.unpack(commandData))
+		self:addCommand(commandData.Name, commandData.Alias, commandData.Func)
 	end
 end
 
@@ -759,13 +756,13 @@ end
 function api:_http(
 	Route: string,
 	Method: any,
-	Headers: { [string]: any },
+	Headers: { [string]: any }?,
 	Body: { [any]: any }?,
 	useOldApi: boolean?
 ): (boolean, Types.httpResponse)
-	local canContinue, err = self._private.rateLimiter:Check()
+	local canContinue: boolean, err: string? = self._private.rateLimiter:Check()
 	if not canContinue then
-		local message = "You're being rate limited! " .. err
+		local message = "You're being rate limited! " .. tostring(err)
 
 		-- Create a fake error response
 		return false,
@@ -776,7 +773,7 @@ function api:_http(
 				rawBody = "{}",
 				Headers = {
 					["Content-Type"] = "application/json",
-					["x-api-key"] = self.Settings.apiKey,
+					["x-api-key"] = self.apiKey,
 				},
 				Body = {
 					success = false,
@@ -789,8 +786,12 @@ function api:_http(
 
 	Route = (typeof(Route) == "string") and Route or "/"
 	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
-	Headers = (typeof(Headers) == "table") and Headers or { ["Content-Type"] = "application/json" }
 	Body = (Method ~= "GET" and Method ~= "HEAD") and Body or nil
+
+	local generatedHeaders = Headers :: { [string]: any }
+	if not Headers or typeof(Headers) ~= "table" then
+		generatedHeaders = { ["Content-Type"] = "application/json" }
+	end
 
 	if Body then
 		local extraLoggerInfo = (RunService:IsStudio()) and " `(Studio PlayTest)`" or ""
@@ -798,7 +799,7 @@ function api:_http(
 	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
-	Headers["x-api-key"] = self.Settings.apiKey
+	generatedHeaders["x-api-key"] = self.apiKey
 
 	-- Prevents sending api key to external URLs
 	-- Remove from 'Route' extra slash that was added
@@ -806,13 +807,13 @@ function api:_http(
 	if string.match(Route, "[http://]|[https://]") ~= nil then
 		Route = string.sub(Route, 2, #Route)
 		apiToUse = ""
-		Headers["x-api-key"] = nil
+		generatedHeaders["x-api-key"] = nil
 	end
 
 	local Options = {
 		Url = apiToUse .. Route,
 		Method = Method,
-		Headers = Headers,
+		Headers = generatedHeaders,
 		Body = Body and HttpService:JSONEncode(Body) or nil,
 		Compress = Enum.HttpCompression.None,
 	}
@@ -977,7 +978,7 @@ function api:_onPlayerAdded(Player: Player)
 	-- leaks from occurring by vibez's api wrapper.
 	self._private.Maid[Player.UserId] = {}
 	table.insert(
-		self._private.Maid[Player.UserId],
+		self._private.Maid[Player.UserId] :: { RBXScriptConnection },
 		Player.Chatted:Connect(function(message: string)
 			return self:_onPlayerChatted(Player, message)
 		end)
@@ -1053,7 +1054,11 @@ function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- 
 	end
 
 	-- Disconnect connections connected to specific user.
-	for _, connection: RBXScriptConnection in pairs(self._private.Maid[Player.UserId]) do
+	for _, connection: RBXScriptConnection? in pairs(self._private.Maid[Player.UserId] :: { RBXScriptConnection }) do
+		if not connection then
+			continue
+		end
+
 		connection:Disconnect()
 	end
 
@@ -1372,16 +1377,23 @@ end
 function api:_giveSticks(Player: Player)
 	local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
 	local rankStick = (self.Settings.RankSticks["sticksModel"] == nil) and script.RankSticks
-		or self.Settings.RankSticks["sticksModel"]
+		or self.Settings.RankSticks["sticksModel"] :: any
 
 	local playerBackpack = Player:WaitForChild("Backpack", 10)
 	if not playerBackpack then
 		return
 	end
 
-	for _, operationName: string in ipairs(stickTypes) do
-		local cloned = rankStick:Clone()
+	local sticksToIgnore = Table.Map(self.Settings.RankSticks.Removed, function(str: string)
+		return string.lower(tostring(str))
+	end)
 
+	for _, operationName: string in ipairs(stickTypes) do
+		if table.find(sticksToIgnore, string.lower(tostring(operationName))) then
+			continue
+		end
+
+		local cloned = rankStick:Clone()
 		cloned:SetAttribute(self._private.clientScriptName, "RankSticks")
 
 		cloned.Name = operationName
@@ -1438,7 +1450,7 @@ end
 ]=]
 ---
 function api:giveRankSticks(User: Player | string | number, shouldCheckPermissions: boolean?): Types.vibezApi
-	local Player = self:_verifyUser(User, "Instance") :: Player?
+	local Player = self:_verifyUser(User, "Player") :: Player
 	if not Player then
 		return self
 	end
@@ -1514,8 +1526,8 @@ function api:setRankStickTool(tool: any): Types.vibezApi
 	newTool.Name = "RankingSticks"
 	newTool.Parent = Utils.getTemporaryStorage()
 
-	Debris:AddItem(self.Settings.RankSticks["sticksModel"], 0)
-	self.Settings.RankSticks["sticksModel"] = tool
+	Debris:AddItem(self.Settings.RankSticks["sticksModel"] :: any, 0)
+	self.Settings.RankSticks["sticksModel"] = tool :: any
 
 	return self
 end
@@ -1533,13 +1545,14 @@ end
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
 	-- Check for activity tracker to increment messages sent.
-	local token = self._private._modules.Utils.rotateCharacters(string.reverse(self.Settings.apiKey), 128)
+	local token = self._private._modules.Utils.rotateCharacters(string.reverse(self.apiKey), 128)
 	local existingTracker = ActivityTracker.Keys[token][Player.UserId]
 	if existingTracker then
 		existingTracker:Chatted()
 	end
 
 	-- Commands handler
+	warn(self.Settings.RankSticks)
 	if self.Settings.Commands.Enabled == false and self.Settings.RankSticks.Enabled == false then
 		return
 	end
@@ -1564,7 +1577,7 @@ function api:_onPlayerChatted(Player: Player, message: string)
 			and (
 				(self.Settings.Commands.useDefaultNames == true and string.lower(command) == string.lower(data.Name))
 				or Table.Filter(data.Alias, function(innerData)
-						return string.lower(innerData) == string.lower(command)
+						return string.lower(tostring(innerData)) == string.lower(command)
 					end)[1]
 					~= nil
 			)
@@ -1574,9 +1587,9 @@ function api:_onPlayerChatted(Player: Player, message: string)
 		return
 	end
 
-	commandData[1].Execute(Player, args, function(...)
+	commandData[1].Execute(Player, args, function(...: any)
 		return self:_addLog(...)
-	end, function(...)
+	end, function(...: any)
 		return self:getUsersForCommands(...)
 	end)
 end
@@ -1640,17 +1653,20 @@ function api:_addLog(
 	affectedUsers: { { Name: string, UserId: number } },
 	extraData: any?
 ): ()
-	table.insert(self._private.actionStorage.Logs, {
-		calledBy = calledBy, -- Player who used an action.
-		triggeredBy = triggeringAction, -- Useful for filtering on the UI.
+	table.insert(
+		self._private.actionStorage.Logs,
+		{
+			calledBy = calledBy, -- Player who used an action.
+			triggeredBy = triggeringAction, -- Useful for filtering on the UI.
 
-		affectedCount = (affectedUsers == nil) and 0 or #affectedUsers,
-		affectedUsers = affectedUsers,
-		extraData = extraData,
+			affectedCount = (affectedUsers == nil) and 0 or #affectedUsers,
+			affectedUsers = affectedUsers,
+			extraData = extraData,
 
-		Action = Action,
-		Timestamp = DateTime.now().UnixTimestamp,
-	})
+			Action = Action,
+			Timestamp = DateTime.now().UnixTimestamp,
+		} :: any
+	)
 
 	-- Truncate logs to a count of 100 (Expecting a small amount of people to use logs)
 	self._private.actionStorage.Logs = Table.Truncate(self._private.actionStorage.Logs, 100)
@@ -1665,7 +1681,9 @@ end
 ]=]
 ---
 function api:_buildAttributes()
-	local function convertEnumToString(enum: EnumItem): string
+	local function convertEnumToString(
+		enum: Enum.Font | Enum.FontSize | Enum.EasingDirection | Enum.EasingStyle | Enum.KeyCode | string | number
+	): any
 		if typeof(enum) == "EnumItem" then
 			return enum.Name
 		end
@@ -1762,10 +1780,8 @@ end
 	@within VibezAPI
 	@since 0.3.0
 ]=]
-function api:_playerIsValidStaff(
-	Player: Player | number | string | { Name: string, UserId: number }
-): { Rank: number, User: Player }
-	local userId = self:_verifyUser(Player, "UserId")
+function api:_playerIsValidStaff(Player: Player | number | string): { Rank: number, User: Player }
+	local userId = self:_verifyUser(Player, "Id") :: number
 	return self._private.requestCaches.validStaff[userId]
 end
 
@@ -1782,7 +1798,7 @@ end
 function api:_verifyUser(
 	User: Player | number | string,
 	typeToReturn: "UserId" | "Player" | "Name" | "Id"
-): (Player | number | string)?
+): Player | number | string
 	if typeof(User) == "Instance" and User:IsA("Player") then
 		if typeToReturn == "UserId" or typeToReturn == "Id" then
 			return User.UserId
@@ -1805,11 +1821,11 @@ function api:_verifyUser(
 		elseif typeToReturn == "Name" then
 			return self:_getNameById(User)
 		elseif typeToReturn == "Player" then
-			return Players:GetPlayerByUserId(User)
+			return Players:GetPlayerByUserId(User) :: Player
 		end
 	end
 
-	return nil
+	return User
 end
 
 --// Public Functions \\--
@@ -1831,8 +1847,8 @@ function api:getGroupId()
 	end
 
 	self._private.recentlyChangedKey = false
-	local isOk, res = self:_http("/ranking/groupid", "post", nil, nil)
-	local Body: Types.groupIdResponse = res.Body
+	local isOk, res = self:_http("/ranking/groupid", "post", nil :: any, nil)
+	local Body = res.Body :: Types.groupIdResponse
 
 	-- Make this a new thread, in case there's a failure we don't return nothing.
 	-- These lines below were for the planned dashboard, which has been placed on halt.
@@ -1873,7 +1889,7 @@ function api:setRank(
 	User: Player | string | number,
 	rankId: string | number,
 	whoCalled: { userName: string, userId: number }?
-): Types.rankResponse | Types.errorResponse
+): Types.responseBody
 	local userId = self:_verifyUser(User, "UserId")
 	local userName = self:_verifyUser(User, "Name")
 	local roleId = self:_getRoleIdFromRank(rankId)
@@ -1909,10 +1925,10 @@ function api:setRank(
 		rankId = tonumber(roleId),
 	}
 
-	local isOk, response = self:_http("/ranking/changerank", "post", nil, body)
+	local isOk, response: any = self:_http("/ranking/changerank", "post", nil :: any, body)
 
 	if isOk and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+		coroutine.wrap(self._checkPlayerForRankChange)(self, tonumber(userId) :: number)
 	end
 
 	return response.Body
@@ -1950,7 +1966,7 @@ function api:Promote(
 		}
 	end
 
-	local _, response = self:_http("/ranking/promote", "post", nil, {
+	local _, response: any = self:_http("/ranking/promote", "post", nil :: any, {
 		userToRank = {
 			userId = tostring(userId),
 			userName = userName,
@@ -1960,7 +1976,7 @@ function api:Promote(
 	})
 
 	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId :: number)
 	end
 
 	return response.Body
@@ -1980,7 +1996,7 @@ end
 function api:Demote(
 	User: Player | string | number,
 	whoCalled: { userName: string, userId: number }?
-): Types.rankResponse | Types.errorResponse
+): Types.responseBody
 	local userId = self:_verifyUser(User, "UserId")
 	local userName = self:_verifyUser(User, "Name")
 
@@ -1998,7 +2014,7 @@ function api:Demote(
 		}
 	end
 
-	local _, response = self:_http("/ranking/demote", "post", nil, {
+	local _, response: any = self:_http("/ranking/demote", "post", nil, {
 		userToRank = {
 			userId = tostring(userId),
 			userName = userName,
@@ -2008,7 +2024,7 @@ function api:Demote(
 	})
 
 	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId :: number)
 	end
 
 	return response.Body
@@ -2025,10 +2041,7 @@ end
 	@since 0.1.0
 ]=]
 ---
-function api:Fire(
-	User: Player | string | number,
-	whoCalled: { userName: string, userId: number }?
-): Types.rankResponse | Types.errorResponse
+function api:Fire(User: Player | string | number, whoCalled: { userName: string, userId: number }?): Types.responseBody
 	local userId = self:_verifyUser(User, "UserId")
 	local userName = self:_verifyUser(User, "Name")
 
@@ -2046,7 +2059,7 @@ function api:Fire(
 		}
 	end
 
-	local _, response = self:_http("/ranking/fire", "post", nil, {
+	local _, response: any = self:_http("/ranking/fire", "post", nil, {
 		userToRank = {
 			userId = tostring(userId),
 			userName = userName,
@@ -2056,7 +2069,7 @@ function api:Fire(
 	})
 
 	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId)
+		coroutine.wrap(self._checkPlayerForRankChange)(self, userId :: number)
 	end
 
 	return response.Body
@@ -2074,7 +2087,7 @@ end
 ]=]
 function api:addCommand(
 	commandName: string,
-	commandAliases: { string },
+	commandAliases: { string? },
 	commandOperation: (
 		Player: Player,
 		Args: { string },
@@ -2111,7 +2124,7 @@ function api:addCommand(
 	-- Remove any aliases that are already taken.
 	for _, alias in ipairs(flatData) do
 		local _, index = Table.Find(commandAliases, function(value)
-			return string.lower(value) == string.lower(alias)
+			return string.lower(tostring(value)) == string.lower(tostring(alias))
 		end)
 
 		table.remove(commandAliases, index)
@@ -2121,7 +2134,7 @@ function api:addCommand(
 		Name = string.lower(commandName),
 		Alias = commandAliases,
 		Enabled = true,
-		Execute = commandOperation,
+		Execute = commandOperation :: any,
 	})
 
 	return true
@@ -2163,7 +2176,8 @@ function api:addArgumentPrefix(
 
 	for opName, opData in pairs(self._private.commandOperationCodes) do
 		if operationCode == opData.Code and operationCode ~= "" then
-			return self:_warn(`Operation code '{operationCode}' already exists for the operation '{opName}'!`)
+			self:_warn(`Operation code '{operationCode}' already exists for the operation '{opName}'!`)
+			return self
 		end
 	end
 
@@ -2225,15 +2239,15 @@ end
 ]=]
 ---
 function api:updateKey(newApiKey: string): boolean
-	local savedKey = table.clone(self.Settings).apiKey
+	local savedKey = self.apiKey
 
-	self.Settings.apiKey = newApiKey
+	self.apiKey = newApiKey
 	self._private.recentlyChangedKey = true
 
 	local groupId = self:getGroupId()
 
 	if groupId == -1 and savedKey ~= nil then
-		self.Settings.apiKey = savedKey
+		self.apiKey = savedKey
 		self:_warn(debug.traceback(`New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
 		return false
 	elseif groupId == -1 and not savedKey then
@@ -2269,7 +2283,7 @@ function api:isPlayerABooster(User: number | string | Player): boolean?
 		return
 	end
 
-	local theirCache = self._private.requestCaches.nitro[userId]
+	local theirCache = self._private.requestCaches.nitro[userId :: number]
 	if theirCache ~= nil then
 		local timestamp: number, value = theirCache.timestamp, theirCache.responseValue
 		local now = DateTime.now().UnixTimestamp
@@ -2279,18 +2293,18 @@ function api:isPlayerABooster(User: number | string | Player): boolean?
 		end
 	end
 
-	local isOk, response = self:_http(`/is-booster/{userId}`)
+	local isOk, response: any = self:_http(`/is-booster/{userId}`)
 	if not isOk or (response.StatusCode == 200 and response.Body ~= nil and response.Body.success == false) then
 		return false
 	end
 
 	local newCacheData = {
-		value = response.Body.isBooster,
+		responseValue = response.Body.isBooster,
 		timestamp = DateTime.now().UnixTimestamp + (60 * 10), -- 10 minute offset
 	}
 
-	self._private.requestCaches.nitro[userId] = newCacheData
-	return newCacheData.value
+	self._private.requestCaches.nitro[userId :: number] = newCacheData
+	return newCacheData.responseValue
 end
 
 --[=[
@@ -2301,7 +2315,7 @@ end
 ]=]
 ---
 function api:Destroy()
-	local fullMaid = Table.FlatMap(self._private.Maid, function(connectionValue: RBXScriptConnection)
+	local fullMaid = Table.FlatMap(self._private.Maid, function(connectionValue: any)
 		return connectionValue
 	end)
 
@@ -2321,8 +2335,8 @@ function api:Destroy()
 		self._private.Event:Destroy()
 	end
 
-	for _, userId: number in pairs(self._private.usersWithSticks) do
-		local user = Players:GetPlayerByUserId(userId)
+	for _, userId: number? in pairs(self._private.usersWithSticks) do
+		local user = Players:GetPlayerByUserId(userId :: number)
 		if not user then
 			continue
 		end
@@ -2394,7 +2408,7 @@ function api:addBlacklist(
 	userId = self:_verifyUser(userToBlacklist, "UserId")
 	blacklistedBy = self:_verifyUser(blacklistExecutedBy, "UserId")
 
-	local isOk, response = self:_http(`/blacklists/{userId}`, "put", nil, {
+	local isOk, response: any = self:_http(`/blacklists/{userId}`, "put", nil, {
 		reason = reason,
 		blacklistedBy = blacklistedBy,
 	})
@@ -2426,7 +2440,7 @@ function api:deleteBlacklist(
 	end
 
 	local userId = self:_verifyUser(userToDelete, "UserId")
-	local isOk, response = self:_http(`/blacklists/{userId}`, "delete")
+	local isOk, response: any = self:_http(`/blacklists/{userId}`, "delete")
 
 	if not isOk then
 		return {
@@ -2448,10 +2462,10 @@ end
 ]=]
 ---
 function api:getBlacklists(
-	userId: (string | number | Player)?
+	userId: string | number | Player
 ): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
 	userId = self:_verifyUser(userId, "UserId")
-	local isOk, response = self:_http(`/blacklists/{userId}`)
+	local isOk, response: any = self:_http(`/blacklists/{userId}`)
 
 	if not isOk or not response.Success then
 		return { success = false, message = response.Body.message or "Internal server error." }
@@ -2497,14 +2511,15 @@ end
 	@since 0.6.0
 ]=]
 ---
-function api:isUserBlacklisted<B, R, BB>(userId: (string | number)?): ...any
-	local blacklistData = self:getBlacklists(userId)
+function api:isUserBlacklisted<B, R, BB>(User: Player | string | number): ...any
+	local userId = self:_verifyUser(User, "Id")
+	local blacklistData: any = self:getBlacklists(userId :: number) :: Types.userBlacklistResponse
 
 	if blacklistData.success then
 		local data = {
 			blacklistData.data.blacklisted,
-			blacklistData.data.reason or nil,
-			blacklistData.data.blacklistedBy or nil,
+			blacklistData.data.reason,
+			blacklistData.data.blacklistedBy,
 		}
 
 		return table.unpack(data)
@@ -2524,7 +2539,7 @@ end
 ]=]
 ---
 function api:waitUntilLoaded(): Types.vibezApi?
-	if self["Loaded"] == true then
+	if self.Loaded == true then
 		return self
 	end
 
@@ -2549,8 +2564,8 @@ end
 	@since 0.3.0
 ]=]
 ---
-function api:getActivity(userId: string | number): Types.activityResponse
-	userId = self:_verifyUser(userId, "UserId")
+function api:getActivity(User: Player | string | number): Types.activityResponse
+	local userId = self:_verifyUser(User, "UserId")
 
 	local body: any = { userId = userId }
 	if not userId then
@@ -2558,7 +2573,7 @@ function api:getActivity(userId: string | number): Types.activityResponse
 	end
 
 	local _, result = self:_http("/activity/fetch2", "post", nil, body)
-	return result.Body
+	return result.Body :: Types.activityResponse
 end
 
 --[=[
@@ -2571,8 +2586,8 @@ end
 	@since 0.11.0
 ]=]
 ---
-function api:removeActivity(userId: Player | string | number): boolean
-	userId = self:_verifyUser(userId, "UserId")
+function api:removeActivity(User: Player | string | number): boolean
+	local userId = self:_verifyUser(User, "UserId") :: number
 	if not userId then
 		return false
 	end
@@ -2590,7 +2605,7 @@ function api:removeActivity(userId: Player | string | number): boolean
 	local fixedSeconds, fixedMessages =
 		(secondsSpent == 0) and 0 or -secondsSpent, (messagesSent == 0) and 0 or -messagesSent
 
-	local response = self:saveActivity(userId, userGroupInformation.Rank, fixedSeconds, fixedMessages)
+	local response: any = self:saveActivity(userId, userGroupInformation.Rank, fixedSeconds, fixedMessages)
 	return response.success or false
 end
 
@@ -2609,13 +2624,13 @@ end
 ]=]
 ---
 function api:saveActivity(
-	userId: string | number,
+	User: Player | string | number,
 	userRank: number,
 	secondsSpent: number?,
 	messagesSent: (number | { string })?,
 	shouldFetchGroupRank: boolean?
 ): (Types.infoResponse | Types.errorResponse)?
-	userId = self:_verifyUser(userId, "UserId")
+	local userId = self:_verifyUser(User, "UserId") :: number
 	messagesSent = (typeof(messagesSent) == "table") and #messagesSent
 		or (tonumber(messagesSent) ~= nil) and messagesSent
 		or nil
@@ -2650,7 +2665,7 @@ function api:saveActivity(
 
 	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
 
-	local _, response = self:_http("/activity/save2", "post", nil, {
+	local _, response: any = self:_http("/activity/save2", "post", nil, {
 		userId = userId,
 		userRank = userRank,
 		secondsUserHasSpent = secondsSpent,
@@ -3043,144 +3058,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- Only run the settings check if extra options were changed.
 	if wereOptionsAttempted then
 		-- Recursively fixes the settings table with custom logic for certain sections.
-		local function fixDiscrepencies(Data: any, Default: any, path: string): any
-			local pathSplit = string.split(path, ".")
-			local parentKey = (#pathSplit > 2) and pathSplit[#pathSplit - 1] or "Unknown"
-			local latestKey = (#pathSplit > 1) and pathSplit[#pathSplit] or "Unknown"
-
-			-- Errors --
-			local optionalKeyStarter = string.format("Optional key '%s'", path)
-			local optionalKeyInvalidError = string.format("%s is not a valid option.", optionalKeyStarter)
-
-			if typeof(Data) == typeof(Default) then
-				-- Notify the developer that all tabs are invisible and the interface is basically useless.
-				if latestKey == "nonViewableTabs" and #Data >= #clientInterface.Frame.Top.Buttons:GetChildren() - 1 then
-					self:_warn(
-						optionalKeyStarter
-							.. " makes all frame tabs invisible with it's current configuration. Either disable the 'Interface' or make atleast 1 tab visible."
-					)
-					return Default
-				elseif typeof(Data) == "table" then
-					-- Add non-existant keys
-					for key: string, value: any in pairs(Default) do
-						if typeof(Data[key]) == typeof(value) and typeof(value) ~= "table" then
-							continue
-						end
-
-						local newValue = fixDiscrepencies(Data[key], value, path .. "." .. key)
-						Data[key] = newValue
-					end
-
-					return Data
-				end
-			-- Custom errors past this point --
-			elseif typeof(Data) ~= typeof(Default) then
-				--selene: allow(empty_if)
-				if Data == nil and Default ~= nil then -- Insert if it doesn't exist
-					-- Allow pass through to return Default
-				elseif Default == nil then
-					self:_warn(optionalKeyInvalidError)
-				elseif parentKey == "RankSticks" and latestKey == "sticksModel" then
-					if Data == nil or typeof(Data) == "Instance" then
-						return Data
-					end
-
-					self:_warn(
-						optionalKeyStarter
-							.. " the RankStick's model must be a type of 'Instance' or 'nil'! Provided: "
-							.. typeof(Data)
-					)
-				elseif typeof(Default) == "string" and latestKey == "Mode" and parentKey == "RankSticks" then
-					if not self._private.validModes[string.lower(Data)] then
-						self:_warn(optionalKeyStarter .. " is not a valid 'Mode' state for the RankSticks.")
-						return Default
-					end
-
-					return Data
-				end
-			end
-
-			return Default
-		end
-
-		self.Settings = fixDiscrepencies(extraOptions, self.Settings, "Settings")
-
-		-- Old Settings check
-		--[[
-		for settingSubCategory, value in pairs(extraOptions :: { [any]: any }) do
-			if self.Settings[settingSubCategory] == nil then
-				self:_warn(`Optional key '{settingSubCategory}' is not a valid option.`)
-				continue
-			end
-
-			-- Final settings check
-			if typeof(value) == "table" then
-				-- Handle 'nilCheckIgnore' for tables that can be somewhat-wrongly typed.
-				for settingToChange, newSetting in pairs(value) do
-					local currentSettingToChange = self.Settings[settingSubCategory][settingToChange]
-
-					-- 'sticksModel' is nil by default.
-					if currentSettingToChange == nil and settingToChange ~= "sticksModel" then
-						self:_warn(
-							string.format(
-								"Optional key 'Settings.%s.%s' is not a valid option.",
-								settingSubCategory,
-								settingToChange
-							)
-						)
-						continue
-					elseif
-						-- Custom logic to validate feature modes.
-						self.Settings[settingSubCategory] ~= nil
-						and currentSettingToChange ~= nil
-						and settingToChange :: string == "Mode"
-						and typeof(newSetting) == "string"
-					then
-						if not self._private.validModes[settingSubCategory] then
-							self:_warn(
-								string.format(
-									"The 'Mode' setting within '%s' is not correctly validated! Please screenshot this message and send it to @ltsRune!",
-									settingSubCategory
-								)
-							)
-							continue
-						end
-
-						if self._private.validModes[settingSubCategory][string.lower(tostring(newSetting))] == nil then
-							self:_warn(
-								string.format(
-									"Optional mode '%s' for 'Settings.%s' is not a valid, it's been overwritten to the default of '%s'.",
-									newSetting,
-									settingSubCategory,
-									currentSettingToChange
-								)
-							)
-							continue
-						end
-					elseif
-						-- Write in custom logic for 'Instance' types.
-						typeof(currentSettingToChange) ~= typeof(newSetting)
-						and (settingToChange == "sticksModel" and typeof(newSetting) ~= "Instance")
-					then
-						self:_warn(
-							string.format(
-								"Optional key 'Settings.%s.%s' is not the same type as it's default value of '%s'",
-								settingSubCategory,
-								settingToChange,
-								typeof(currentSettingToChange)
-							)
-						)
-						continue
-					end
-
-					self.Settings[settingSubCategory][settingToChange] = newSetting
-				end
-			else
-				self.Settings[settingSubCategory] = value
-			end
-		end
-		]]
-		--
+		self.Settings = settingsCheck(self, extraOptions, self.Settings, "Settings")
 	end
 
 	--/ Configuration Setup \--
