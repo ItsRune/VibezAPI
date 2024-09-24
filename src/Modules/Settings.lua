@@ -102,6 +102,7 @@
 	@within VibezAPI
 ]=]
 
+-- Array string: 'settings_check_ignore_nil_tbl' ignores data in table for settings checker.
 return {
 	Commands = {
 		Enabled = false, -- Toggles the Commands module.
@@ -111,8 +112,8 @@ return {
 		MaxRank = 255, -- Maximum rank
 
 		Prefix = "!", -- Prefix to use when using commands.
-		Alias = {}, -- Command aliases.
-		Removed = {}, -- Removes specified commands.
+		Alias = { "settings_check_ignore_nil_tbl" }, -- Command aliases.
+		Removed = { "settings_check_ignore_nil_tbl" }, -- Removes specified commands.
 	},
 
 	RankSticks = {
@@ -123,7 +124,7 @@ return {
 		MaxRank = 255,
 
 		sticksModel = nil, -- Uses default
-		Removed = {}, -- Won't insert if the name is in this table.
+		Removed = { "settings_check_ignore_nil_tbl" }, -- Won't insert if the name is in this table.
 
 		Animation = {
 			R6 = 17838471144,
@@ -173,7 +174,7 @@ return {
 			iconToolTip = "Vibez UI", -- The text shown when hovering over the toggle button.
 		},
 
-		nonViewableTabs = {}, -- Determines which tabs to not view in the Interface. (Not case sensitive)
+		nonViewableTabs = { "settings_check_ignore_nil_tbl" }, -- Determines which tabs to not view in the Interface. (Not case sensitive)
 	},
 
 	Logs = {
@@ -202,6 +203,7 @@ return {
 
 	Misc = {
 		originLoggerText = game.Name, -- Text of logger for Vibez provided embeds. (Ranking)
+		showDebugMessages = false, -- Allows our wrapper to print to the output any debugging related messages.
 		ignoreWarnings = false, -- Ignores debugging outputs.
 		overrideGroupCheckForStudio = false, -- Overrides group rank checks for developers.
 		createGlobalVariables = false, -- Creates a Folder in ServerStorage providing another script access to the API.

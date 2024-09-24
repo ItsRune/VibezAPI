@@ -111,7 +111,7 @@ export type vibezSettings = {
 		MaxRank: number,
 
 		Prefix: string,
-		Alias: { { any } },
+		Alias: { [string]: string | { string } },
 		Removed: { string? },
 	},
 
@@ -197,6 +197,7 @@ export type vibezSettings = {
 	Misc: {
 		originLoggerText: string,
 		ignoreWarnings: boolean,
+		showDebugMessages: boolean,
 		overrideGroupCheckForStudio: boolean,
 		createGlobalVariables: boolean,
 		rankingCooldown: number,
@@ -258,6 +259,7 @@ export type vibezInternalApi = {
 	_playerIsValidStaff: (self: vibezApi, Player: any) -> { [any]: any },
 	_notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
 	_warn: (self: vibezApi, ...any) -> (),
+	_debug: (self: vibezApi, ...any) -> (),
 	_addLog: (
 		self: vibezApi,
 		calledBy: Player,

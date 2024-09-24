@@ -32,7 +32,7 @@ local TestService = game:GetService("TestService")
 
 --// Modules \\--
 local Types = require(script.Modules.Internal.Types)
-local settingsCheck = require(script.Modules.Internal.SettingsChecker)
+local checkingMethods = require(script.Modules.Internal.SettingsChecker)
 local Hooks = require(script.Modules.Hooks)
 local ActivityTracker = require(script.Modules.Activity)
 local RateLimit = require(script.Modules.RateLimit)
@@ -80,7 +80,7 @@ local function onServerInvoke(
 	if actionIndex ~= nil then
 		local Targets = Data[1]
 
-		if typeof(Targets) ~= "table" then
+		if typeof(Targets[1]) ~= "table" and typeof(Targets[1]) ~= "Player" then
 			Targets = { Targets }
 		end
 
@@ -105,19 +105,14 @@ local function onServerInvoke(
 
 				-- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
 				if typeof(Target) == "number" or typeof(Target) == "string" then
-					local toFetch = (typeof(Target) == "number") and "Name" or "UserId"
-					local oppoFetch = (toFetch == "Name") and "UserId" or "Name"
-
-					local fetched = self:_verifyUser(Target, toFetch)
-					local rememberedOriginalValue = Target
-
+					local userId, name = self:_verifyUser(Target, "UserId"), self:_verifyUser(Target, "Name")
 					Target = {
-						[oppoFetch] = rememberedOriginalValue,
-						[toFetch] = fetched,
+						["Name"] = name,
+						["UserId"] = userId,
 					}
 				end
 
-				local userId = self:_getUserIdByName(Target.Name)
+				local userId = Target.UserId
 				local fakeTargetInstance = { Name = Target.Name, UserId = userId }
 
 				local targetGroupData = self:_playerIsValidStaff(fakeTargetInstance)
@@ -232,6 +227,7 @@ local function onServerInvoke(
 					local newRank = Data[2]
 					result = self[actionFunc](self, userId, newRank, { userName = Player.Name, userId = Player.UserId })
 				else
+					warn(userId, Player, actionFunc)
 					result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
 				end
 
@@ -293,6 +289,7 @@ local function onServerInvoke(
 		repeat
 			task.wait()
 		until #resolvedPromises == #Targets
+		warn(resolvedPromises, #Targets)
 
 		local requiresAndMore = #resolvedPromises > 3
 		local maxResolved = requiresAndMore and 3 or #resolvedPromises
@@ -638,12 +635,48 @@ function api:_setupCommands()
 		},
 	}
 
+	local removedCommands = Table.Map(self.Settings.Commands.Removed or {}, function(commandName: string?)
+		return string.lower(tostring(commandName))
+	end)
+
 	for _, commandData in ipairs(baseCommands) do
-		if table.find(self.Settings.Commands.Removed, commandData.Name) then
+		if table.find(removedCommands, string.lower(commandData.Name)) then
 			continue
 		end
 
-		self:addCommand(commandData.Name, commandData.Alias, commandData.Func)
+		local developerDefinedAliases = self.Settings.Commands.Alias[string.lower(commandData.Name)]
+		local aliases: { string } = {}
+
+		if developerDefinedAliases ~= nil then
+			local removedAliases = 0
+
+			if typeof(developerDefinedAliases) == "string" then
+				aliases = { developerDefinedAliases }
+			elseif typeof(developerDefinedAliases) == "table" then
+				aliases = developerDefinedAliases
+			end
+
+			for index, alias in ipairs(aliases) do
+				local existingCommand = Table.Find(self._private.commandOperations, function(data)
+					return string.lower(tostring(data.Name)) == string.lower(tostring(alias))
+						or table.find(data.Alias, string.lower(tostring(alias))) ~= nil
+				end)
+
+				if existingCommand then
+					local warningMessage =
+						"Insertion of alias '%s' caused an internal issue, this alias will not work for command '%s'"
+					self:_warn(string.format(warningMessage, alias, existingCommand.Name))
+
+					table.remove(aliases, index - removedAliases)
+					removedAliases += 1
+					continue
+				end
+
+				aliases[index - removedAliases] = string.lower(tostring(alias))
+			end
+		end
+
+		self:addCommand(commandData.Name, aliases, commandData.Func)
 	end
 end
 
@@ -1377,7 +1410,7 @@ function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | 
 				local code: string, codeFunc: (...any) -> ...any = operationData.Code, operationData.Execute
 
 				if string.lower(string.sub(tostring(username), 1, #code)) == string.lower(code) then
-					local data = codeFunc(string.sub(tostring(username), #code + 1, #tostring(username)))
+					local data = codeFunc(nil, nil, string.sub(tostring(username), #code + 1, #tostring(username)))
 
 					if data == nil then
 						continue
@@ -1600,22 +1633,22 @@ function api:_onPlayerChatted(Player: Player, message: string)
 	local command = string.sub(string.lower(args[1]), string.len(commandPrefix) + 1, #args[1])
 	table.remove(args, 1)
 
-	local commandData = Table.Filter(self._private.commandOperations, function(data)
-		return data.Enabled == true
+	local commandData = Table.Find(self._private.commandOperations, function(data)
+		return data.Enabled
 			and (
-				(self.Settings.Commands.useDefaultNames == true and string.lower(command) == string.lower(data.Name))
-				or Table.Filter(data.Alias, function(innerData)
-						return string.lower(tostring(innerData)) == string.lower(command)
-					end)[1]
+				string.lower(tostring(data.Name)) == string.lower(tostring(command))
+				or Table.Find(data.Alias, function(aliasData)
+						return string.lower(tostring(aliasData)) == string.lower(tostring(command))
+					end)
 					~= nil
 			)
 	end)
 
-	if commandData[1] == nil then
+	if commandData == nil then
 		return
 	end
 
-	commandData[1].Execute(Player, args, function(...: any)
+	commandData.Execute(Player, args, function(...: any)
 		return self:_addLog(...)
 	end, function(...: any)
 		return self:getUsersForCommands(...)
@@ -1649,7 +1682,7 @@ function api:_checkPlayerForRankChange(userId: number)
 end
 
 --[=[
-	Displays a warning with the prefix of "Vibez @ TIMESTAMP: Message"
+	Displays a warning to the output.
 	@param ... ...string
 
 	@private
@@ -1663,6 +1696,24 @@ function api:_warn(...: string)
 	end
 
 	warn("[Vibez]:", ...)
+end
+
+--[=[
+	Displays a debug message to the output.
+	@param ... ...string
+
+	@private
+	@within VibezAPI
+	@since 1.0.2
+]=]
+---
+function api:_debug(...: string)
+	if not self.Settings.Misc.showDebugMessages then
+		return
+	end
+
+	print("[Vibez | Debug]:", ...)
+	print(debug.traceback())
 end
 
 --[=[
@@ -2126,44 +2177,40 @@ function api:addCommand(
 		) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }
 	) -> ()
 ): boolean
-	-- Make sure command doesn't already exist.
-	commandAliases = (typeof(commandAliases) == "table") and commandAliases or {}
-
-	local flatData = Table.Flat(Table.Map(self._private.commandOperations, function(value)
-		return value.Alias
-	end))
-
-	local mappedCommandNames = Table.Map(self._private.commandOperations, function(value)
-		return value.Name
+	local currentCommands = self._private.commandOperations
+	local existingCommand = Table.Find(currentCommands, function(data)
+		return string.lower(data.Name) == string.lower(commandName)
+			or table.find(data.Alias, string.lower(commandName)) ~= nil
 	end)
 
-	-- Conjoin the two tables into 1 | Result: { string }
-	local keys = Table.Assign(flatData, mappedCommandNames)
+	if existingCommand then
+		local isAttemptedCommandNameOverwrite = (string.lower(existingCommand.Name) == string.lower(commandName))
+		local warningMessage = "Attempting to %s is not possible."
 
-	-- Both command names and aliases cannot be used as a command name.
-	-- Just stop execution when detected.
-	for _, key in ipairs(keys) do
-		if string.lower(tostring(key)) == string.lower(tostring(commandName)) then
-			return false
-		end
+		self:_warn(
+			string.format(
+				warningMessage,
+				(
+					isAttemptedCommandNameOverwrite and "overwrite existing command name"
+					or "create a command with an existing alias"
+				)
+			)
+		)
+		return false
 	end
 
-	-- Remove any aliases that are already taken.
-	for _, alias in ipairs(flatData) do
-		local _, index = Table.Find(commandAliases, function(value)
-			return string.lower(tostring(value)) == string.lower(tostring(alias))
-		end)
+	commandAliases = Table.Map(commandAliases, function(data)
+		return string.lower(tostring(data))
+	end)
 
-		table.remove(commandAliases, index)
-	end
-
-	table.insert(self._private.commandOperations, {
+	local newData: any = {
 		Name = string.lower(commandName),
 		Alias = commandAliases,
 		Enabled = true,
-		Execute = commandOperation :: any,
-	})
+		Execute = commandOperation,
+	}
 
+	table.insert(self._private.commandOperations, newData)
 	return true
 end
 
@@ -2424,7 +2471,8 @@ function api:addBlacklist(
 	Reason: string?,
 	blacklistExecutedBy: Player | string | number
 ): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
-	local userId, reason, blacklistedBy = nil, (Reason or "Unknown."), nil
+	local userId, reason, blacklistedBy =
+		nil, (typeof(Reason) ~= "string" or Reason == "") and "Unknown." or Reason, nil
 
 	if not userToBlacklist then
 		return nil
@@ -2489,9 +2537,9 @@ end
 ]=]
 ---
 function api:getBlacklists(
-	userId: string | number | Player
+	userId: (string | number | Player)?
 ): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
-	userId = self:_verifyUser(userId, "UserId")
+	userId = (userId ~= nil) and self:_verifyUser(userId, "UserId") or ""
 	local isOk, response: any = self:_http(`/blacklists/{userId}`)
 
 	if not isOk or not response.Success then
@@ -2786,7 +2834,10 @@ function api:_initialize(apiKey: string): ()
 		self:Destroy()
 		return setmetatable({}, {
 			__index = function()
-				warn("[Vibez]:", "API Key was not accepted, please make sure there are no special character or spaces.")
+				warn(
+					"[Vibez]:",
+					"API Key was not accepted, please make sure there are no special characters or spaces."
+				)
 				return function() end
 			end,
 		})
@@ -2898,6 +2949,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	api.__index = api
 
+	-- No autofill for this section, can't get Luau-LSP to work well with this.
 	local self = setmetatable({}, api) :: any
 
 	--[=[
@@ -3031,7 +3083,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		end
 
 		if not name or not id then
-			return false
+			return nil
 		end
 
 		return {
@@ -3080,14 +3132,15 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	local wereOptionsAttempted = not (extraOptions == nil)
 	extraOptions = (typeof(extraOptions) == "table") and extraOptions or {} :: Types.vibezSettings
 
-	if Table.Count(extraOptions :: any) == 0 and wereOptionsAttempted then
+	if Table.Count(extraOptions) == 0 and wereOptionsAttempted then
 		self:_warn("Extra options have an error associated with them, reverting to default options...")
 	end
 
 	-- Only run the settings check if extra options were changed.
 	if wereOptionsAttempted then
 		-- Recursively fixes the settings table with custom logic for certain sections.
-		self.Settings = settingsCheck(self, extraOptions, self.Settings, "Settings")
+		local modified = checkingMethods.settingsCheck(self, extraOptions, self.Settings, "Settings")
+		self.Settings = checkingMethods.removeNilChecks(modified)
 	end
 
 	--/ Configuration Setup \--
@@ -3129,6 +3182,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		-- Remove the other commands, that way sticks is the only command possible.
 		if not self.Settings.Commands.Enabled then
+			warn("Removed ALL")
 			self.Settings.Commands.Removed = { "Promote", "Demote", "Fire", "Blacklist", "Unblacklist" }
 		end
 
@@ -3140,49 +3194,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- Add rest of the commands when "Commands" is enabled.
 	if self.Settings.Commands.Enabled == true then
 		self:_setupCommands()
-	end
-
-	-- Check for aliases changed and update them (Separate Thread)
-	if #self.Settings.Commands.Alias > 0 then
-		coroutine.wrap(function()
-			Table.ForEach(self.Settings.Commands.Alias, function(data: { any }) -- data: { string, { string } }
-				if
-					typeof(data) ~= "table"
-					or typeof(data[1]) ~= "string"
-					or typeof(data[2]) ~= "table"
-					or typeof(data[2][1]) ~= "string"
-				then
-					return
-				end
-
-				-- Listen... We don't talk about this one..
-				Table.ForEach(
-					Table.Assign(
-						data[2],
-						Table.FlatMap(self._private.commandOperations, function(command)
-							return command.Alias
-						end)
-					),
-					function(temp)
-						local isNotOk = string.lower(temp) == string.lower(data[1])
-
-						if isNotOk then
-							return
-						end
-
-						local mapped = Table.Map(self._private.commandOperations, function(command)
-							if string.lower(command.Name) == string.lower(data[1]) then
-								table.insert(command.Alias, temp)
-							end
-
-							return command
-						end)
-
-						self._private.commandOperations = mapped
-					end
-				)
-			end)
-		end)()
 	end
 
 	-- (DEPRECATED)

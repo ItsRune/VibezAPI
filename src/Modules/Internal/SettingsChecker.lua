@@ -11,6 +11,18 @@ local Table = require(script.Parent.Parent.Table)
 local clientInterface = script.Parent.Parent.Parent.Client.Components.UI.Interface
 
 --// Functions \\--
+--[=[
+	Compares a value to a default value and ensures it's type is kept the same.
+
+	```lua
+	local Default = { ["Test"] = "Hello!" }
+	local Data = { ["Test"] = 1 }
+
+	Data = fixDiscrepencies(_, Data, Default)
+	
+	print(Data) --> { ["Test"] = "Hello!" }
+	```
+]=]
 local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, path: string): any
 	local pathSplit = string.split(path, ".")
 	local parentKey = (#pathSplit > 2) and pathSplit[#pathSplit - 1] or "<UNKNOWN_PARENT>"
@@ -49,30 +61,23 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 			return Data
 		elseif typeof(Data) == "table" and typeof(Default) == "table" then
 			-- Remove non-existant keys
-			for key: string, value: any in pairs(Data) do
-				if typeof(Default[key]) == typeof(value) and typeof(value) ~= "table" then
-					continue
-				end
-
-				local newValue = fixDiscrepencies(self, value, Default[key], path .. "." .. key)
-				Data[key] = newValue
-			end
-
-			-- Add non-existant keys
 			for key: string, value: any in pairs(Default) do
 				if typeof(Data[key]) == typeof(value) and typeof(value) ~= "table" then
 					continue
 				end
 
-				local newValue = fixDiscrepencies(self, Data[key], value, path .. "." .. key)
-				Data[key] = newValue
+				Data[key] = fixDiscrepencies(self, Data[key], value, path .. "." .. key)
 			end
 
 			return Data
 		end
 		-- Custom errors past this point --
 	elseif typeof(Data) ~= typeof(Default) then
-		if parentKey == "RankSticks" and latestKey == "sticksModel" then
+		if typeof(Default) == "table" and Default[1] == "settings_check_ignore_nil_tbl" then
+			return ((typeof(Data) == "table" and Data[1] ~= "settings_check_ignore_nil_tbl") or typeof(Data) ~= "table")
+					and Data
+				or {}
+		elseif parentKey == "RankSticks" and latestKey == "sticksModel" then
 			if Data == nil or typeof(Data) == "Instance" then
 				return Data
 			end
@@ -82,24 +87,40 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 
 			return Default
 		elseif typeof(Data) == "string" and latestKey == "Mode" and parentKey == "RankSticks" then
-			if not self._private.validModes[string.lower(tostring(Data))] then
-				self:_warn(
-					string.format("%s '%s' is not a valid 'Mode' for RankSticks.", optionalKeyStarter, tostring(Data))
-				)
-				return Default
+			if self._private.validModes[string.lower(tostring(Data))] then
+				return Data
 			end
 
+			self:_warn(
+				string.format("%s '%s' is not a valid 'Mode' for RankSticks.", optionalKeyStarter, tostring(Data))
+			)
+			return Default
+		elseif Default == nil and (parentKey == "Alias" or parentKey == "Removed") then
 			return Data
 		elseif Default == nil then
 			self:_warn(optionalKeyInvalidError)
-			return Default
 		end
 	end
 
 	return Default
 end
 
-return fixDiscrepencies
+local function removeAllIgnoreNilChecks(Data: any): any
+	if typeof(Data) == "table" then
+		for key: string, value: any in next, Data do
+			Data[key] = removeAllIgnoreNilChecks(value)
+		end
+	elseif Data == "settings_check_ignore_nil_tbl" then
+		return nil
+	end
+
+	return Data
+end
+
+return {
+	settingsCheck = fixDiscrepencies,
+	removeNilChecks = removeAllIgnoreNilChecks,
+}
 
 -- Old Settings check
 --[[

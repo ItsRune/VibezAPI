@@ -909,7 +909,7 @@ end
 	TableUtil.Count({abc = 32}) -- 1
 	```
 ]=]
-local function Count(tbl: { [any]: any }): number
+local function Count(tbl: any): number
 	local count = 0
 
 	for _, _ in pairs(tbl) do
