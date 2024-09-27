@@ -2611,7 +2611,7 @@ end
 	@since 0.6.0
 ]=]
 ---
-function api:isUserBlacklisted<B, R, BB>(User: Player | string | number): ...any
+function api:isUserBlacklisted(User: Player | string | number): ...any
 	local userId = self:_verifyUser(User, "Id")
 	local blacklistData: any = self:getBlacklists(userId :: number) :: Types.userBlacklistResponse
 
