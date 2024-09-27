@@ -16,6 +16,8 @@ type Tweens = (Inst: Instance, TweenInfo, { [string]: any }) -> tweenServiceElem
 
 --// Variables \\--
 local frameComponents = script.Frames
+local oldUIData = require(script.oldUI)
+local notifiedAboutBetaUsage = false
 local Maid = {
 	Parent = {},
 	Children = {},
@@ -145,7 +147,12 @@ function _toggleUI(componentData: { [any]: any })
 	end
 
 	-- Exit button
-	table.insert(Maid.Children, Top.Exit.MouseButton1Click:Connect(_onExitButtonClicked))
+	table.insert(
+		Maid.Children,
+		Top.Exit.MouseButton1Click:Connect(function()
+			_onExitButtonClicked(componentData)
+		end)
+	)
 
 	-- Main frame's dragging mechanics
 	do
@@ -214,6 +221,10 @@ function _toggleUI(componentData: { [any]: any })
 end
 
 function onDestroy(componentData: { [any]: any })
+	if not componentData.Data.useBeta then
+		return oldUIData.Destroy
+	end
+
 	UI.Enabled = false
 	UI.Frame.Position = UDim2.fromScale(0.5, 0.5)
 
@@ -231,10 +242,22 @@ function onDestroy(componentData: { [any]: any })
 end
 
 function onSetup(componentData: { [any]: any })
+	if not componentData.Data.useBeta then
+		return oldUIData.Setup
+	end
+
 	onDestroy(componentData)
 
+	if notifiedAboutBetaUsage == false then
+		notifiedAboutBetaUsage = nil
+		componentData._warn(
+			"Vibez Beta",
+			"You've opted to use our beta UI, please keep in mind that this UI is still being worked on and can contain bugs!"
+		)
+	end
+
 	local interfaceData = componentData.Data
-	if not componentData.Data.iconAllowMobile or topBarButton ~= nil then
+	if topBarButton ~= nil then
 		return
 	end
 

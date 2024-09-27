@@ -154,7 +154,16 @@ export type vibezSettings = {
 
 		MinRank: number,
 		MaxRank: number,
+
+		-- For Beta UI use only.
+		useBetaUI: boolean,
 		maxUsersForSelection: number,
+
+		Suggestions: {
+			searchPlayersOutsideServer: boolean,
+			outsideServerTagText: string,
+			outsideServerTagColor: Color3 | BrickColor,
+		},
 
 		Activation: {
 			Keybind: string | Enum.KeyCode,

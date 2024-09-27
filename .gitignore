@@ -1,5 +1,6 @@
 # Project place file
-/API_V2.rbxlx
+/*.rbxl
+/*.rbxlx
 
 # Roblox Studio lock files
 /*.rbxlx.lock
@@ -10,3 +11,4 @@
 
 # Private files
 /private
+/tests

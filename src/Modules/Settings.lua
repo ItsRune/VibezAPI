@@ -155,6 +155,7 @@ return {
 
 	Interface = {
 		Enabled = false, -- Toggles the Interface module.
+		useBetaUI = false, -- Determines whether you'd like to use our newer UI.
 
 		MinRank = 255, -- Minimum rank for the interface to show for.
 		MaxRank = 255, -- Maximum rank required for the interface.
@@ -163,6 +164,7 @@ return {
 		Suggestions = {
 			searchPlayersOutsideServer = false, -- Determines whether our interface will allow players outside of the server to be searched.
 			outsideServerTagText = "External", -- The text shown when a player is searched outside of the server.
+			outsideServerTagColor = Color3.fromRGB(255, 50, 50), -- The tag's color for a player searched outside of the server.
 		},
 
 		Activation = {

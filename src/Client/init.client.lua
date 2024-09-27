@@ -129,11 +129,6 @@ local function onAttributeChanged()
 			_warn = _warn,
 		}
 
-		if key == "UI" and not componentData.Data.iconAllowMobile then
-			_warn("Vibez Setup", string.format("Ignoring '%s' due to being disabled for mobile players.", key))
-			continue
-		end
-
 		local associatedModule, moduleName
 		for modName: string, moduleData: { [any]: any } in pairs(System.Components) do
 			if string.find(string.lower(modName), string.lower(key)) ~= nil then
@@ -153,10 +148,10 @@ local function onAttributeChanged()
 			Method = "Destroy"
 		end
 
-		associatedModule[Method](componentData)
-
 		local description = (Method == "Setup") and "Setting up" or "Undoing setup"
 		_warn("Vibez Setup", string.format("%s for '%s'", description, moduleName))
+
+		associatedModule[Method](componentData)
 
 		if Method == "Setup" then
 			table.insert(System.hasSetup, moduleName)

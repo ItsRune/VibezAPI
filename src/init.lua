@@ -1760,7 +1760,7 @@ end
 ]=]
 ---
 function api:_buildAttributes()
-	local function convertEnumToString(
+	local function _convertEnumToString(
 		enum: Enum.Font | Enum.FontSize | Enum.EasingDirection | Enum.EasingStyle | Enum.KeyCode | string | number
 	): any
 		if typeof(enum) == "EnumItem" then
@@ -1770,7 +1770,25 @@ function api:_buildAttributes()
 		return enum
 	end
 
-	local function handleImageIds(image: string | number): number?
+	local function _serializeColor(Color: Color3 | BrickColor): string
+		local color3: Color3
+		if typeof(Color) == "BrickColor" then
+			color3 = Color.Color :: Color3
+		elseif typeof(Color) == "Color3" then
+			color3 = Color
+		else
+			return ""
+		end
+
+		return string.format(
+			"%d,%d,%d",
+			math.floor(color3.R * 255),
+			math.floor(color3.G * 255),
+			math.floor(color3.B * 255)
+		)
+	end
+
+	local function _handleImageIds(image: string | number): number?
 		if string.match(tostring(image), "rbxassetid") ~= nil then
 			return tonumber(string.match(tostring(image), "[%d]+"))
 				or baseSettings.Interface.Activation.iconButtonImage :: any
@@ -1795,27 +1813,28 @@ function api:_buildAttributes()
 
 		Notifications = {
 			Status = self.Settings.Notifications.Enabled,
-			Font = convertEnumToString(self.Settings.Notifications.Font),
-			FontSize = convertEnumToString(self.Settings.Notifications.FontSize),
+			Font = _convertEnumToString(self.Settings.Notifications.Font),
+			FontSize = _convertEnumToString(self.Settings.Notifications.FontSize),
 
 			keyboardFontSizeMultiplier = self.Settings.Notifications.keyboardFontSizeMultiplier,
 			delayUntilRemoval = self.Settings.Notifications.delayUntilRemoval,
 
 			entranceTweenInfo = {
-				Style = convertEnumToString(self.Settings.Notifications.entranceTweenInfo.Style),
-				Direction = convertEnumToString(self.Settings.Notifications.entranceTweenInfo.Direction),
+				Style = _convertEnumToString(self.Settings.Notifications.entranceTweenInfo.Style),
+				Direction = _convertEnumToString(self.Settings.Notifications.entranceTweenInfo.Direction),
 				timeItTakes = self.Settings.Notifications.entranceTweenInfo.timeItTakes,
 			},
 
 			exitTweenInfo = {
-				Style = convertEnumToString(self.Settings.Notifications.exitTweenInfo.Style),
-				Direction = convertEnumToString(self.Settings.Notifications.exitTweenInfo.Direction),
+				Style = _convertEnumToString(self.Settings.Notifications.exitTweenInfo.Style),
+				Direction = _convertEnumToString(self.Settings.Notifications.exitTweenInfo.Direction),
 				timeItTakes = self.Settings.Notifications.exitTweenInfo.timeItTakes,
 			},
 		},
 
 		UI = {
 			Status = self.Settings.Interface.Enabled,
+			useBeta = self.Settings.Interface.useBetaUI,
 
 			MinRank = self.Settings.Interface.MinRank,
 			MaxRank = self.Settings.Interface.MaxRank,
@@ -1827,11 +1846,16 @@ function api:_buildAttributes()
 				MinRank = self.Settings.Logs.MinRank,
 			},
 
-			iconAllowMobile = self.Settings.Interface.Activation.allowMobileUsers,
+			Suggestions = {
+				allowExternalPlayerSearch = self.Settings.Interface.Suggestions.searchPlayersOutsideServer,
+				externalSearchTagText = self.Settings.Interface.Suggestions.outsideServerTagText,
+				externalSearchTagColor = _serializeColor(self.Settings.Interface.Suggestions.outsideServerTagColor),
+			},
+
 			iconPosition = self.Settings.Interface.Activation.iconButtonPosition,
 			iconToolTip = self.Settings.Interface.Activation.iconToolTip,
-			iconImageId = handleImageIds(self.Settings.Interface.Activation.iconButtonImage),
-			iconKeybind = convertEnumToString(self.Settings.Interface.Activation.Keybind),
+			iconImageId = _handleImageIds(self.Settings.Interface.Activation.iconButtonImage),
+			iconKeybind = _convertEnumToString(self.Settings.Interface.Activation.Keybind),
 
 			maxUsersToSelectForRanking = self.Settings.Interface.maxUsersForSelection,
 		},
@@ -2196,6 +2220,7 @@ function api:addCommand(
 				)
 			)
 		)
+
 		return false
 	end
 

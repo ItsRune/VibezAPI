@@ -116,6 +116,11 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 	local templateFrame = usernameTextBox.Parent.Suggestions.Template
 	local userInformation = _getUserInformation(Target.UserId)
 	local newTemplate = templateFrame:Clone()
+	local tagText = string.format(
+		'<font color="rgb(%s)">[%s]</font>',
+		componentData.Data.Suggestions.externalSearchTagColor,
+		componentData.Data.Suggestions.externalSearchTagText
+	)
 
 	newTemplate.LayoutOrder = layoutOrder or 99999
 	newTemplate.Left.Information.Username.Text = Target.Name
@@ -123,7 +128,7 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 	newTemplate.Left.Thumbnail.Image = userInformation.Thumbnail
 
 	--stylua: ignore
-	newTemplate.Right.Tag.Text = not userInformation.isInGame and '<font color="rgb(225, 50, 50)">[External]</font>' or ""
+	newTemplate.Right.Tag.Text = not userInformation.isInGame and tagText or ""
 	newTemplate.Right.Checkbox.ImageTransparency = (table.find(selectedUsers, Target.UserId) ~= nil) and 0.2 or 1
 
 	newTemplate.Name = Target.UserId
@@ -372,7 +377,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
 			local filteredPlayers = componentData.Table.Filter(Players:GetPlayers(), _fullCheckForFilter)
 
-			if #filteredPlayers == 0 then
+			if #filteredPlayers == 0 and componentData.Data.Suggestions.allowExternalPlayerSearch then
 				_checkTextAfterDelay(Frame.User.Username, 1, _handleExternalUserSearch, componentData)
 				return
 			end

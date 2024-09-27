@@ -1,4 +1,5 @@
 --!nocheck
+--!nolint
 -- Not as clean as the main module. But it works...
 --// Services \\--
 local Debris = game:GetService("Debris")
