@@ -3,15 +3,24 @@ sidebar_position: 5
 ---
 
 ### What are notifications?
+
 Notifications are a way to tell the user if their request went through successfully or not. Their main purpose is to inform the user of the status of their request.
 
 ### When are notifications used?
-Notifications are mainly used when using the: UI, [Commands](/VibezAPI/docs/Features/Commands/About/), or RankSticks. Notifications are intended to tell the user if their request went throught successfully or not.
+
+Notifications are mainly used when using the: Beta UI, [Commands](/VibezAPI/docs/Features/Commands/About/), or RankSticks. Notifications are intended to tell the user if their request went throught successfully or not.
 
 ### Can I send custom notifications?
-At this time, you cannot access notifications directly with our API. However, you can access them via the [Global API](/VibezAPI/docs/Features/Global).
+
+Yes, you can use our notification handler to send custom notifications. The method to do this is `notifyPlayer` along with the message. <br/>
+Example:
+
+```lua
+VibezAPI:notifyPlayer(Player, "Hello there!")
+```
 
 ### Notification Settings
+
 ```lua
 Enabled = true, -- Determines whether or not notifications are enabled.
 

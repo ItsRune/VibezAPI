@@ -109,15 +109,18 @@ export type vibezSettings = {
 
 	RankSticks: {
 		Enabled: boolean,
-		Mode: "DetectionInFront" | "ClickOnPlayer",
+		Mode: "DetectionInFront" | "ClickOnPlayer" | "Default",
 
 		MinRank: number,
 		MaxRank: number,
 
 		Removed: { string },
 
-		sticksModel: Model?,
-		sticksAnimation: string?,
+		Model: (Tool | Model)?,
+		Animation: {
+			R6: number,
+			R15: number,
+		},
 	},
 
 	Notifications: {

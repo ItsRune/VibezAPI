@@ -30,113 +30,378 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 
 <h3>Here's a simple table to help you understand the types:</h3>
 
-|       Type        |               Example               |
-|:-----------------:|:-----------------------------------:|
-|      Boolean      |         `true` OR `false`           |
-|      String       | `"Text"` OR `'Text'` OR `` `Text` ``  |
-|      Number       | `-2,147,483,647` TO `2,147,483,647` |
-|    Array | `{1, 2, 3}` OR `{"A", "B", "C"}` |
-| Array <br/> Example | <ul><li>String&lt;whatYoureChanging&gt; → "Example"</li><li>Array&lt;String&lt;Something&gt;&gt; → `{"Something1", "Something2", "Something2"}`</li></ul> |
+|  Type   |               Example                |
+| :-----: | :----------------------------------: |
+| boolean |          `true` OR `false`           |
+| string  | `"Text"` OR `'Text'` OR `` `Text` `` |
+| number  | `-2,147,483,647` TO `2,147,483,647`  |
 
 <details>
 <summary>Commands</summary>
-<br />
 
-| Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables chat commands. |
-| useDefaultNames | Boolean | true | Determines whether default names should be included in the alias list. |
-| Prefix | String | ! | The prefix for chat commands. |
-| MinRank | Number | 255 | The minimum rank required to use chat commands. |
-| MaxRank | Number | 255 | The maximum rank required to use chat commands. |
+#### Enabled
 
+Enables chat commands. <br/>
+`boolean` <br/>
+`false`
 
-<!-- | Alias | Array&lt;\{String&lt;commandName&gt;, String&lt;commandAlias&gt;\}&gt; | {} | The aliases for chat commands. | -->
+#### MinRank
+
+Minimum group rank required. <br/>
+`number` <br/>
+`255`
+
+#### MaxRank
+
+Maximum group rank required. <br/>
+`number` <br/>
+`255`
+
+#### Prefix
+
+The prefix to use. <br/>
+`string` <br/>
+`!`
+
+#### Alias
+
+Creates alias commands for already defined commands. <br/>
+`table` <br/>
+Example:
+
+```lua
+{
+    ["Promote"] = "up",
+    ["Demote"] = {"de", "down"}
+}
+```
+
+#### Removed
+
+Removes commands from being used. <br/>
+`table` <br/>
+Example:
+
+```lua
+{
+    "Promote"
+}
+```
 
 </details>
 
 <details>
 <summary>ActivityTracker</summary>
-<br />
 
-| Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables the activity tracker. |
-| MinRank | Number | 255 | The minimum rank required to track activity. |
-| disableInStudio | Boolean | true | Disables activity tracking in studio. |
-| disableWhenAFK | Boolean | false | Disables activity tracking when a player is AFK. |
-| delayBeforeAFK | Number | 30 | The amount of time in seconds before a player is marked 'AFK'. |
-| kickIfFails | Boolean | false | Kicks players if the activity tracker fails to initialize. |
-| failMessage | String | We were unable to initialize the activity tracker for you. Please rejoin the game. | The message sent when the activity tracker fails to initialize. |
+#### Enabled
+
+Toggles whether we track the activity of players within your game. <br/>
+`boolean` <br/>
+`false`
+
+#### MinRank
+
+The minimum rank a staff member needs to be tracked. <br/>
+`number` <br/>
+`255`
+
+#### MaxRank
+
+The maximum rank a staff member needs to be tracked. <br/>
+`number` <br/>
+`255`
+
+#### disableWhenInStudio
+
+Toggles whether we stop tracking when in studio play-test. <br/>
+`boolean` <br/>
+`true`
+
+#### disableWhenAFK
+
+Stops tracking activity when a player goes afk. <br/>
+`boolean` <br/>
+`false`
+
+#### delayBeforeMarkedAFK
+
+Marks a player as AFK after this delay (along with checks). <br/>
+`number` <br/>
+`30`
+
+#### kickIfFails
+
+If our activity tracker fails to load for a player, should we kick them? <br/>
+`boolean` <br/>
+`false`
+
+#### failMessage
+
+If 'kickIfFails' is true, what message would you like to display? <br/>
+`string` <br/>
+`We were unable to initialize the activity tracker for you. Please rejoin the game.`
 
 </details>
 
 <details>
 <summary>Interface</summary>
-<br />
 
-| Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables the interface. |
-| MinRank | Number | 255 | The minimum rank required to use the interface. |
-| MaxRank | Number | 255 | The maximum rank required to use the interface. |
+#### Enabled
+
+Toggles the interface. <br/>
+`boolean` <br/>
+`false`
+
+#### MinRank
+
+Minimum group rank required. <br/>
+`number` <br/>
+`255`
+
+#### MaxRank
+
+Maximum group rank required. <br/>
+`number` <br/>
+`255`
+
+#### useBetaUI ![Beta](https://img.shields.io/badge/BETA-8A2BE2)
+
+Toggles the usage of an interface that's currently in development. <br/>
+`boolean` <br/>
+`false`
+
+#### nonViewableTabs ![Beta](https://img.shields.io/badge/BETA-8A2BE2)
+
+Anything placed in this array will be immediately disabled from a player's view. <br/>
+`table` <br/>
+Example:
+
+```lua
+{
+    "Ranking",
+    "Logs"
+}
+```
+
+#### maxUsersForSelection ![Beta](https://img.shields.io/badge/BETA-8A2BE2)
+
+Maximum users that can be selected on the beta interface. <br/>
+`number` <br/>
+`5`
+
+#### Suggestions ![Beta](https://img.shields.io/badge/BETA-8A2BE2)
+
+Determines how we handle user suggestions and how they look. <br/>
+`table` <br/>
+
+```lua
+{
+    searchPlayersOutsideServer = false,
+    outsideServerTagText = "External",
+    outsideServerTagColor = Color3.fromRGB(255, 50, 50),
+}
+```
+
+#### Activation ![Beta](https://img.shields.io/badge/BETA-8A2BE2)
+
+Changes the behavior of how we handle activation of the new interface. <br/>
+`table` <br/>
+
+```lua
+{
+    Keybind = Enum.KeyCode.RightShift,
+    iconButtonPosition = "Center",
+    iconButtonImage = "rbxassetid://3610247188",
+    iconToolTip = "Vibez UI",
+}
+```
+
+#### Logs ![Beta](https://img.shields.io/badge/BETA-8A2BE2)
+
+Determines how we handle a player attempting to interact with our server logs. <br/>
+`table` <br/>
+
+```lua
+{
+    Enabled = false,
+    MinRank = 255,
+}
+```
 
 </details>
 
 <details>
 <summary>RankSticks</summary>
-<br />
 
-| Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables rank sticks. |
-| MinRank | Number | 255 | The minimum rank required to use rank sticks. |
-| MaxRank | Number | 255 | The maximum rank required to use rank sticks. |
-| sticksModel | Model | Tool? | The model/tool to use as the rank sticks. (Optional) |
-| sticksAnimation | Number OR String | "17837716782\|17838391578" | The animation id to use when the stick is clicked. If you have a game that uses both R15 and R6, use a String with the pipe "\|" character to denote ("R15\|R6") versions (Optional) |
+#### Enabled
+
+Toggles the rank sticks. <br/>
+`boolean`
+`false`
+
+#### Mode
+
+Determines the behavior the sticks should use. There's currently 2 modes; 'DetectionInFront' (Default) and 'ClickOnPlayer'. DetectionInFront checks for a player who's character is directly in front of you in order for it to work, unlike ClickOnPlayer where the player's character has to be clicked on by your mouse. <br/>
+`string` <br/>
+`DetectionInFront`
+
+#### Removed
+
+Removes specified rank stick types from being handed to the staff member. <br/>
+`array<string>` <br/>
+
+```lua
+{}
+```
+
+#### MinRank
+
+The minimum rank required to use rank sticks. <br/>
+`number` <br/>
+`255`
+
+#### MaxRank
+
+The maximum rank required to use rank sticks. <br/>
+`number` <br/>
+`255`
+
+#### Model
+
+The model/tool to use as the rank sticks. <br/>
+[`(Model | Tool)?`](/) <br/>
+`nil`
+
+#### Animation
+
+The animation id to use when the stick is activated. <br/>
+`table` <br/>
+
+```lua
+{
+    R6 = 17838471144,
+    R15 = 17837716782,
+}
+```
 
 </details>
 
 <details>
 <summary>Notifications</summary>
-<br />
 
-| Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables notifications. |
-| Font | String | Gotham | The font of the notifications. |
-| FontSize | Number | 16 | The size of the content with notifications (Use sizes for mobile). |
-| keyboardFontSizeMultiplier | Number | 1.25 | The multiplier for keyboard users. |
-| delayUntilRemoval | Number | 20 | The amount of seconds each notification is shown for. |
-| entranceTweenInfo | Array&lt;\{String&lt;Style&gt;, String&lt;Direction&gt;, Number&lt;timeItTakes&gt;\}&gt; | `{Style="Quint", Direction="InOut", timeItTakes=1}` | The information of the tween that plays when a new notification appears. |
-| exitTweenInfo | Array&lt;\{String&lt;Style&gt;, String&lt;Direction&gt;, Number&lt;timeItTakes&gt;\}&gt; | `{Style="Quint", Direction="InOut", timeItTakes=1}` | The information of the tween that plays when a notification needs to be deleted. |
+#### Enabled
+
+Toggles whether notifications show for players. <br/>
+`boolean` <br/>
+`false`
+
+#### [Font](https://create.roblox.com/docs/reference/engine/datatypes/Font)
+
+The font of the notifications. <br/>
+`string` <br/>
+`Gotham`
+
+#### FontSize
+
+The font size of the notifications. <br/>
+`number` <br/>
+`16`
+
+#### keyboardFontSizeMultiplier
+
+Self-explanatory, it multiplies the font size for keyboard players. <br/>
+`number` <br/>
+`1.25`
+
+#### delayUntilRemoval
+
+How many seconds until the notification disappears. <br/>
+`number` <br/>
+`20`
+
+#### entranceTweenInfo
+
+Tweening info that determines how notifications will act when they appear on screen. <br/>
+`table` <br/>
+
+```lua
+{
+    Style = "Quint",
+    Direction = "InOut",
+    timeItTakes = 1,
+}
+```
+
+#### exitTweenInfo
+
+Tweening info that determines how notifications will act when they leave the screen. <br/>
+`table` <br/>
+
+```lua
+{
+    Style = "Quint",
+    Direction = "InOut",
+    timeItTakes = 1,
+}
+```
 
 </details>
 
 <details>
 <summary>Blacklists</summary>
-<br />
 
-| Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|
-| Enabled | Boolean | false | Enables/Disables whether blacklists will be kicked upon joining. |
-| userIsBlacklistedMessage | String | You have been blacklisted from the game for: &lt;BLACKLIST_REASON&gt; | The kick message presented to the user who's blacklisted. |
+#### Enabled
+
+Toggles the blacklisting module. <br/>
+`boolean`
+`false`
+
+#### userIsBlacklistedMessage
+
+The message presented to the user when they've been blacklisted. <br/>
+`string`
+`You have been blacklisted from the game by &lt;BLACKLISTED_BY&gt; for: &lt;BLACKLIST_REASON&gt;
 
 </details>
 
 <details>
 <summary>Misc</summary>
-<br />
 
-| Setting Name | Type | Default Value | Description |
-|:---------:|:---------:|:---------:|:---------:|
-| originLoggerText | String | Game | The text used in the origin logger. |
-| rankingCooldown | Number | 30 | Amount of seconds to wait between ranking the same person again. |
-| ignoreWarnings | Boolean | false | Ignores warnings. |
-| overrideGroupCheckForStudio | Boolean | false | Overrides the group check for studio. |
-| isAsync | Boolean | false | Toggles whether upon initialization should yield the current thread or not. |
-| createGlobalVariables | Boolean | false | Toggles whether upon initialization should the module create \_G variables to use. |
-| checkForUpdates | Boolean | true | Toggles whether we check our GitHub for an updated released version. |
+#### originLoggerText
+
+This text is used in an embed sent from your bot to a logs channel, specifically changes the 'Origin' portion of the embed. <br/>
+`string` <br/>
+`Game`
+
+#### rankingCooldown
+
+A number of seconds the staff would have to wait until chain ranking another player. <br/>
+`number` <br/>
+`30`
+
+#### ignoreWarnings
+
+Ignores warnings thrown from our module. <br/>
+`boolean` <br/>
+`false`
+
+#### overrideGroupCheckForStudio
+
+Overrides our permissions check when play testing in studio. <br/>
+`boolean` <br/>
+`false`
+
+#### showDebugMessages
+
+Our module sometimes outputs random messages that show what's going on, this setting allows you to disable that. <br/>
+`boolean`
+`false`
+
+#### createGlobalVariables
+
+Toggles whether we create easy access for our api (and your api key) to be used from other **Server** scripts. <br/>
+`boolean` <br/>
+`false`
 
 </details>
 
@@ -144,17 +409,17 @@ local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY"
 
 ### Formatting Codes
 
-| Code | Description | Example |
-|:----------|:---------:|-----------:|
-| (username) | The username of the player. | `(username) has just been ranked!` |
-| (rank) | The player's group rank. | `Users with the rank (rank) were given 3 extra points!` |
-| (rankname) | The players' group rank's name. | `A (rankname) has just joined the server!` |
-| (groupid) | The id of the group. | `The group's ID is (groupid).` |
-| (userid) | The user ID of the player. | `Your UserID is: (userid)` |
-| (player) | The player object. | `game:GetService('ROBLOX')` |
-| (replicatedstorage)| ReplicatedStorage | `game:GetService('ReplicatedStorage')` |
-| (replicatedfirst) | ReplicatedFirst | `game:GetService('ReplicatedStorage')` |
-| (serverstorage) | ServerStorage | `game:GetService('ServerStorage')` |
-| (serverscriptservice) | ServerScriptService | `game:GetService('ServerScriptService')` |
-| (workspace) | Workspace | `game:GetService('Workspace')` |
-| (players) | Players | `game:GetService('Players')` |
+| Code                  |           Description           |                                                 Example |
+| :-------------------- | :-----------------------------: | ------------------------------------------------------: |
+| (username)            |   The username of the player.   |                      `(username) has just been ranked!` |
+| (rank)                |    The player's group rank.     | `Users with the rank (rank) were given 3 extra points!` |
+| (rankname)            | The players' group rank's name. |              `A (rankname) has just joined the server!` |
+| (groupid)             |      The id of the group.       |                          `The group's ID is (groupid).` |
+| (userid)              |   The user ID of the player.    |                              `Your UserID is: (userid)` |
+| (player)              |       The player object.        |                             `game:GetService('ROBLOX')` |
+| (replicatedstorage)   |        ReplicatedStorage        |                  `game:GetService('ReplicatedStorage')` |
+| (replicatedfirst)     |         ReplicatedFirst         |                  `game:GetService('ReplicatedStorage')` |
+| (serverstorage)       |          ServerStorage          |                      `game:GetService('ServerStorage')` |
+| (serverscriptservice) |       ServerScriptService       |                `game:GetService('ServerScriptService')` |
+| (workspace)           |            Workspace            |                          `game:GetService('Workspace')` |
+| (players)             |             Players             |                            `game:GetService('Players')` |
