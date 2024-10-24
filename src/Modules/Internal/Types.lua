@@ -10,11 +10,7 @@ export type RateLimit = {
 
 export type userBlacklistResponse = {
 	success: boolean,
-	data: {
-		blacklisted: boolean,
-		reason: string,
-		blacklistedBy: string,
-	},
+	message: string,
 }
 
 export type fullBlacklists = {
@@ -23,10 +19,6 @@ export type fullBlacklists = {
 }
 
 export type userType = Player | string | number
-
-export type vibezDebugTools = {
-	stringifyTableDeep: (tbl: { any }, tabbing: number?) -> string,
-}
 
 export type blacklistResponse = userBlacklistResponse | fullBlacklists
 
@@ -168,18 +160,17 @@ export type vibezSettings = {
 		Activation: {
 			Keybind: string | Enum.KeyCode,
 
-			allowMobileUsers: boolean,
 			iconButtonImage: string | number,
 			iconButtonPosition: "Left" | "Right" | "Center",
 			iconToolTip: string,
 		},
 
-		nonViewableTabs: { string? },
-	},
+		Logs: {
+			Enabled: boolean,
+			MinRank: number,
+		},
 
-	Logs: {
-		Enabled: boolean,
-		MinRank: number,
+		nonViewableTabs: { string? },
 	},
 
 	ActivityTracker: {
@@ -266,7 +257,6 @@ export type vibezInternalApi = {
 	_giveSticks: (self: vibezApi, Player: Player) -> (),
 	_removeSticks: (self: vibezApi, Player: Player) -> (),
 	_playerIsValidStaff: (self: vibezApi, Player: any) -> { [any]: any },
-	_notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
 	_warn: (self: vibezApi, ...any) -> (),
 	_debug: (self: vibezApi, ...any) -> (),
 	_addLog: (
@@ -295,13 +285,13 @@ export type vibezPrivate = {
 	Function: RemoteFunction,
 
 	_initialized: boolean,
-	_lastVersionCheck: number,
-	_rotateIndex: number,
-	_modules: { [any]: any },
+	_modules: {
+		Utils: { [any]: any },
+		Table: { [any]: any },
+	},
 
 	recentlyChangedKey: boolean,
 	newApiUrl: string,
-	oldApiUrl: string,
 
 	clientScriptName: string,
 	rateLimiter: RateLimit,
@@ -387,10 +377,9 @@ export type vibezProperties = {
 	Loaded: boolean,
 	GroupId: number,
 	apiKey: string,
+	Version: string,
 
 	Settings: vibezSettings,
-
-	_debug: vibezDebugTools,
 	_private: vibezPrivate,
 }
 
@@ -413,6 +402,7 @@ export type vibezPublicApi = {
 	getGroupId: (self: vibezApi) -> number,
 
 	isPlayerABooster: (self: vibezApi, User: number | string | Player) -> boolean?,
+	notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
 
 	-- Blacklists
 	addBlacklist: (
@@ -517,12 +507,28 @@ export type vibezHooks = {
 	Destroy: (self: vibezHooks) -> nil,
 }
 
-export type ActivityTracker = typeof(setmetatable({}, {})) & {
-	changeAfkState: (self: ActivityTracker, override: boolean?) -> ActivityTracker,
+type activityTrackerMeta = {
+	__index: activityTrackerMeta,
 	Left: (self: ActivityTracker) -> nil,
 	Increment: (self: ActivityTracker) -> nil,
 	Destroy: (self: ActivityTracker) -> nil,
 }
+
+type activityTrackerContent = {
+	isLeaving: boolean,
+	isAfk: boolean,
+
+	_api: vibezApi,
+	_token: string,
+	_seconds: number,
+	_messages: number,
+	_afkCounter: number,
+	_increment: number,
+	_lastCheck: number,
+	_groupData: { Rank: number, Role: string, Id: number?, errMessage: string? },
+}
+
+export type ActivityTracker = typeof(setmetatable({} :: activityTrackerContent, {} :: activityTrackerMeta))
 
 export type Embed = {
 	data: {

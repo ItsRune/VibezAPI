@@ -1,107 +1,3 @@
--- Commands
---[=[
-	@interface commandOptions
-	.Enabled boolean
-	.useDefaultNames boolean
-	.MinRank number<0-255>
-	.MaxRank number<0-255>
-	.Prefix string
-	.Alias {[string]: string}
-	.Removed {string?}
-	@private
-	@within VibezAPI
-]=]
-
--- RankSticks
---[=[
-	@interface rankStickOptions
-	.Enabled boolean
-	.Mode "Default" | "ClickOnPlayer" | "DetectionInFront"
-	.MinRank number<0-255>
-	.MaxRank number<0-255>
-	.sticksModel (Model | Tool)?
-	.Removed {string?}
-	.Animation { R6: number, R15: number }
-	@private
-	@within VibezAPI
-]=]
-
--- Notifications
---[=[
-	@interface notificationsOptions
-	.Enabled boolean
-	.Font Enum.Font
-	.FontSize number
-	.keyboardFontMultiplier number
-	.delayUntilRemoval number
-	.entranceTweenInfo { Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number }
-	.exitTweenInfo { Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number }
-	@private
-	@within VibezAPI
-]=]
-
--- Interface
---[=[
-	@interface interfaceOptions
-	.Enabled boolean
-	.MinRank number<0-255>
-	.MaxRank number<0-255>
-	.maxUsersForSelection number
-	.Suggestions { searchPlayersOutsideServer: boolean, outsideServerTagText: string }
-	.Activation { Keybind: Enum.KeyCode, allowMobileUsers: boolean, iconButtonPosition: "Center" | "Left" | "Right", iconButtonImage: string, iconToolTip: string }
-	.nonViewableTabs { string? }
-	@private
-	@within VibezAPI
-]=]
-
--- Logs
---[=[
-	@interface loggingOptions
-	.Enabled boolean
-	.MinRank number<0-255>
-	@private
-	@within VibezAPI
-]=]
-
--- Activity Tracker
---[=[
-	@interface activityTrackerOptions
-	.Enabled boolean
-	.MinRank number<0-255>
-	.disableWhenInStudio boolean
-	.disableWhenInPrivateServer boolean
-	.disableWhenAFK boolean
-	.delayBeforeMarkedAFK number
-	.kickIfFails boolean
-	.failMessage string
-	@private
-	@within VibezAPI
-]=]
-
--- Misc
---[=[
-	@interface miscOptions
-	.originLoggerText string
-	.ignoreWarnings boolean
-	.overrideGroupCheckForStudio boolean
-	.createGlobalVariables boolean
-	.rankingCooldown number
-	@private
-	@within VibezAPI
-]=]
-
--- Base
---[=[
-	@interface extraOptionsType
-	.Commands commandOptions
-	.RankSticks rankStickOptions
-	.Notifications notificationsOptions
-	.Interface interfaceOptions
-	.ActivityTracker activityTrackerOptions
-	.Misc miscOptions
-	@within VibezAPI
-]=]
-
 -- Array string: 'settings_check_ignore_nil_tbl' ignores data in table for settings checker.
 return {
 	Commands = {
@@ -155,7 +51,7 @@ return {
 
 	Interface = {
 		Enabled = false, -- Toggles the Interface module.
-		useBetaUI = false, -- Determines whether you'd like to use our newer UI.
+		useBetaUI = false, -- Determines whether you'd like to use our newer Interface.
 
 		MinRank = 255, -- Minimum rank for the interface to show for.
 		MaxRank = 255, -- Maximum rank required for the interface.
@@ -165,6 +61,11 @@ return {
 			searchPlayersOutsideServer = false, -- Determines whether our interface will allow players outside of the server to be searched.
 			outsideServerTagText = "External", -- The text shown when a player is searched outside of the server.
 			outsideServerTagColor = Color3.fromRGB(255, 50, 50), -- The tag's color for a player searched outside of the server.
+		},
+
+		Logs = {
+			Enabled = false, -- Toggles whether we hold server-specific logs of each interaction.
+			MinRank = 255, -- Minimum rank to access logs via Interface.
 		},
 
 		Activation = {
@@ -177,11 +78,6 @@ return {
 		},
 
 		nonViewableTabs = { "settings_check_ignore_nil_tbl" }, -- Determines which tabs to not view in the Interface. (Not case sensitive)
-	},
-
-	Logs = {
-		Enabled = false, -- Toggles whether we hold server-specific logs of each interaction.
-		MinRank = 255, -- Minimum rank to access logs via Interface.
 	},
 
 	ActivityTracker = {
@@ -200,7 +96,7 @@ return {
 
 	Blacklists = {
 		Enabled = false, -- Toggles the Blacklists module.
-		userIsBlacklistedMessage = "You have been blacklisted from the game for: <BLACKLIST_REASON>", -- Message displayed when a player is kicked for being blacklisted.
+		userIsBlacklistedMessage = "You have been blacklisted from the game by <BLACKLIST_BY> for: <BLACKLIST_REASON>", -- Message displayed when a player is kicked for being blacklisted.
 	},
 
 	Misc = {

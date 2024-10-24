@@ -1,5 +1,4 @@
---!nocheck
---!nolint
+--!strict
 local ServerStorage = game:GetService("ServerStorage")
 
 local Utils = {}
@@ -36,6 +35,17 @@ function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
 	local tabsToApply = tabbing or 1
 	local str = "{\n"
 
+	local function tableHasValues(data: { [any]: any }): boolean
+		local x = 0
+
+		for _, _ in data do
+			x = 1
+			break
+		end
+
+		return x > 0
+	end
+
 	local function applyTabbing()
 		if tabbing == 0 then
 			return
@@ -54,6 +64,11 @@ function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
 		end
 
 		if typeof(value) == "table" then
+			if not tableHasValues(value) then
+				str ..= "{},\n"
+				continue
+			end
+
 			str ..= Utils.stringifyTableDeep(value, tabsToApply + 1) .. ","
 		else
 			str ..= (typeof(value) == "string" and string.format('"%s"', value) or string.format("%s,", tostring(value)))
@@ -70,29 +85,31 @@ end
 
 -- Returns the temporary folder within ServerStorage, creates one if one doesn't exist.
 function Utils.getTemporaryStorage(): Folder
-	local folder = ServerStorage:FindFirstChild("Vibez_Storage")
+	local folder = ServerStorage:FindFirstChild("Vibez_Storage") :: Folder?
 
 	if not folder then
-		folder = Instance.new("Folder")
-		folder.Name = "Vibez_Storage"
-		folder.Parent = ServerStorage
+		local newFolder = Instance.new("Folder") :: Folder
+		newFolder.Name = "Vibez_Storage"
+		newFolder.Parent = ServerStorage
+
+		return newFolder
 	end
 
 	return folder
 end
 
 -- Rotates characters for a simple ROT cipher.
-function Utils.rotateCharacters(Input: string, Key: number, splitter: string, shouldDecode: boolean)
-	splitter = splitter or ""
-	local bytes = shouldDecode and string.split(Input, splitter) or string.split(Input, "")
+function Utils.rotateCharacters(Input: string, Key: number, splitter: string?, shouldDecode: boolean?)
+	local splitIndex = splitter or ""
+	local bytes = shouldDecode and string.split(Input, splitIndex) or string.split(Input, "")
 
 	for i, v in ipairs(bytes) do
-		local num = tonumber(v)
+		local num = tonumber(v) :: number
 		if shouldDecode and not num then
 			continue
 		end
 
-		bytes[i] = shouldDecode and string.char(num - Key) or string.byte(v) + Key .. splitter
+		bytes[i] = shouldDecode and string.char(num - Key) or string.byte(v) + Key .. splitIndex
 	end
 
 	return table.concat(bytes, "")

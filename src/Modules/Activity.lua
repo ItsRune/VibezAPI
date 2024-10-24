@@ -1,4 +1,4 @@
---!nocheck
+--!strict
 --// Services \\--
 local RunService = game:GetService("RunService")
 
@@ -67,10 +67,11 @@ local Types = require(script.Parent.Internal.Types)
 	@since 1.0.0
 ]=]
 ---
-function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.ActivityTracker?
-	if typeof(VibezAPI) ~= "table" or VibezAPI["isVibez"] ~= true then
-		return nil
-	end
+function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.ActivityTracker
+	assert(
+		typeof(VibezAPI) == "table" and VibezAPI["isVibez"] == true,
+		"Expected 'Vibez' class and received something else!"
+	)
 
 	-- Await a random number to ensure processing is in effect at different load-times.
 	local RNG = Random.new(tick())
@@ -86,7 +87,7 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 	end
 
 	-- Rotate the characters within the key to prevent any bad-actors. (If this module ends up in a client-replicated service)
-	local reversedKey = VibezAPI._private._modules.Utils.rotateCharacters(string.reverse(VibezAPI.Settings.apiKey), 128)
+	local reversedKey = VibezAPI._private._modules.Utils.rotateCharacters(string.reverse(VibezAPI.apiKey), 128)
 	local keyTracker = Activity.Keys[reversedKey] or {}
 	local existingTracker = keyTracker[forPlayer.UserId]
 
@@ -108,42 +109,44 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 	self._lastCheck = DateTime.now().UnixTimestamp
 	self._groupData = self._api:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
 
-	if not self._groupData then
-		self._api:_warn(
-			string.format(
-				"Activity tracker failed to load group rank for %s! This has resulted in activity not tracking this user!",
-				tostring(forPlayer)
-			)
-		)
+	if self._groupData then
+		self._api:_warn(string.format("Setting up activity tracking for %s.", tostring(forPlayer)))
 
-		if self._api.Settings.shouldKickPlayerIfActivityTrackerFails == true then
-			forPlayer:Kick("[Activity Tracker]: " .. self._api.Settings.activityTrackerFailedMessage)
-		end
+		keyTracker[self._player.UserId] = self
+		Activity.Keys[reversedKey] = keyTracker
 
-		self:Destroy()
+		table.insert(self._api._private.Binds._internal["Afk"], function(Player: Player, override: boolean?)
+			local existingClass = Activity.Keys[reversedKey][Player.UserId]
+			if not existingClass then
+				return
+			end
+
+			if override == nil then
+				override = not existingClass.isAfk
+			end
+
+			existingClass.isAfk = override
+		end)
+
 		table.remove(Activity.Processing, table.find(Activity.Processing, forPlayer.UserId))
-		return nil
+		return self
 	end
 
-	self._api:_warn(string.format("Setting up activity tracking for %s.", tostring(forPlayer)))
+	self._api:_warn(
+		string.format(
+			"Activity tracker failed to load group rank for %s! This has resulted in activity not tracking this user!",
+			tostring(forPlayer)
+		)
+	)
 
-	keyTracker[self._player.UserId] = self
-	Activity.Keys[reversedKey] = keyTracker
+	if self._api.Settings.ActivityTracker.kickIfFails == true then
+		forPlayer:Kick("[Activity Tracker]: " .. self._api.Settings.ActivityTracker.failMessage)
+	end
 
-	table.insert(self._api._private.Binds._internal["Afk"], function(Player: Player, override: boolean?)
-		local existingClass = Activity.Keys[reversedKey][Player.UserId]
-		if not existingClass then
-			return
-		end
-
-		if override == nil then
-			override = not existingClass.isAfk
-		end
-
-		existingClass.isAfk = override
-	end)
-
+	self:Destroy()
 	table.remove(Activity.Processing, table.find(Activity.Processing, forPlayer.UserId))
+
+	-- I guess the type checker is fine with this? Even though the class would be destroyed and equal to 'nil'.
 	return self
 end
 
@@ -229,7 +232,7 @@ end
     @since 1.0.0
 ]=]
 ---
-function Class:Destroy()
+function Class:Destroy(): ()
 	Activity.Keys[self._token][self._player.UserId] = nil
 
 	table.clear(self)

@@ -176,7 +176,7 @@ local function onServerInvoke(
 							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
 						)
 					)
-					self:_notifyPlayer(Player, "Error: That user's rank is higher OR equal to your rank.")
+					self:notifyPlayer(Player, "Error: That user's rank is higher OR equal to your rank.")
 					return reject("Too high to rank")
 				end
 
@@ -192,7 +192,7 @@ local function onServerInvoke(
 							userId
 						)
 					)
-					self:_notifyPlayer(Player, "Error: No.")
+					self:notifyPlayer(Player, "Error: No.")
 					return reject("Too high to rank")
 				end
 
@@ -209,7 +209,7 @@ local function onServerInvoke(
 					)
 
 					self:_warn(message)
-					self:_notifyPlayer(Player, "Error: " .. message)
+					self:notifyPlayer(Player, "Error: " .. message)
 					return reject("Ranking cooldown")
 				end
 
@@ -227,7 +227,6 @@ local function onServerInvoke(
 					local newRank = Data[2]
 					result = self[actionFunc](self, userId, newRank, { userName = Player.Name, userId = Player.UserId })
 				else
-					warn(userId, Player, actionFunc)
 					result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
 				end
 
@@ -243,7 +242,7 @@ local function onServerInvoke(
 				end
 
 				if result["Success"] == false then
-					self:_notifyPlayer(
+					self:notifyPlayer(
 						Player,
 						string.format(
 							"Error: Attempting to %s %s (%d) resulted in an internal server error!",
@@ -265,7 +264,7 @@ local function onServerInvoke(
 			end):andThen(function(result: { [any]: any })
 				table.insert(resolvedPromises, result)
 			end, function(err)
-				warn(tostring(err))
+				self:_warn(tostring(err))
 			end)
 		end
 
@@ -276,7 +275,7 @@ local function onServerInvoke(
 
 		if #Targets > 1 then
 			local avgProcessingSpeedInSeconds = 3
-			self:_notifyPlayer(
+			self:notifyPlayer(
 				Player,
 				string.format(
 					"Info: Ranking %d players could take up to %d seconds",
@@ -331,7 +330,7 @@ local function onServerInvoke(
 		local concatenatedUsernames = table.concat(notificationStringFilledWithUsers, ", ")
 			.. ((moreUsersDifference > 0) and " and " .. moreUsersDifference .. " more" or "")
 
-		self:_notifyPlayer(Player, string.format(fullNotificationString, realActionTitle, concatenatedUsernames))
+		self:notifyPlayer(Player, string.format(fullNotificationString, realActionTitle, concatenatedUsernames))
 		return true
 	elseif Action == "Afk" then
 		Table.ForEach(self._private.Binds._internal.Afk, function(classRouter: (Player: Player, something: any) -> ())
@@ -582,16 +581,29 @@ function api:_setupCommands()
 				table.remove(Args, 1)
 
 				local reason = table.concat(Args, " ")
+				local blacklistReason =
+					self:_fixFormattedString(self.Settings.Blacklists.userIsBlacklistedMessage, Player, {
+						onlyApplyCustom = true,
+						Codes = {
+							{ code = "<BLACKLIST_REASON>", equates = reason },
+							{ code = "<BLACKLIST_BY>", equates = Player.Name },
+						},
+					})
 
 				for _, Target: any in ipairs(users) do
-					local res = self:addBlacklist(Target.UserId, reason, Player.UserId)
+					local res = self:addBlacklist(Target.UserId, reason, Player.UserId) :: Types.userBlacklistResponse
 					if not res or not res.success then
 						self:_warn("Blacklist resulted in an error, please try again later.")
 						return
 					end
 
 					table.insert(affectedUsers, Target)
-					self:_warn(res)
+					self:_warn(res.message)
+
+					local inGameTarget = Players:GetPlayerByUserId(Target.UserId)
+					if inGameTarget then
+						inGameTarget:Kick(blacklistReason)
+					end
 				end
 
 				self:_addLog(Player, "Blacklist", "Commands", affectedUsers, { Reason = reason })
@@ -622,7 +634,7 @@ function api:_setupCommands()
 
 					local res: any = self:deleteBlacklist(Target.UserId)
 					if not res or not res.success then
-						self:_notifyPlayer(Player, "Error: " .. res.errorMessage)
+						self:notifyPlayer(Player, "Error: " .. res.errorMessage)
 						continue
 					end
 
@@ -778,7 +790,7 @@ function api:_setupGlobals(): ()
 	end
 
 	globalsFolder.Notifications.OnInvoke = function(...: any): any
-		return self:_notifyPlayer(...)
+		return self:notifyPlayer(...)
 	end
 
 	globalsFolder.Webhooks.OnInvoke = function(...: any): any
@@ -806,7 +818,6 @@ end
 	@param Method any
 	@param Headers { [string]: any }?
 	@param Body { any }?
-	@param useOldApi boolean?
 	@return boolean, httpResponse?
 
 	@yields
@@ -819,8 +830,7 @@ function api:_http(
 	Route: string,
 	Method: any,
 	Headers: { [string]: any }?,
-	Body: { [any]: any }?,
-	useOldApi: boolean?
+	Body: { [any]: any }?
 ): (boolean, Types.httpResponse)
 	local canContinue: boolean, err: string? = self._private.rateLimiter:Check()
 	if not canContinue then
@@ -844,8 +854,7 @@ function api:_http(
 			}
 	end
 
-	local apiToUse = (useOldApi == true) and self._private.oldApiUrl or self._private.newApiUrl
-
+	local apiToUse = self._private.newApiUrl
 	Route = (typeof(Route) == "string") and Route or "/"
 	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
 	Body = (Method ~= "GET" and Method ~= "HEAD") and Body or nil
@@ -1018,11 +1027,17 @@ function api:_onPlayerAdded(Player: Player)
 		local isBlacklisted, blacklistReason, blacklistedBy = self:isUserBlacklisted(Player)
 
 		if isBlacklisted then
+			local blacklistedByUsernameIsOk, blacklistedByUsername =
+				pcall(Players.GetNameFromUserIdAsync, Players, blacklistedBy)
+
 			local kickReason = self:_fixFormattedString(self.Settings.Blacklists.userIsBlacklistedMessage, Player, {
 				onlyApplyCustom = true,
 				Codes = {
 					{ code = "<BLACKLIST_REASON>", equates = blacklistReason },
-					{ code = "<BLACKLIST_BY>", equates = blacklistedBy },
+					{
+						code = "<BLACKLIST_BY>",
+						equates = blacklistedByUsernameIsOk and blacklistedByUsername or blacklistedBy,
+					},
 				},
 			})
 
@@ -1308,20 +1323,19 @@ function api:_getRoleIdFromRank(rank: number | string): number?
 end
 
 --[=[
-	Gets the role id of a rank.
+	Sends a notification to a player.
 	@param Player Player
 	@param Message string
 	@return number?
 
 	@yields
-	@private
 	@within VibezAPI
-	@since 0.10.0
+	@since 0.11.0
 ]=]
 ---
-function api:_notifyPlayer(Player: Player, Message: string): ()
+function api:notifyPlayer(Player: Player, Message: string): ()
 	if self.Settings.Notifications.Enabled == false then
-		self:_warn(string.format("Notification for %s (%d) |", Player.Name, Player.UserId), Message)
+		self:_warn(string.format("Notification request for %s (%d): ", Player.Name, Player.UserId), Message)
 		return
 	end
 
@@ -1607,7 +1621,7 @@ end
 ---
 function api:_onPlayerChatted(Player: Player, message: string)
 	-- Check for activity tracker to increment messages sent.
-	local token = self._private._modules.Utils.rotateCharacters(string.reverse(self.apiKey), 128)
+	local token = Utils.rotateCharacters(string.reverse(self.apiKey), 128)
 	local existingTracker = (ActivityTracker.Keys[token] ~= nil) and ActivityTracker.Keys[token][Player.UserId] or nil
 	if existingTracker then
 		existingTracker:Chatted()
@@ -1842,8 +1856,8 @@ function api:_buildAttributes()
 			nonViewableTabs = self.Settings.Interface.nonViewableTabs,
 
 			Logs = {
-				Status = self.Settings.Logs.Enabled,
-				MinRank = self.Settings.Logs.MinRank,
+				Status = self.Settings.Interface.Logs.Enabled,
+				MinRank = self.Settings.Interface.Logs.MinRank,
 			},
 
 			Suggestions = {
@@ -2604,7 +2618,7 @@ end
 
 --[=[
 	Gets either a full list of blacklists or checks if a player is currently blacklisted.
-	@param userId (string | number)?
+	@param User Player | string | number
 	@return (boolean, string?, string?)
 
 	@within VibezAPI
@@ -2659,7 +2673,7 @@ end
 
 --[=[
 	Gets a player's or everyone's current activity
-	@param userId (string | number)?
+	@param User Player | string | number
 	@return activityResponse
 
 	@within VibezAPI
@@ -2680,7 +2694,7 @@ end
 
 --[=[
 	Negates the player's activity seconds & message counts. (Does not clear detail logs array.)
-	@param userId Player | string | number
+	@param User Player | string | number
 	@return boolean
 
 	@yields
@@ -2713,7 +2727,7 @@ end
 
 --[=[
 	Saves the player's current activity
-	@param userId string | number
+	@param User Player | string | number
 	@param userRank number
 	@param secondsSpent number
 	@param messagesSent (number | { string })?
@@ -2978,10 +2992,18 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	local self = setmetatable({}, api) :: any
 
 	--[=[
+		@prop Version string
+		@since 0.11.0
+		@within VibezAPI
+		A string containing the current loaded version of the wrapper.
+	]=]
+	self.Version = _VERSION
+
+	--[=[
 		@prop isVibez boolean
 		@since 0.11.0
 		@within VibezAPI
-		A quick boolean check to determine whether the table is indeed related to Vibez.
+		A boolean to determine whether the wrapper is indeed related to Vibez.
 	]=]
 	self.isVibez = true
 
@@ -3010,7 +3032,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 
 	--[=[
-		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, oldApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
+		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
 		@since 0.1.0
 		@private
 		@within VibezAPI
@@ -3021,16 +3043,9 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		Function = nil,
 
 		_initialized = false,
-		_lastVersionCheck = DateTime.now().UnixTimestamp,
-		_rotateIndex = Random.new():NextInteger(12, 256),
-		_modules = { -- This is to prevent stack overflow on multiple required modules.
-			Utils = Utils,
-			Table = Table,
-		},
 
 		recentlyChangedKey = false,
 		newApiUrl = "https://leina.vibez.dev",
-		oldApiUrl = "https://api.vibez.dev/api",
 
 		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
 		rateLimiter = RateLimit.new(60, 60),
@@ -3207,7 +3222,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		-- Remove the other commands, that way sticks is the only command possible.
 		if not self.Settings.Commands.Enabled then
-			warn("Removed ALL")
 			self.Settings.Commands.Removed = { "Promote", "Demote", "Fire", "Blacklist", "Unblacklist" }
 		end
 
@@ -3443,9 +3457,107 @@ return setmetatable({
 	@within VibezAPI
 ]=]
 
+-- Commands
 --[=[
-	@interface vibezDebugTools
-	.stringifyTableDeep (tbl: { any }, tabbing: number?) -> string
+	@interface commandOptions
+	.Enabled boolean
+	.useDefaultNames boolean
+	.MinRank number<0-255>
+	.MaxRank number<0-255>
+	.Prefix string
+	.Alias {[string]: string}
+	.Removed {string?}
 	@private
+	@within VibezAPI
+]=]
+
+-- RankSticks
+--[=[
+	@interface rankStickOptions
+	.Enabled boolean
+	.Mode "Default" | "ClickOnPlayer" | "DetectionInFront"
+	.MinRank number<0-255>
+	.MaxRank number<0-255>
+	.sticksModel (Model | Tool)?
+	.Removed {string?}
+	.Animation { R6: number, R15: number }
+	@private
+	@within VibezAPI
+]=]
+
+-- Notifications
+--[=[
+	@interface notificationsOptions
+	.Enabled boolean
+	.Font Enum.Font
+	.FontSize number
+	.keyboardFontMultiplier number
+	.delayUntilRemoval number
+	.entranceTweenInfo { Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number }
+	.exitTweenInfo { Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number }
+	@private
+	@within VibezAPI
+]=]
+
+-- Interface
+--[=[
+	@interface interfaceOptions
+	.Enabled boolean
+	.MinRank number<0-255>
+	.MaxRank number<0-255>
+	.maxUsersForSelection number
+	.Suggestions { searchPlayersOutsideServer: boolean, outsideServerTagText: string, outsideServerTagColor: BrickColor | Color3 }
+	.Activation { Keybind: Enum.KeyCode, iconButtonPosition: "Center" | "Left" | "Right", iconButtonImage: string, iconToolTip: string }
+	.nonViewableTabs { string? }
+	@private
+	@within VibezAPI
+]=]
+
+-- Logs
+--[=[
+	@interface loggingOptions
+	.Enabled boolean
+	.MinRank number<0-255>
+	@private
+	@within VibezAPI
+]=]
+
+-- Activity Tracker
+--[=[
+	@interface activityTrackerOptions
+	.Enabled boolean
+	.MinRank number<0-255>
+	.disableWhenInStudio boolean
+	.disableWhenInPrivateServer boolean
+	.disableWhenAFK boolean
+	.delayBeforeMarkedAFK number
+	.kickIfFails boolean
+	.failMessage string
+	@private
+	@within VibezAPI
+]=]
+
+-- Misc
+--[=[
+	@interface miscOptions
+	.originLoggerText string
+	.ignoreWarnings boolean
+	.showDebugMessages boolean
+	.overrideGroupCheckForStudio boolean
+	.createGlobalVariables boolean
+	.rankingCooldown number
+	@private
+	@within VibezAPI
+]=]
+
+-- Base
+--[=[
+	@interface extraOptionsType
+	.Commands commandOptions
+	.RankSticks rankStickOptions
+	.Notifications notificationsOptions
+	.Interface interfaceOptions
+	.ActivityTracker activityTrackerOptions
+	.Misc miscOptions
 	@within VibezAPI
 ]=]

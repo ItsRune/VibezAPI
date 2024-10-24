@@ -1,5 +1,4 @@
---!nocheck
---!nolint
+--!strict
 --// Services \\--
 local Players = game:GetService("Players")
 local UserService = game:GetService("UserService")
@@ -13,6 +12,24 @@ local selectedUsers = {}
 local Maid = {
 	Main = {},
 	suggestionButtons = {},
+}
+
+--// Types \\--
+type cachedUserContent = {
+	Name: string,
+	DisplayName: string,
+	UserId: number,
+	isVerified: boolean,
+	isInGame: boolean,
+	Thumbnail: string,
+	lastUpdated: number,
+}
+
+type userInfoResponse = {
+	Id: number,
+	DisplayName: string,
+	Username: string,
+	HasVerifiedBadge: boolean,
 }
 
 --// Functions \\--
@@ -41,7 +58,7 @@ local function _truncateUserCache()
 	end
 end
 
-local function _getUserInformation(userId: number)
+local function _getUserInformation(userId: number): cachedUserContent?
 	local currentCache = userCache[userId]
 	local now = DateTime.now().UnixTimestamp
 
@@ -76,27 +93,23 @@ local function _getUserInformation(userId: number)
 		return nil
 	end
 
-	userInfo = userInfo[1]
-
-	-- Ignore me, I prefer this format.
-	userInfo.UserId = userInfo.Id
-	userInfo.Id = nil
-
-	userCache[userInfo.UserId] = {
-		Name = userInfo.Username,
-		UserId = userInfo.UserId,
-		DisplayName = userInfo.DisplayName,
-		isVerified = userInfo.HasVerifiedBadge,
-		isInGame = (Players:GetPlayerByUserId(userInfo.UserId) ~= nil),
+	-- Apparently 'GetUserInfosByUserIdsAsync's type doesn't include 'HasVerifiedBadge'
+	local userData = userInfo[1] :: userInfoResponse
+	userCache[userData.Id] = {
+		Name = userData.Username,
+		UserId = userData.Id,
+		DisplayName = userData.DisplayName,
+		isVerified = userData.HasVerifiedBadge,
+		isInGame = (Players:GetPlayerByUserId(userData.Id) ~= nil),
 		Thumbnail = thumbnail,
 		lastUpdated = now,
 	}
 
 	_truncateUserCache()
-	return userCache[userInfo.UserId]
+	return userCache[userData.Id]
 end
 
-local function _fullCheckForFilter(Target: Player)
+local function _fullCheckForFilter(Target: Player | cachedUserContent)
 	local currentText = usernameTextBox.Text
 	return (
 		currentText == ""
@@ -105,7 +118,11 @@ local function _fullCheckForFilter(Target: Player)
 	)
 end
 
-local function _createTargetTemplate(componentData: { [any]: any }, Target: Player, layoutOrder: number?)
+local function _createTargetTemplate(
+	componentData: { [any]: any },
+	Target: Player | cachedUserContent,
+	layoutOrder: number?
+)
 	if not usernameTextBox then
 		return
 	end
@@ -113,6 +130,11 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 	local templateFrame = usernameTextBox.Parent.Suggestions.Template
 	local userInformation = _getUserInformation(Target.UserId)
 	local newTemplate = templateFrame:Clone()
+
+	if not userInformation then
+		newTemplate:Destroy()
+		return
+	end
 
 	newTemplate.LayoutOrder = layoutOrder or 99999
 	newTemplate.Left.Information.Username.Text = Target.Name

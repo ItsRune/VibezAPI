@@ -1,3 +1,4 @@
+--!strict
 --// Services \\--
 local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")

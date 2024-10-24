@@ -1,4 +1,4 @@
---!nocheck
+--!strict
 --// Services \\--
 local Players = game:GetService("Players")
 local UserService = game:GetService("UserService")
@@ -14,6 +14,24 @@ local selectedUsers = {}
 local Maid = {
 	Main = {},
 	suggestionButtons = {},
+}
+
+--// Types \\--
+type cachedUserContent = {
+	Name: string,
+	DisplayName: string,
+	UserId: number,
+	isVerified: boolean,
+	isInGame: boolean,
+	Thumbnail: string,
+	lastUpdated: number,
+}
+
+type userInfoResponse = {
+	Id: number,
+	DisplayName: string,
+	Username: string,
+	HasVerifiedBadge: boolean,
 }
 
 --// Helper Functions \\--
@@ -42,7 +60,7 @@ local function _truncateUserCache()
 	end
 end
 
-local function _getUserInformation(userId: number)
+local function _getUserInformation(userId: number): cachedUserContent?
 	local currentCache = userCache[userId]
 	local now = DateTime.now().UnixTimestamp
 
@@ -77,27 +95,22 @@ local function _getUserInformation(userId: number)
 		return nil
 	end
 
-	userInfo = userInfo[1]
-
-	-- Ignore, I prefer this format.
-	userInfo.UserId = userInfo.Id
-	userInfo.Id = nil
-
-	userCache[userInfo.UserId] = {
-		Name = userInfo.Username,
-		UserId = userInfo.UserId,
-		DisplayName = userInfo.DisplayName,
-		isVerified = userInfo.HasVerifiedBadge,
-		isInGame = (Players:GetPlayerByUserId(userInfo.UserId) ~= nil),
+	local userData = userInfo[1] :: userInfoResponse
+	userCache[userData.Id] = {
+		Name = userData.Username,
+		UserId = userData.Id,
+		DisplayName = userData.DisplayName,
+		isVerified = userData.HasVerifiedBadge,
+		isInGame = (Players:GetPlayerByUserId(userData.Id) ~= nil),
 		Thumbnail = thumbnail,
 		lastUpdated = now,
 	}
 
 	_truncateUserCache()
-	return userCache[userInfo.UserId]
+	return userCache[userData.Id]
 end
 
-local function _fullCheckForFilter(Target: Player)
+local function _fullCheckForFilter(Target: Player | cachedUserContent)
 	local currentText = usernameTextBox.Text
 
 	return Target ~= Player
@@ -108,7 +121,11 @@ local function _fullCheckForFilter(Target: Player)
 		)
 end
 
-local function _createTargetTemplate(componentData: { [any]: any }, Target: Player, layoutOrder: number?)
+local function _createTargetTemplate(
+	componentData: { [any]: any },
+	Target: Player | cachedUserContent,
+	layoutOrder: number?
+)
 	if not usernameTextBox then
 		return
 	end
@@ -121,6 +138,11 @@ local function _createTargetTemplate(componentData: { [any]: any }, Target: Play
 		componentData.Data.Suggestions.externalSearchTagColor,
 		componentData.Data.Suggestions.externalSearchTagText
 	)
+
+	if not userInformation then
+		newTemplate:Destroy()
+		return
+	end
 
 	newTemplate.LayoutOrder = layoutOrder or 99999
 	newTemplate.Left.Information.Username.Text = Target.Name
@@ -259,17 +281,16 @@ local function _handleExternalUserSearch(componentData: { [any]: any })
 	end
 
 	isOk, userInfo = pcall(UserService.GetUserInfosByUserIdsAsync, UserService, { userId })
-	if not isOk or (typeof(userInfo) == "table" and not userInfo[1]) then
+	if not isOk or typeof(userInfo) ~= "table" or userInfo[1] == nil then
 		return
 	end
 
 	local fakePlayers = {}
-
 	for i = 1, #userInfo do
 		local userData = userInfo[i]
 
 		-- Even with external searches, we still have to prevent the local player from trying to rank themselves.
-		if userData.UserId == Player.UserId then
+		if userData.Id == Player.UserId then
 			continue
 		end
 
@@ -277,13 +298,13 @@ local function _handleExternalUserSearch(componentData: { [any]: any })
 		local Metatable = getmetatable(fakePlayer)
 		local Internal = {}
 
-		Internal.Name = userInfo[i].Username
+		Internal.Name = userData[i].Username
 		Internal.UserId = userId
-		Internal.DisplayName = userInfo[i].DisplayName
-		Internal.isVerified = userInfo[i].HasVerifiedBadge
+		Internal.DisplayName = userData[i].DisplayName
+		Internal.isVerified = userData[i].HasVerifiedBadge
 
 		Metatable.__index = Internal
-		Metatable.__tostring = function(self: Player): string
+		Metatable.__tostring = function(self): string
 			return rawget(self, "Name")
 		end
 
@@ -418,11 +439,11 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 	-- Add a dropdown for group ranks with the provided attribute "GroupId" on existing attr.
 	-- - Will provide easier use of users within the group along with simple suggestions that'll prevent time spent typing role names.
 	-- - Cache of group ranks to keep things simple.
-	local groupId = componentData.GroupId
+	local groupId = tonumber(componentData.GroupId) :: number
 	local rankTextBox = setRankFrame.newRank
 	local suggestionLabel = rankTextBox.Suggestion
 	local rankIdSuggestionLabel = rankTextBox.numSuggestion
-	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, tonumber(groupId))
+	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, groupId)
 
 	if not isOk or typeof(groupInfo) ~= "table" then
 		return

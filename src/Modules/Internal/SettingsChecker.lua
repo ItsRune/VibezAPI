@@ -11,18 +11,18 @@ local Table = require(script.Parent.Parent.Table)
 local clientInterface = script.Parent.Parent.Parent.Client.Components.UI.Interface
 
 --// Functions \\--
---[=[
+--[[
 	Compares a value to a default value and ensures it's type is kept the same.
 
 	```lua
 	local Default = { ["Test"] = "Hello!" }
-	local Data = { ["Test"] = 1 }
+	local Data = { ["Test"] = 1, ["Something"] = "Else!" }
 
 	Data = fixDiscrepencies(_, Data, Default)
 	
 	print(Data) --> { ["Test"] = "Hello!" }
 	```
-]=]
+]]
 local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, path: string): any
 	local pathSplit = string.split(path, ".")
 	local parentKey = (#pathSplit > 2) and pathSplit[#pathSplit - 1] or "<UNKNOWN_PARENT>"
@@ -77,6 +77,8 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 			return ((typeof(Data) == "table" and Data[1] ~= "settings_check_ignore_nil_tbl") or typeof(Data) ~= "table")
 					and Data
 				or {}
+		elseif latestKey == "outsideServerTagColor" and typeof(Data) == "BrickColor" then -- Allow BrickColors for tag color
+			return Data
 		elseif parentKey == "RankSticks" and latestKey == "sticksModel" then
 			if Data == nil or typeof(Data) == "Instance" then
 				return Data

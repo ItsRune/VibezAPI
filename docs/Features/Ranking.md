@@ -5,6 +5,7 @@ sidebar_position: 1
 Let's be honest, there's nothing worse than a potential future worker doing an application and not being automatically ranked by a system, days or even weeks of them spamming the group wall (or discord DMs) begging for their rank. This is why we have the ranking API. It allows you to rank workers in game without having to do it manually.
 
 ## Usage
+
 **IF** you're confused with the type definitons, this is for you:
 You may notice that some parameters are separated by a `|` this is noting that you can use either of these types to fill the parameter. <br />
 Examples:
@@ -24,36 +25,42 @@ Examples:
 [**whoCalled: (See Below)**](/VibezAPI/docs/Features/Ranking#whats-this-whocalled-parameter)
 
 ### [Promote](/VibezAPI/api/VibezAPI#Promote)
+
 Increments a player's rank by 1.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+
 ```lua
 local userId = 1
 VibezApi:Promote(userId)
 ```
 
 ### [Demote](/VibezAPI/api/VibezAPI#Demote)
+
 Decrements a player's rank by 1.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+
 ```lua
 local userId = 1
 VibezApi:Demote(userId)
 ```
 
 ### [Fire](/VibezAPI/api/VibezAPI#Fire)
+
 Sets a player's rank to the lowest rank.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+
 ```lua
 local userId = 1
 local newRankId = 5
@@ -61,6 +68,7 @@ VibezApi:Fire(userId, newRankId)
 ```
 
 ### [setRank](/VibezAPI/api/VibezAPI#setRank)
+
 Sets a player's rank to a specific rank.
 
 `userId: number | string | Player` <br />
@@ -68,12 +76,14 @@ Sets a player's rank to a specific rank.
 `whoCalled: { userName: string, userId: number }?`
 
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+
 ```lua
 local userId = 1
 VibezApi:setRank(1, 2)
 ```
 
 ## What's this `whoCalled` parameter?
+
 Under the hood of the API, we use the `whoCalled` parameter to generate logs within a Discord channel of the action, who did it, and who was affected. **THIS PARAMETER IS OPTIONAL**. This is useful for auditing purposes, and to see who's abusing the API. If you supply nothing, the wrapper will automatically supply **SYSTEM** for the username, and the log generated will look different than with a proper user. If you supply a user's ID and name, the log will look like this:
 
 <img src="/VibezAPI/rankingExampleWithUser.png"></img>
@@ -83,6 +93,7 @@ If you supply nothing, the log will look like this:
 <img src="/VibezAPI/rankingExampleAutomatic.png"></img>
 
 ### How would I use this?
+
 When issuing a function with the wrapper that has this included, just create a new parameter with the `userName` and `userId` keys, and supply the values. Here's an example:
 
 ```lua
@@ -90,6 +101,7 @@ VibezApi:Promote(1, { userName = "ltsRune", userId = 107392833 })
 ```
 
 ## Why isn't it working?
+
 There's many reasons why the ranking API may fail, maybe your discord bot is offline, or maybe the worker is already ranked to the rank you're trying to rank them to. If you're having issues with the ranking API, please join our discord below and ask for help in the support channel.
 
 <iframe src="https://discord.com/widget?id=528920896497516554&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
@@ -103,7 +115,6 @@ There's many reasons why the ranking API may fail, maybe your discord bot is off
 ```lua title="ServerScriptService/autoRankPoints.server.lua"
 --// Configuration \\--
 local apiKey = "API KEY" -- Vibez's API Key
-local vibezApiLocation = 14946453963 --game:GetService("ServerScriptService").VibezAPI
 local pointRanks = {
 	{ Rank = 2, pointsRequired = 10 }
 }
@@ -117,13 +128,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 
 --// Variables \\--
-local vibezApi = require(vibezApiLocation)(apiKey)
+local vibezApi = require(14946453963)(apiKey)
 local dataStoreToUse = DataStoreService:GetDataStore("pointRanks_" .. game.PlaceId)
 local userCache = {}
 
 --// Functions \\--
 local function onPlayerAdded(Player: Player)
-	-- Wherever you're keeping your player's points, this is what you'd want to change it to.
+	-- Wherever you're keeping your player's points, this is where you'd want to change it.
 	local pointStats = Player:WaitForChild("leaderstats", 120):WaitForChild("Points", 120)
 
 	-- Don't touch below unless you know what you're doing.
@@ -144,7 +155,7 @@ local function onPlayerAdded(Player: Player)
 	table.insert(connections, pointStats:GetPropertyChangedSignal("Value"):Connect(function()
 		local userGroupData = vibezApi:_getGroupFromUser(vibezApi.GroupId, Player.UserId)
 		local copiedData = userCache[Player.UserId][2] or {}
-		
+
 		if not userGroupData or userGroupData.Rank == 0 then
 			return
 		end
@@ -159,20 +170,20 @@ local function onPlayerAdded(Player: Player)
             then
 				continue
 			end
-			
+
 			if
 				userGroupData.Rank < data.Rank
 				and pointStats.Value >= data.pointsRequired
 			then
 				local response = vibezApi:setRank(Player, data.Rank)
-				
+
 				if response.success then
 					table.insert(copiedData, data.Rank)
 				end
 				break
 			end
 		end
-		
+
 		userCache[Player.UserId][2] = copiedData
 	end))
 

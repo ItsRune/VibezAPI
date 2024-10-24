@@ -1,3 +1,4 @@
+--!strict
 --// Modules \\--
 local Tweens = require(script.Parent.TweenService)
 

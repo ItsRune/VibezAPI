@@ -117,6 +117,7 @@ local function undoUISetup(componentData: { [any]: any })
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Promote")
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Demote")
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Fire")
+	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Blacklist")
 
 	componentData.Disconnect(Maid)
 	Maid = nil

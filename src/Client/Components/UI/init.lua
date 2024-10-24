@@ -1,5 +1,4 @@
 --!nocheck
---!nolint
 --// Services \\--
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -239,10 +238,13 @@ function onDestroy(componentData: { [any]: any })
 
 	currentOpenFrame.Position = UDim2.fromScale(1.5, 0.5)
 	currentOpenFrame = nil
+
+	return
 end
 
 function onSetup(componentData: { [any]: any })
 	if not componentData.Data.useBeta then
+		componentData._warn("Vibez Setup", "Setting up V1 Interface.")
 		return oldUIData.Setup
 	end
 
@@ -270,7 +272,7 @@ function onSetup(componentData: { [any]: any })
 	end
 
 	--stylua: ignore
-	componentData.TopbarPlus
+	topBarButton = componentData.TopbarPlus
 		.new()
 		:setImage(interfaceData.iconImageId)
 		:setCaption(interfaceData.iconToolTip)
@@ -284,6 +286,8 @@ function onSetup(componentData: { [any]: any })
 
 			_onExitButtonClicked(componentData)
 		end)
+
+	return
 end
 
 return {
