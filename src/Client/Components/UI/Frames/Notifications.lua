@@ -233,6 +233,7 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 end
 
 local function onDestroy(Frame: any, componentData: { [any]: any })
+	componentData._debug("interface_notifications_destroy", "Destroy has been triggered.")
 	table.clear(selectedUsers)
 	selectedUsers = {}
 
@@ -266,6 +267,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		suggestionButtons = {},
 	}
 
+	componentData._debug("interface_notifications_initialization", "Connecting username textbox 'onFocus'.")
 	table.insert(
 		Maid.Main,
 		Frame.User.Username.Focused:Connect(function()
@@ -274,6 +276,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("interface_notifications_initialization", "Connecting username textbox 'onTextChange'.")
 	table.insert(
 		Maid.Main,
 		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
@@ -282,6 +285,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("interface_notifications_initialization", "Connecting send button 'onMouseButton1Click'.")
 	table.insert(
 		Maid.Main,
 		Frame.Actions.Body.Send.MouseButton1Click:Connect(function()

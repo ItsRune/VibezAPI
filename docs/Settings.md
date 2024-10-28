@@ -391,15 +391,20 @@ Overrides our permissions check when play testing in studio. <br/>
 `boolean` <br/>
 `false`
 
-#### showDebugMessages
-
-Our module sometimes outputs random messages that show what's going on, this setting allows you to disable that. <br/>
-`boolean`
-`false`
-
 #### createGlobalVariables
 
 Toggles whether we create easy access for our api (and your api key) to be used from other **Server** scripts. <br/>
+`boolean` <br/>
+`false`
+
+</details>
+
+<details>
+<summary>Debug</summary>
+
+#### logMessages
+
+This setting **WILL** spew out a bunch of messages into the output. This setting should only be enabled if a developer asks for it within a support ticket.
 `boolean` <br/>
 `false`
 

@@ -168,10 +168,14 @@ function Class:addEmbedWithBuilder(...: (embedCreator: Types.embedCreator) -> Ty
 			continue
 		end
 
-		local createdEmbed = handler(embedClass.new())
+		local createdEmbedBuilder = embedClass.new()
+		local createdEmbed = handler(createdEmbedBuilder)
 
-		if not createdEmbed then
+		if typeof(createdEmbed) ~= typeof(createdEmbedBuilder) then
 			self.Api:_warn("Embed handler does not return an embed!")
+			continue
+		elseif not createdEmbed then
+			self.Api:_warn("Embed class expected to be returned via handler function, received something else!")
 			continue
 		end
 
@@ -199,6 +203,7 @@ end
 ---
 function Class:addEmbed(data: { [string]: any }): Types.vibezHooks
 	if not self.toSend["embeds"] then
+		self.Api:_debug("webhooks_add_embed", "Creating base embed table.")
 		self.toSend.embeds = Hooks._createEmbedTable()
 	end
 
@@ -246,6 +251,7 @@ end
 ---
 function Class:setData(data: { any }): Types.vibezHooks
 	self.toSend = data
+	self.Api:_debug("webhooks_set_data", "Overwrote webhook body.")
 	return self
 end
 
@@ -283,6 +289,7 @@ end
 ]=]
 ---
 function Class:Destroy()
+	self.Api:_debug("webhooks_destroy", "Destroy method triggered.")
 	table.clear(self)
 	setmetatable(self, nil)
 	self = nil
@@ -308,6 +315,7 @@ function Class:Send(): Types.httpResponse
 		self.Api:_warn(response.Body.message)
 	end
 
+	self.Api:_debug("webhooks_send", "Sent webhook data with a response code of '" .. response.StatusCode .. "'.")
 	return response
 end
 

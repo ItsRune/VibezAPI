@@ -120,6 +120,7 @@ local function _addLog(Frame: any, componentData: { [any]: any }, newLog: LogInf
 end
 
 local function onDestroy(Frame: any, componentData: { [any]: any })
+	componentData._debug("interface_logs_destroy", "Destroy method triggered.")
 	nextLayoutOrder = 999999
 
 	componentData.clearAllChildren(Frame.Scroll, { "UIPadding", "UIListLayout" })
@@ -149,6 +150,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		return
 	end
 
+	componentData._debug("interface_logs_initialization", "Fetching log data.")
 	local logData = componentData.remoteFunction:InvokeServer("Logs")
 
 	-- Create an error so that the user knows there's no logs yet.
@@ -160,6 +162,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		_addLog(Frame, componentData, logData[i])
 	end
 
+	componentData._debug("interface_logs_initialization", "Connecting client event for receiving new logs.")
 	table.insert(
 		Maid,
 		componentData.remoteEvent.OnClientEvent:Connect(function(Command: string, ...: any)

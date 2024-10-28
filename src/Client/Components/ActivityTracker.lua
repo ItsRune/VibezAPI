@@ -7,6 +7,7 @@ local Maid = {}
 
 --// Functions \\--
 local function onDestroy(componentData: { [any]: any })
+	componentData._debug("activity_destroy", "Destroy method triggered.")
 	if not Maid then
 		return
 	end
@@ -32,6 +33,7 @@ local function onSetup(componentData: { [any]: any })
 	local lastCheck = DateTime.now().UnixTimestamp
 	local Counter = 0
 
+	componentData._debug("activity_initialization", "Connecting 'onWindowFocus'.")
 	table.insert(
 		Maid,
 		UserInputService.WindowFocused:Connect(function()
@@ -39,6 +41,7 @@ local function onSetup(componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("activity_initialization", "Connecting 'onWindowFocusReleased'.")
 	table.insert(
 		Maid,
 		UserInputService.WindowFocusReleased:Connect(function()
@@ -46,6 +49,7 @@ local function onSetup(componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("activity_initialization", "Connecting 'onInputBegan'.")
 	table.insert(
 		Maid,
 		UserInputService.InputBegan:Connect(function()
@@ -57,6 +61,7 @@ local function onSetup(componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("activity_initialization", "Binding to rendering function.")
 	pcall(function()
 		RunService:BindToRenderStep("Vibez_AFK_Tracker", Enum.RenderPriority.Last.Value, function()
 			local now = DateTime.now().UnixTimestamp

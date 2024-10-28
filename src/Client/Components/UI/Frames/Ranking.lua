@@ -316,6 +316,7 @@ end
 
 --// Functions \\--
 local function onDestroy(Frame: any, componentData: { [any]: any })
+	componentData._debug("interface_ranking_destroy", "Destroy method triggered.")
 	table.clear(selectedUsers)
 	selectedUsers = {}
 
@@ -350,6 +351,10 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		suggestionButtons = {},
 	}
 
+	componentData._debug(
+		"interface_ranking_initialization",
+		"Connecting action button connections 'onInputBegan' & 'onMouseButton1Click'."
+	)
 	for _, actionButton: TextButton in ipairs(Frame.Actions.Body:GetChildren()) do
 		if not actionButton:IsA("TextButton") then
 			continue
@@ -381,6 +386,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		)
 	end
 
+	componentData._debug("interface_ranking_initialization", "Connecting username textbox 'onFocus'.")
 	table.insert(
 		Maid.Main,
 		Frame.User.Username.Focused:Connect(function()
@@ -393,6 +399,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("interface_ranking_initialization", "Connecting username textbox 'onTextChanged'.")
 	table.insert(
 		Maid.Main,
 		Frame.User.Username:GetPropertyChangedSignal("Text"):Connect(function()
@@ -409,6 +416,8 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 
 	local setRankFrame = Frame.Actions.Body.setRank
 	local setRankButton = setRankFrame.Button
+
+	componentData._debug("interface_ranking_initialization", "Connecting setRankButton 'onMouseButton1Click'.")
 	table.insert(
 		Maid.Main,
 		setRankButton.MouseButton1Click:Connect(function()
@@ -421,6 +430,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("interface_ranking_initialization", "Connecting setRankButton 'onInputBegan'.")
 	table.insert(
 		Maid.Main,
 		setRankButton.InputBegan:Connect(function(Input: InputObject)
@@ -449,6 +459,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		return
 	end
 
+	componentData._debug("interface_ranking_initialization", "Connecting textbox 'onTextChanged'.")
 	table.insert(
 		Maid.Main,
 		rankTextBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -490,6 +501,7 @@ local function onSetup(Frame: any, componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("interface_ranking_initialization", "Connecting textbox 'onFocusLost'.")
 	table.insert(
 		Maid.Main,
 		rankTextBox.FocusLost:Connect(function()

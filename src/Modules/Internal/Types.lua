@@ -200,13 +200,17 @@ export type vibezSettings = {
 	Misc: {
 		originLoggerText: string,
 		ignoreWarnings: boolean,
-		showDebugMessages: boolean,
 		overrideGroupCheckForStudio: boolean,
 		createGlobalVariables: boolean,
 		rankingCooldown: number,
 		-- isAsync: boolean,
 		-- checkForUpdates: boolean,
 		-- autoReportErrors: boolean,
+	},
+
+	Debug: {
+		logMessages: boolean,
+		logClientMessages: boolean,
 	},
 }
 
@@ -458,7 +462,7 @@ export type vibezPublicApi = {
 		messagesSent: (number | { string })?,
 		shouldFetchGroupRank: boolean?
 	) -> (infoResponse | errorResponse)?,
-	getActivity: (self: vibezApi, userId: string | number) -> activityResponse,
+	getActivity: (self: vibezApi, userId: string | number) -> activityResponse | errorResponse,
 
 	-- Commands
 	getUsersForCommands: (self: vibezApi, playerWhoCalled: Player, usernames: { string | number }) -> { Player },

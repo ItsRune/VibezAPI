@@ -101,13 +101,17 @@ return {
 
 	Misc = {
 		originLoggerText = game.Name, -- Text of logger for Vibez provided embeds. (Ranking)
-		showDebugMessages = false, -- Allows our wrapper to print to the output any debugging related messages.
-		ignoreWarnings = false, -- Ignores debugging outputs.
+		ignoreWarnings = false, -- Ignores warning messages from different features.
 		overrideGroupCheckForStudio = false, -- Overrides group rank checks for developers.
 		createGlobalVariables = false, -- Creates a Folder in ServerStorage providing another script access to the API.
 		rankingCooldown = 30, -- How long until a player can be ranked.
 		-- isAsync = false, -- Broken
 		-- autoReportErrors = false, -- It's best to use this when a developer asks you to within a ticket. (Removed)
 		-- checkForUpdates = false, -- Checks github for an updated version of the module. (Removed)
+	},
+
+	Debug = {
+		logMessages = false, -- Toggles whether we dump the console full of information about what's happening behind the scenes.
+		logClientMessages = false, -- Toggles dump-age of the client's console.
 	},
 }

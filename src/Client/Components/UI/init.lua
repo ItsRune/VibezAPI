@@ -258,17 +258,39 @@ function onSetup(componentData: { [any]: any })
 		)
 	end
 
+	local staffInformation = componentData.remoteFunction:InvokeServer("staffCheck", "Interface")
+	if
+		typeof(staffInformation) ~= "table"
+		or not staffInformation.Rank
+		or staffInformation.Rank < componentData.Data.MinRank
+	then
+		componentData._debug("staff_check", "Staff check failed for Interface.")
+		return
+	end
+
 	local interfaceData = componentData.Data
 	if topBarButton ~= nil then
+		componentData._debug(
+			"interface_initialization",
+			"Initialization of topbar button failed due to one already existing."
+		)
 		return
 	end
 
 	for _, viewableTab: string in ipairs(componentData.Data.nonViewableTabs) do
+		local debugView = table.create(#componentData.Data.nonViewableTabs)
+
 		for _, tab: GuiLabel in ipairs(Top.Buttons:GetChildren()) do
 			if string.lower(viewableTab) == string.lower(tab.Name) then
+				table.insert(debugView, tab.Name)
 				tab.Visible = false
 			end
 		end
+
+		componentData._debug(
+			"interface_tabs_view",
+			"Disabled " .. #debugView .. " tabs. (" .. table.concat(debugView, ", ") .. ")"
+		)
 	end
 
 	--stylua: ignore
@@ -287,6 +309,7 @@ function onSetup(componentData: { [any]: any })
 			_onExitButtonClicked(componentData)
 		end)
 
+	componentData._debug("interface_initialization", "Setup completed.")
 	return
 end
 

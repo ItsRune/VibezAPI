@@ -72,8 +72,8 @@ local function _onNotification(componentData: { [any]: any }, dontAllowFormattin
 		notifGui.Holder.AbsoluteSize
 	)
 	if not isOk then
-		warn("Notification failed, message content: " .. Message)
 		Debris:AddItem(newItem, 0)
+		componentData._debug("notification_request", "Failed to resize the TextLabel. Message content: " .. Message)
 		return
 	end
 

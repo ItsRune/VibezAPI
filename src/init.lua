@@ -382,7 +382,10 @@ local function onServerInvoke(
 		return self._private.actionStorage.Logs
 	else
 		-- Maybe actually log it somewhere... I have no clue where though.
-		self:_warn("Player %s (%d) tried to perform an invalid action with our API.", Player.Name, Player.UserId)
+		self:_warn(
+			string.format("Player %s (%d) tried to perform an invalid action with our API.", Player.Name, Player.UserId)
+		)
+		self:_debug(string.format("'%s' attempted to perform action '%s' which is invalid.", Player.Name, Action))
 
 		-- REVIEW: Somehow admins are reaching this point and being kicked for it.
 		-- Player:Kick(
@@ -959,6 +962,7 @@ function api:_getGroupFromUser(
 	end
 
 	if RunService:IsStudio() and self.Settings.Misc.overrideGroupCheckForStudio == true then
+		self:_debug("get_group_from_user", "Studio override for permission check.")
 		return {
 			Rank = 255,
 			Role = "Unknown",
@@ -970,6 +974,7 @@ function api:_getGroupFromUser(
 	local found = nil
 
 	if not isOk then
+		self:_debug("get_group_from_user", "Failed to fetch group data for '" .. userId .. "'; Fake data provided.")
 		return {
 			Id = groupId,
 			Rank = 0,
@@ -1005,6 +1010,7 @@ function api:_getGroupFromUser(
 		self:_warn(`An error occurred whilst fetching group information from {tostring(possiblePlayer)}.`)
 	end
 
+	self:_debug("get_group_from_user", "Unexpected issue occurred.")
 	return {
 		Id = self.GroupId,
 		Role = "Guest",
@@ -1022,6 +1028,23 @@ end
 ]=]
 ---
 function api:_onPlayerAdded(Player: Player)
+	-- Ensure API loads with all settings before initializing client.
+	local counter = 0
+	repeat
+		task.wait()
+		counter += 1
+	until counter >= 1000 or self.Loaded
+
+	if not self.Loaded and counter >= 1000 then
+		self:_debug("api_took_too_long", "Client joined, but couldn't initialize due to slow api response time!")
+		return
+	elseif Player.Parent ~= Players then
+		self:_debug("api_took_too_long", "Client left the game as we were awaiting the api to load fully.")
+		return
+	else
+		self:_debug("api_took_too_long", "Passed ✅")
+	end
+
 	-- Check if player is currently blacklisted.
 	if self.Settings.Blacklists.Enabled then
 		local isBlacklisted, blacklistReason, blacklistedBy = self:isUserBlacklisted(Player)
@@ -1042,6 +1065,15 @@ function api:_onPlayerAdded(Player: Player)
 			})
 
 			Player:Kick(kickReason)
+			self:_debug(
+				"user_blacklist_check",
+				"'"
+					.. Player.Name
+					.. "' was blacklisted by '"
+					.. (blacklistedByUsernameIsOk and blacklistedByUsername or blacklistedBy)("' for '")
+					.. blacklistReason
+					.. "'!"
+			)
 			return
 		end
 	end
@@ -1066,12 +1098,14 @@ function api:_onPlayerAdded(Player: Player)
 		self._private.requestCaches.validStaff[Player.UserId] = { User = Player, Rank = theirGroupData.Rank }
 	end
 
-	local PlayerGui = Player:WaitForChild("PlayerGui", 10)
+	local PlayerGui = Player:WaitForChild("PlayerGui", 30)
 	if not PlayerGui then
+		self:_debug("user_initialization", "Failed to find PlayerGui.")
 		return
 	end
 
 	if PlayerGui:FindFirstChild(self._private.clientScriptName) ~= nil then
+		self:_debug("user_initialization", "User already has been initialized.")
 		return -- Player was already in game but got disconnected (typically from an in game rank change)
 	end
 
@@ -1127,6 +1161,7 @@ function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- 
 
 	-- Check for and delete any existing connections with the player.
 	if self._private.Maid[Player.UserId] == nil then
+		self:_debug("user_removal", "User has no existing RBXScriptConnections to disconnect.")
 		return
 	end
 
@@ -1714,6 +1749,7 @@ end
 
 --[=[
 	Displays a debug message to the output.
+	@param starter string
 	@param ... ...string
 
 	@private
@@ -1721,13 +1757,13 @@ end
 	@since 1.0.2
 ]=]
 ---
-function api:_debug(...: string)
-	if not self.Settings.Misc.showDebugMessages then
+function api:_debug(starter: string, ...: string)
+	if not self.Settings.Debug.logMessages then
 		return
 	end
 
-	print("[Vibez | Debug]:", ...)
-	print(debug.traceback())
+	local prefix = string.format("[Debug-vibez_%s]:", starter)
+	print(prefix, ...)
 end
 
 --[=[
@@ -1791,6 +1827,7 @@ function api:_buildAttributes()
 		elseif typeof(Color) == "Color3" then
 			color3 = Color
 		else
+			self:_debug("attributes_color_serializer", "Supplied color is not a valid color type.")
 			return ""
 		end
 
@@ -1804,8 +1841,14 @@ function api:_buildAttributes()
 
 	local function _handleImageIds(image: string | number): number?
 		if string.match(tostring(image), "rbxassetid") ~= nil then
-			return tonumber(string.match(tostring(image), "[%d]+"))
-				or baseSettings.Interface.Activation.iconButtonImage :: any
+			local result = tonumber(string.match(tostring(image), "[%d]+"))
+
+			if not result then
+				self:_debug("attributes_image_ids", "Invalid image id was supplied, using base setting.")
+				return baseSettings.Interface.Activation.iconButtonImage :: any
+			end
+
+			return result
 		end
 
 		return tonumber(image)
@@ -1881,9 +1924,11 @@ function api:_buildAttributes()
 
 		Misc = {
 			ignoreWarnings = self.Settings.Misc.ignoreWarnings,
+			showDebugMessages = self.Settings.Debug.logClientMessages,
 		},
 	}
 
+	self:_debug("attributes", "Applying attributes.")
 	Workspace:SetAttribute(self._private.clientScriptName, HttpService:JSONEncode(dataToEncode))
 end
 
@@ -1941,6 +1986,10 @@ function api:_verifyUser(
 		end
 	end
 
+	self:_debug(
+		"user_verification",
+		"Supplied user parameter does not match the types checked. ('" .. typeof(User) .. "')"
+	)
 	return User
 end
 
@@ -2018,6 +2067,7 @@ function api:setRank(
 	end
 
 	if not tonumber(userId) then
+		self:_debug("set_rank", "Supplied UserId is not valid.")
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
@@ -2025,6 +2075,7 @@ function api:setRank(
 	end
 
 	if not tonumber(roleId) then
+		self:_debug("set_rank", "Supplied RoleId is not valid.")
 		return {
 			success = false,
 			errorMessage = "Parameter 'rankId' is an invalid rank.",
@@ -2076,6 +2127,7 @@ function api:Promote(
 	end
 
 	if not tonumber(userId) then
+		self:_debug("promote", "Supplied UserId is not valid.")
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
@@ -2124,6 +2176,7 @@ function api:Demote(
 	end
 
 	if not tonumber(userId) then
+		self:_debug("demote", "Supplied UserId is not valid.")
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
@@ -2169,6 +2222,7 @@ function api:Fire(User: Player | string | number, whoCalled: { userName: string,
 	end
 
 	if not tonumber(userId) then
+		self:_debug("fire", "Supplied UserId is not valid.")
 		return {
 			success = false,
 			errorMessage = "Parameter 'userId' must be a valid number.",
@@ -2361,14 +2415,14 @@ function api:updateKey(newApiKey: string): boolean
 
 	if groupId == -1 and savedKey ~= nil then
 		self.apiKey = savedKey
-		self:_warn(debug.traceback(`New api key "{newApiKey}" was invalid and was reverted to the previous one!`, 2))
+		self:_debug("update_key", "New api key '" .. newApiKey .. "' was invalid and was reverted to the previous one!")
 		return false
 	elseif groupId == -1 and not savedKey then
-		self:_warn(
-			debug.traceback(
-				`Api key "{newApiKey}" was invalid! Please make sure there are no special characters or spaces in your key!`,
-				2
-			)
+		self:_debug(
+			"update_key",
+			"Api key '"
+				.. newApiKey
+				.. "' was invalid! Please make sure there are no special characters or spaces in your key!"
 		)
 		return false
 	end
@@ -2514,6 +2568,7 @@ function api:addBlacklist(
 		nil, (typeof(Reason) ~= "string" or Reason == "") and "Unknown." or Reason, nil
 
 	if not userToBlacklist then
+		self:_debug("add_blacklist", "An invalid user was supplied.")
 		return nil
 	elseif not blacklistExecutedBy then
 		blacklistExecutedBy = -1
@@ -2528,6 +2583,7 @@ function api:addBlacklist(
 	})
 
 	if not isOk then
+		self:_debug("add_blacklist", "An unexpected server issue occurred.")
 		return {
 			success = false,
 			message = "Internal server error.",
@@ -2550,6 +2606,7 @@ function api:deleteBlacklist(
 	userToDelete: Player | string | number
 ): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
 	if not userToDelete then
+		self:_debug("delete_blacklist", "An invalid user was supplied.")
 		return nil
 	end
 
@@ -2557,6 +2614,7 @@ function api:deleteBlacklist(
 	local isOk, response: any = self:_http(`/blacklists/{userId}`, "delete")
 
 	if not isOk then
+		self:_debug("delete_blacklist", "An unexpected server issue occurred.")
 		return {
 			success = false,
 			message = "Internal server error.",
@@ -2582,6 +2640,7 @@ function api:getBlacklists(
 	local isOk, response: any = self:_http(`/blacklists/{userId}`)
 
 	if not isOk or not response.Success then
+		self:_debug("get_blacklist", "An unexpected server issue occurred.")
 		return { success = false, message = response.Body.message or "Internal server error." }
 	end
 
@@ -2654,21 +2713,21 @@ end
 ---
 function api:waitUntilLoaded(): Types.vibezApi?
 	self:_warn("Method 'waitUntilLoaded' is deprecated and shouldn't be used in newer games.")
-
-	if self.Loaded == true then
-		return self
-	end
-
-	local counter = 0
-	local maxCount = 25
-
-	-- Remove 'repeat' and replace with something more performant and can cancel.
-	repeat
-		task.wait(1)
-		counter += 1
-	until self.Loaded == true or counter >= maxCount
-
+	self:_debug("deprecated_method_wait_until_loaded", "Attempted to use deprecated method.")
 	return self.Loaded and self or nil
+
+	-- if self.Loaded == true then
+	-- 	return self
+	-- end
+
+	-- local counter = 0
+	-- local maxCount = 25
+
+	-- -- Remove 'repeat' and replace with something more performant and can cancel.
+	-- repeat
+	-- 	task.wait(1)
+	-- 	counter += 1
+	-- until self.Loaded == true or counter >= maxCount
 end
 
 --[=[
@@ -2680,11 +2739,17 @@ end
 	@since 0.3.0
 ]=]
 ---
-function api:getActivity(User: Player | string | number): Types.activityResponse
+function api:getActivity(User: Player | string | number): Types.activityResponse | Types.errorResponse
 	local userId = self:_verifyUser(User, "UserId")
 
 	local body: any = { userId = userId }
-	if not userId then
+	if User ~= nil and not userId then
+		self:_debug("get_activity", "Supplied user was not valid.")
+		return {
+			success = false,
+			errorMessage = "Invalid user was supplied.",
+		} :: Types.errorResponse
+	elseif not userId then
 		body = nil
 	end
 
@@ -2705,12 +2770,14 @@ end
 function api:removeActivity(User: Player | string | number): boolean
 	local userId = self:_verifyUser(User, "UserId") :: number
 	if not userId then
+		self:_debug("remove_activity", "Supplied user was not valid.")
 		return false
 	end
 
 	-- Get the current activity and negate the activity to remove it. (Temporary Solution)
-	local currentActivity = self:getActivity(userId)
-	if not currentActivity then
+	local currentActivity = self:getActivity(userId) :: Types.activityResponse
+	if not currentActivity or not currentActivity["secondsUserHasSpent"] then
+		self:_debug("remove_activity", "Internal server error.")
 		return false
 	end
 
@@ -2887,10 +2954,12 @@ function api:_initialize(apiKey: string): ()
 	self._private.Function, self._private.Event = remoteFunction, remoteEvent
 	remoteFunction, remoteEvent = nil, nil
 
+	self:_debug("initialization", "Connecting RemoteFunction.")
 	self._private.Function.OnServerInvoke = function(Player: Player, ...: any)
 		return onServerInvoke(self, Player, ...)
 	end
 
+	self:_debug("initialization", "Connecting RemoteEvent.")
 	table.insert(
 		self._private.Maid,
 		self._private.Event.OnServerEvent:Connect(function(Player: Player, ...: any)
@@ -2899,6 +2968,7 @@ function api:_initialize(apiKey: string): ()
 	)
 
 	-- Chat command connections
+	self:_debug("initialization", "Connecting 'PlayerAdded' event.")
 	table.insert(
 		self._private.Maid,
 		Players.PlayerAdded:Connect(function(Player)
@@ -2906,11 +2976,13 @@ function api:_initialize(apiKey: string): ()
 		end)
 	)
 
+	self:_debug("initialization", "Connecting 'PlayerAdded' event to existing players in game.")
 	for _, Player in pairs(Players:GetPlayers()) do
 		coroutine.wrap(self._onPlayerAdded)(self, Player)
 	end
 
 	-- Connect the player's maid cleanup function.
+	self:_debug("initialization", "Connecting 'PlayerRemoving' event.")
 	table.insert(
 		self._private.Maid,
 		Players.PlayerRemoving:Connect(function(Player)
@@ -2919,10 +2991,12 @@ function api:_initialize(apiKey: string): ()
 	)
 
 	-- Initialize the workspace attribute
+	self:_debug("initialization", "Building attributes for client.")
 	self:_buildAttributes()
 
 	-- Track activity
 	if self.Settings.ActivityTracker.Enabled then
+		self:_debug("activity_tracker_initialization", "Connecting 'Heartbeat' event.")
 		table.insert(
 			self._private.Maid,
 			RunService.Heartbeat:Connect(function()
@@ -3092,6 +3166,27 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		commandOperationCodes = {},
 	}
 
+	-- We'll have to set the settings debug/warning messages before
+	-- the settings check so that debug/warnings print properly.
+	self.Settings.Debug.logMessages = (
+		extraOptions
+		and extraOptions["Debug"] ~= nil
+		and typeof(extraOptions["Debug"]["logMessages"]) == "boolean"
+		and extraOptions["Debug"]["logMessages"]
+	) or baseSettings.Debug.logMessages
+	self.Settings.Debug.logClientMessages = (
+		extraOptions
+		and extraOptions["Debug"] ~= nil
+		and typeof(extraOptions["Debug"]["logClientMessages"]) == "boolean"
+		and extraOptions["Debug"]["logClientMessages"]
+	) or baseSettings.Debug.logClientMessages
+	self.Settings.Misc.ignoreWarnings = (
+		extraOptions
+		and extraOptions["Misc"] ~= nil
+		and typeof(extraOptions["Misc"]["ignoreWarnings"]) == "boolean"
+		and extraOptions["Misc"]["ignoreWarnings"]
+	) or baseSettings.Misc.ignoreWarnings
+
 	--/ Command Operation Codes \--
 	self:addArgumentPrefix(
 		"shortenedUsername",
@@ -3180,7 +3275,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	if wereOptionsAttempted then
 		-- Recursively fixes the settings table with custom logic for certain sections.
 		local modified = checkingMethods.settingsCheck(self, extraOptions, self.Settings, "Settings")
-		self.Settings = checkingMethods.removeNilChecks(modified)
+		local removedUnknownKeys, removalCount = checkingMethods.removeNilChecks(modified)
+
+		self.Settings = removedUnknownKeys
+		self:_debug("settings_nil_keys_removal", "Removed '" .. removalCount .. "' unknown keys.")
 	end
 
 	--/ Configuration Setup \--
@@ -3542,10 +3640,17 @@ return setmetatable({
 	@interface miscOptions
 	.originLoggerText string
 	.ignoreWarnings boolean
-	.showDebugMessages boolean
 	.overrideGroupCheckForStudio boolean
 	.createGlobalVariables boolean
 	.rankingCooldown number
+	@private
+	@within VibezAPI
+]=]
+
+-- Misc
+--[=[
+	@interface debugOptions
+	.logMessages boolean
 	@private
 	@within VibezAPI
 ]=]
@@ -3559,5 +3664,6 @@ return setmetatable({
 	.Interface interfaceOptions
 	.ActivityTracker activityTrackerOptions
 	.Misc miscOptions
+	.Debug debugOptions
 	@within VibezAPI
 ]=]

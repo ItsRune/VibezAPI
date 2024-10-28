@@ -115,6 +115,10 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 		keyTracker[self._player.UserId] = self
 		Activity.Keys[reversedKey] = keyTracker
 
+		self._api:_debug(
+			"activity_initialization",
+			"Creating internal bind to AFK method for '" .. forPlayer.Name .. "'."
+		)
 		table.insert(self._api._private.Binds._internal["Afk"], function(Player: Player, override: boolean?)
 			local existingClass = Activity.Keys[reversedKey][Player.UserId]
 			if not existingClass then
@@ -140,6 +144,7 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 	)
 
 	if self._api.Settings.ActivityTracker.kickIfFails == true then
+		self._api:_debug("activity_failed", "Activity tracker failed to initialize for '" .. forPlayer.Name .. "'.")
 		forPlayer:Kick("[Activity Tracker]: " .. self._api.Settings.ActivityTracker.failMessage)
 	end
 
@@ -172,11 +177,17 @@ function Class:Increment()
 		if self._afkCounter ~= 0 and self._afkCounter % 30 == 0 then
 			self._api:_warn(self._player.Name .. " has been marked AFK for " .. self._afkCounter .. " seconds!")
 		end
+
+		self._api:_debug(
+			"activity_increment",
+			"Attempted to increase second count for '" .. self._player.Name .. "' but they're AFK."
+		)
 		return
 	end
 
 	self._afkCounter = 0
 	self._seconds += self._increment
+	self._api:_debug("activity_increment", "Increased second count for '" .. self._player.Name .. "'.")
 end
 
 --[=[
@@ -188,6 +199,7 @@ end
 ]=]
 ---
 function Class:Chatted()
+	self._api:_debug("activity_chatted", "Increased message count for '" .. self._player.Name .. "'.")
 	self._messages += 1
 end
 
@@ -201,6 +213,7 @@ end
 ---
 function Class:Left()
 	if self.isLeaving then
+		self._api:_debug("activity_left", "Player has already been marked as 'Left'.")
 		return
 	end
 

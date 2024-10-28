@@ -25,6 +25,7 @@ local function _getTempFolder()
 end
 
 local function onDestroy(componentData: { [any]: any })
+	componentData._debug("ranksticks_destroy", "Destroy method triggered.")
 	if Maid == nil then
 		return
 	end
@@ -176,6 +177,7 @@ local function onSetup(componentData: { [any]: any })
 		return false
 	end
 
+	componentData._debug("ranksticks_initialization", "Connecting 'onChildAdded' to character.")
 	table.insert(
 		Maid,
 		Character.ChildAdded:Connect(function(child: Instance)
@@ -205,6 +207,7 @@ local function onSetup(componentData: { [any]: any })
 		end)
 	)
 
+	componentData._debug("ranksticks_initialization", "Connecting 'onChildRemoved' to character.")
 	table.insert(
 		Maid,
 		Character.ChildRemoved:Connect(function(child: Instance)

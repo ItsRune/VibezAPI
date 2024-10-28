@@ -56,6 +56,15 @@ local function _warn(starter: string, ...: string)
 	warn("[" .. starter .. "]: ", ...)
 end
 
+local function _debug(starter: string, ...: string): ()
+	if not System.areDebugPrintsAllowed then
+		return
+	end
+
+	local prefix = string.format("[Debug-vibez_client_%s]:", starter)
+	print(prefix, ...)
+end
+
 local function _findFirstChildWhichIsAByName(parent: Instance, name: string, class: string, tries: number?): Instance?
 	local existingAttempts = tries or 0
 	if existingAttempts >= 50 then
@@ -106,6 +115,7 @@ local function onAttributeChanged()
 	end
 
 	System.isWarningsAllowed = not States.Misc.ignoreWarnings
+	System.areDebugPrintsAllowed = States.Misc.showDebugMessages
 
 	for key: string, data: { [any]: any } in pairs(States) do
 		if key == "GroupId" then
@@ -127,6 +137,7 @@ local function onAttributeChanged()
 			buttonClickBubble = buttonClickBubble,
 
 			_warn = _warn,
+			_debug = _debug,
 		}
 
 		local associatedModule, moduleName

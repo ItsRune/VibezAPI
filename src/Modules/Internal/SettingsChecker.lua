@@ -11,6 +11,16 @@ local Table = require(script.Parent.Parent.Table)
 local clientInterface = script.Parent.Parent.Parent.Client.Components.UI.Interface
 
 --// Functions \\--
+local function test(self: Types.vibezApi, expr: boolean, checkName: string): boolean
+	if not self.Settings.Debug.logMessages then
+		return expr
+	end
+
+	self:_debug("settings_check", "Test for '" .. checkName .. "' got " .. (expr and "✅" or "❌"))
+	warn("") -- Separator
+	return expr
+end
+
 --[[
 	Compares a value to a default value and ensures it's type is kept the same.
 
@@ -34,16 +44,26 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 
 	if typeof(Data) == typeof(Default) then
 		-- Notify the developer that all tabs are invisible and the interface is basically useless.
-		if latestKey == "nonViewableTabs" and #Data >= #clientInterface.Frame.Top.Buttons:GetChildren() - 1 then
+		if
+			test(
+				self,
+				latestKey == "nonViewableTabs" and #Data >= #clientInterface.Frame.Top.Buttons:GetChildren() - 1,
+				"interface_viewable_tabs_validator"
+			)
+		then
 			self:_warn(
 				optionalKeyStarter
 					.. " makes all frame tabs invisible with it's current configuration. Either disable the 'Interface' or make atleast 1 tab visible."
 			)
 			return Default
 		elseif
-			latestKey == "Removed"
-			and parentKey == "RankSticks"
-			and #Data >= #HttpService:JSONDecode(self._private.stickTypes)
+			test(
+				self,
+				latestKey == "Removed"
+					and parentKey == "RankSticks"
+					and #Data >= #HttpService:JSONDecode(self._private.stickTypes),
+				"ranksticks_removal"
+			)
 		then
 			local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
 			local loweredExcludedNames = Table.Map(Data, function(name: string)
@@ -59,13 +79,14 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 			end
 
 			return Data
-		elseif typeof(Data) == "table" and typeof(Default) == "table" then
+		elseif test(self, typeof(Data) == "table" and typeof(Default) == "table", "same_type_tables_key_removal") then
 			-- Remove non-existant keys
 			for key: string, value: any in pairs(Default) do
 				if typeof(Data[key]) == typeof(value) and typeof(value) ~= "table" then
 					continue
 				end
 
+				self:_debug("settings_check", "Applying checks to nested table '" .. path .. "'.")
 				Data[key] = fixDiscrepencies(self, Data[key], value, path .. "." .. key)
 			end
 
@@ -73,13 +94,22 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 		end
 		-- Custom errors past this point --
 	elseif typeof(Data) ~= typeof(Default) then
-		if typeof(Default) == "table" and Default[1] == "settings_check_ignore_nil_tbl" then
+		if
+			test(
+				self,
+				typeof(Default) == "table" and Default[1] == "settings_check_ignore_nil_tbl",
+				"array_removal_of_ignoring_nil_check"
+			)
+		then
 			return ((typeof(Data) == "table" and Data[1] ~= "settings_check_ignore_nil_tbl") or typeof(Data) ~= "table")
 					and Data
 				or {}
-		elseif latestKey == "outsideServerTagColor" and typeof(Data) == "BrickColor" then -- Allow BrickColors for tag color
+		elseif
+			-- Allow BrickColors for tag color
+			test(self, latestKey == "outsideServerTagColor" and typeof(Data) == "BrickColor", "tag_color_brickcolor")
+		then
 			return Data
-		elseif parentKey == "RankSticks" and latestKey == "sticksModel" then
+		elseif test(self, parentKey == "RankSticks" and latestKey == "Model", "ranksticks_model") then
 			if Data == nil or typeof(Data) == "Instance" then
 				return Data
 			end
@@ -88,7 +118,13 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 			self:_warn(optionalKeyStarter .. errMessage)
 
 			return Default
-		elseif typeof(Data) == "string" and latestKey == "Mode" and parentKey == "RankSticks" then
+		elseif
+			test(
+				self,
+				typeof(Data) == "string" and latestKey == "Mode" and parentKey == "RankSticks",
+				"ranksticks_mode_validation"
+			)
+		then
 			if self._private.validModes[string.lower(tostring(Data))] then
 				return Data
 			end
@@ -97,26 +133,35 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 				string.format("%s '%s' is not a valid 'Mode' for RankSticks.", optionalKeyStarter, tostring(Data))
 			)
 			return Default
-		elseif Default == nil and (parentKey == "Alias" or parentKey == "Removed") then
+		elseif
+			test(self, Default == nil and (parentKey == "Alias" or parentKey == "Removed"), "empty_array_data_return")
+		then
 			return Data
-		elseif Default == nil then
+		elseif test(self, Default == nil, "optional_key_doesnt_exist") then
 			self:_warn(optionalKeyInvalidError)
 		end
 	end
 
+	self:_debug("settings_check", "Returning default value for path '" .. path .. "'")
 	return Default
 end
 
-local function removeAllIgnoreNilChecks(Data: any): any
+local function removeAllIgnoreNilChecks<T>(Data: T, currentCount: number?): (T?, number)
+	local removedCount = currentCount or 0
+
 	if typeof(Data) == "table" then
 		for key: string, value: any in next, Data do
-			Data[key] = removeAllIgnoreNilChecks(value)
+			local result, newCount = removeAllIgnoreNilChecks(value, removedCount)
+
+			Data[key] = result
+			removedCount = newCount
 		end
 	elseif Data == "settings_check_ignore_nil_tbl" then
-		return nil
+		removedCount += 1
+		return nil, removedCount
 	end
 
-	return Data
+	return Data, removedCount
 end
 
 return {
