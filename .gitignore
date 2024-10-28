@@ -12,3 +12,6 @@
 # Private files
 /private
 /tests
+
+# Wally
+/wally.lock

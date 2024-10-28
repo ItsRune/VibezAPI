@@ -1,5 +1,5 @@
+--!strict
 -- REVIEW: Maybe make this module a folder and add custom errors underneath for better organization?
-
 --// Services \\--
 local HttpService = game:GetService("HttpService")
 
@@ -16,7 +16,7 @@ local function test(self: Types.vibezApi, expr: boolean, checkName: string): boo
 		return expr
 	end
 
-	self:_debug("settings_check", "Test for '" .. checkName .. "' got " .. (expr and "✅" or "❌"))
+	self:_debug("settings_check", "Test for '" .. checkName .. "' returned " .. (expr and "✅" or "❌"))
 	warn("") -- Separator
 	return expr
 end

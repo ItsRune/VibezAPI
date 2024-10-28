@@ -2,9 +2,8 @@
 
 # `Vibez API`
 
-[![Build Status](https://github.com/ItsRune/VibezAPI/workflows/CI/badge.svg)](https://github.com/ItsRune/VibezAPI/actions)
+[![Build Status](https://github.com/ItsRune/VibezAPI/workflows/CI/badge.svg)](https://github.com/ItsRune/VibezAPI/actions) <img alt="Discord" src="https://img.shields.io/discord/528920896497516554?label=Discord"> <img alt="Website" src="https://img.shields.io/website?url=https%3A%2F%2Fleina.vibez.dev%2F&up_message=Online&down_message=Offline&label=API">
 
-#### What is Vibez?
-Vibez is a **free** development service which primarily focuses on bots. To create a bot, simply run ***/createbot*** in our Discord server!
+[**Read our documentation here**](https://itsrune.github.io/VibezAPI/)
 
 </div>
