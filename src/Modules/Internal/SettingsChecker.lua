@@ -17,7 +17,6 @@ local function test(self: Types.vibezApi, expr: boolean, checkName: string): boo
 	end
 
 	self:_debug("settings_check", "Test for '" .. checkName .. "' returned " .. (expr and "✅" or "❌"))
-	warn("") -- Separator
 	return expr
 end
 
