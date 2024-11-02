@@ -38,14 +38,14 @@ return {
 
 		entranceTweenInfo = {
 			Style = Enum.EasingStyle.Quint,
-			Direction = Enum.EasingDirection.InOut,
-			timeItTakes = 1, -- Seconds
+			Direction = Enum.EasingDirection.Out,
+			timeItTakes = 0.75, -- Seconds
 		},
 
 		exitTweenInfo = {
 			Style = Enum.EasingStyle.Quint,
-			Direction = Enum.EasingDirection.InOut,
-			timeItTakes = 1, -- Seconds
+			Direction = Enum.EasingDirection.In,
+			timeItTakes = 0.75, -- Seconds
 		},
 	},
 
