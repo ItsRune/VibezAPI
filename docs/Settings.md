@@ -404,7 +404,13 @@ Toggles whether we create easy access for our api (and your api key) to be used 
 
 #### logMessages
 
-This setting **WILL** spew out a bunch of messages into the output. This setting should only be enabled if a developer asks for it within a support ticket.
+Prints a debug message about what the server script is doing. <br />
+`boolean` <br/>
+`false`
+
+#### logClientMessages
+
+Sends a debug message on the client's end about information of what it's doing. <br />
 `boolean` <br/>
 `false`
 
