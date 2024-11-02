@@ -28,19 +28,19 @@ onSetupUI = function(componentData: { [any]: any })
 	eventHolder["Blacklist"] = Instance.new("BindableEvent")
 
 	local function promote(target)
-		remoteFunction:InvokeServer("promote", "Interface", target)
+		remoteFunction:InvokeServer("promote", "Interface", { target })
 	end
 
 	local function demote(target)
-		remoteFunction:InvokeServer("demote", "Interface", target)
+		remoteFunction:InvokeServer("demote", "Interface", { target })
 	end
 
 	local function fire(target)
-		remoteFunction:InvokeServer("fire", "Interface", target)
+		remoteFunction:InvokeServer("fire", "Interface", { target })
 	end
 
 	local function blacklist(target)
-		remoteFunction:InvokeServer("blacklist", "Interface", target)
+		remoteFunction:InvokeServer("blacklist", "Interface", { target })
 	end
 
 	componentData._debug("v1_interface_initialization", "Binding event connections...")

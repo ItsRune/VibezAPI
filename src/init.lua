@@ -112,7 +112,7 @@ local function onServerInvoke(
 	if actionIndex ~= nil then
 		local Targets = Data[1]
 
-		if typeof(Targets[1]) ~= "table" and typeof(Targets[1]) ~= "Player" then
+		if typeof(Targets) ~= "table" then
 			Targets = { Targets }
 		end
 
@@ -136,20 +136,15 @@ local function onServerInvoke(
 				end
 
 				-- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
-				if typeof(Target) == "number" or typeof(Target) == "string" then
-					local userId, name = self:_verifyUser(Target, "UserId"), self:_verifyUser(Target, "Name")
-					Target = {
-						["Name"] = name,
-						["UserId"] = userId,
-					}
-				end
+				local userId, name = self:_verifyUser(Target, "UserId"), self:_verifyUser(Target, "Name")
+				Target = {
+					["Name"] = name,
+					["UserId"] = userId,
+				}
 
-				local userId = Target.UserId
-				local fakeTargetInstance = { Name = Target.Name, UserId = userId }
-
-				local targetGroupData = self:_playerIsValidStaff(fakeTargetInstance)
+				local targetGroupData = self:_playerIsValidStaff(Target)
 				local targetGroupRank = (targetGroupData ~= nil) and targetGroupData.Rank
-					or self:_getGroupFromUser(self.GroupId, fakeTargetInstance.UserId)
+					or self:_getGroupFromUser(self.GroupId, Target.UserId)
 
 				if typeof(targetGroupRank) == "table" then
 					targetGroupRank = targetGroupRank.Rank
@@ -279,7 +274,7 @@ local function onServerInvoke(
 						string.format(
 							"Error: Attempting to %s %s (%d) resulted in an internal server error!",
 							actionFunc == "Blacklist" and "blacklist" or "rank",
-							fakeTargetInstance.Name,
+							Target.Name,
 							userId
 						)
 					)

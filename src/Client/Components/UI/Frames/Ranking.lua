@@ -273,7 +273,7 @@ end
 
 local function _handleExternalUserSearch(componentData: { [any]: any })
 	local Text = usernameTextBox.Text
-	local isOk, userId, userInfo
+	local isOk, userId, userInfo: { [any]: any }
 
 	isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, Text)
 	if not isOk or not userId then
@@ -298,10 +298,10 @@ local function _handleExternalUserSearch(componentData: { [any]: any })
 		local Metatable = getmetatable(fakePlayer)
 		local Internal = {}
 
-		Internal.Name = userData[i].Username
+		Internal.Name = userData.Username
 		Internal.UserId = userId
-		Internal.DisplayName = userData[i].DisplayName
-		Internal.isVerified = userData[i].HasVerifiedBadge
+		Internal.DisplayName = userData.DisplayName
+		Internal.isVerified = userData.HasVerifiedBadge
 
 		Metatable.__index = Internal
 		Metatable.__tostring = function(self): string
