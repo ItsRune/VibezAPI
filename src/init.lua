@@ -46,6 +46,38 @@ local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
 local _privateKeys = {} :: { [string]: string? }
 
 --// Local Functions \\--
+-- https://devforum.roblox.com/t/your-name-color-in-chat-%E2%80%94-history-and-how-it-works/2702247
+local function generateNameColorForNotification(username: string): Color3
+	local NAME_COLORS = {
+		Color3.new(253 / 255, 41 / 255, 67 / 255), -- BrickColor.new("Bright red").Color,
+		Color3.new(1 / 255, 162 / 255, 255 / 255), -- BrickColor.new("Bright blue").Color,
+		Color3.new(2 / 255, 184 / 255, 87 / 255), -- BrickColor.new("Earth green").Color,
+		BrickColor.new("Bright violet").Color,
+		BrickColor.new("Bright orange").Color,
+		BrickColor.new("Bright yellow").Color,
+		BrickColor.new("Light reddish violet").Color,
+		BrickColor.new("Brick yellow").Color,
+	}
+
+	local function GetNameValue(pName)
+		local value = 0
+		for index = 1, #pName do
+			local cValue = string.byte(string.sub(pName, index, index))
+			local reverseIndex = #pName - index + 1
+			if #pName % 2 == 1 then
+				reverseIndex = reverseIndex - 1
+			end
+			if reverseIndex % 4 >= 2 then
+				cValue = -cValue
+			end
+			value = value + cValue
+		end
+		return value
+	end
+
+	return NAME_COLORS[(GetNameValue(username) % #NAME_COLORS) + 1]
+end
+
 local function getActionFunctionFromInvoke(Action: string)
 	Action = string.lower(Action)
 
@@ -401,7 +433,9 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 
 	if Command == "Notifications" then
 		local users = Data[1]
-		local message = Data[2]
+		local usernameColor = generateNameColorForNotification(Player.Name):ToHex()
+		local prefix = string.format('[<font color="#%s">%s</font>]: ', usernameColor, Player.Name)
+		local message = prefix .. Data[2]
 		local staffData = self:_playerIsValidStaff(Player)
 
 		if not staffData or not staffData["Rank"] or staffData.Rank < self.Settings.Interface.MinRank then
@@ -1378,7 +1412,9 @@ end
 
 --[=[
 	Gets the closest match to a player's username who's in game.
+	@param playerWhoCalled Player
 	@param usernames {string}
+	@param ignoreExternal boolean
 	@return {Player}
 
 	@yields
@@ -1386,16 +1422,22 @@ end
 	@since 0.4.0
 ]=]
 ---
-function api:getUsersForCommands(playerWhoCalled: Player, usernames: { string | number }): { Player }
+function api:getUsersForCommands(
+	playerWhoCalled: Player,
+	usernames: { string | number },
+	ignoreExternal: boolean?
+): { Player }
 	local found = {}
 	local externalCodes = {}
 	local foundIndices = {}
 
-	Table.ForEach(self._private.commandOperationCodes, function(data)
-		if data["isExternal"] ~= nil and data["isExternal"] == true then
-			table.insert(externalCodes, data)
-		end
-	end)
+	if not ignoreExternal then
+		Table.ForEach(self._private.commandOperationCodes, function(data)
+			if data["isExternal"] ~= nil and data["isExternal"] == true then
+				table.insert(externalCodes, data)
+			end
+		end)
+	end
 
 	for index, username in pairs(usernames) do
 		for _, player in pairs(Players:GetPlayers()) do
@@ -3325,6 +3367,28 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		-- We need to ensure that the module is indeed setting up
 		-- commands, otherwise sticks can never be given.
 		self.Settings.Commands.Enabled = true
+	end
+
+	if self.Settings.Notifications.Enabled == true then
+		self:addCommand("notify", { "notification" }, function(Player: Player, ...: any)
+			local Args, addLog, getUsersForCommands = ...
+
+			local Users = getUsersForCommands(Player, string.split(Args[1], ","), true)
+			local usernameColor = generateNameColorForNotification(Player.Name):ToHex()
+			local prefix = string.format('[<font color="#%s">%s</font>]: ', usernameColor, Player.Name)
+			local message = (#Args == 1) and "" or table.concat(Args, " ", 2, #Args)
+
+			if #Users == 0 then
+				self:notifyPlayer(Player, "Please specify who you'd like to send a notification to.")
+				return
+			end
+
+			for _, user in ipairs(Users) do
+				self:notifyPlayer(user, prefix .. message)
+			end
+
+			addLog(Player, "Notification", "Commands", Users)
+		end)
 	end
 
 	-- Add rest of the commands when "Commands" is enabled.
