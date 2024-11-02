@@ -8,14 +8,20 @@ local Workspace = game:GetService("Workspace")
 --// Variables \\--
 local isUIContextEnabled = false
 local eventHolder, Maid = {}, {}
+local onSetupUI, undoUISetup
 
 --// Functions \\--
-local function onSetupUI(componentData: { [any]: any })
+onSetupUI = function(componentData: { [any]: any })
+	if #eventHolder > 0 then
+		undoUISetup(componentData)
+	end
+
 	local remoteFunction = componentData.remoteFunction
 	if isUIContextEnabled == false then
 		isUIContextEnabled = StarterGui:GetCore("AvatarContextMenuEnabled")
 	end
 
+	componentData._debug("v1_interface_initialization", "Creating events...")
 	eventHolder["Promote"] = Instance.new("BindableEvent")
 	eventHolder["Demote"] = Instance.new("BindableEvent")
 	eventHolder["Fire"] = Instance.new("BindableEvent")
@@ -37,12 +43,14 @@ local function onSetupUI(componentData: { [any]: any })
 		remoteFunction:InvokeServer("blacklist", "Interface", target)
 	end
 
+	componentData._debug("v1_interface_initialization", "Binding event connections...")
 	Maid = {}
 	table.insert(Maid, eventHolder.Promote.Event:Connect(promote))
 	table.insert(Maid, eventHolder.Demote.Event:Connect(demote))
 	table.insert(Maid, eventHolder.Fire.Event:Connect(fire))
 	table.insert(Maid, eventHolder.Blacklist.Event:Connect(blacklist))
 
+	componentData._debug("v1_interface_initialization", "Creating context menu options...")
 	StarterGui:SetCore("AvatarContextMenuEnabled", true)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", Enum.AvatarContextMenuOption.Friend)
@@ -54,7 +62,8 @@ local function onSetupUI(componentData: { [any]: any })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Fire", eventHolder.Fire } :: { any })
 	StarterGui:SetCore("AddAvatarContextMenuOption", { "Blacklist", eventHolder.Blacklist } :: { any })
 
-	local highLight = nil
+	componentData._debug("v1_interface_initialization", "Binding highlight effect...")
+	local highLight: Highlight? = nil
 	pcall(function()
 		RunService:BindToRenderStep("Vibez_Client_HoverEffect", Enum.RenderPriority.Camera.Value + 1, function()
 			local Mouse = Players.LocalPlayer:GetMouse()
@@ -73,7 +82,7 @@ local function onSetupUI(componentData: { [any]: any })
 				return
 			end
 
-			highLight = Instance.new("Highlight") :: any
+			highLight = Instance.new("Highlight")
 			highLight.Parent = script
 			highLight.Adornee = possiblePlayer.Character
 			highLight.FillTransparency = 1
@@ -92,12 +101,13 @@ local function onSetupUI(componentData: { [any]: any })
 			end
 
 			dir = (transparencyCounter >= 0.75 and -1) or (transparencyCounter <= 0 and 1) or dir
-			transparencyCounter += 0.03 * dir
+			transparencyCounter += 0.02 * dir
 
 			highLight.OutlineTransparency = transparencyCounter
 		end)
 	end)
 
+	componentData._debug("v1_interface_initialization", "Creating 'ContextMenuArrow'.")
 	table.insert(
 		Maid,
 		Workspace.CurrentCamera.ChildAdded:Connect(function(child)
@@ -106,9 +116,12 @@ local function onSetupUI(componentData: { [any]: any })
 			end
 		end)
 	)
+
+	componentData._debug("v1_interface_initialization", "Setup complete!")
 end
 
-local function undoUISetup(componentData: { [any]: any })
+undoUISetup = function(componentData: { [any]: any })
+	componentData._debug("v1_interface_destroy", "Removing context options...")
 	StarterGui:SetCore("AddAvatarContextMenuOption", Enum.AvatarContextMenuOption.InspectMenu)
 	StarterGui:SetCore("AddAvatarContextMenuOption", Enum.AvatarContextMenuOption.Friend)
 	StarterGui:SetCore("AddAvatarContextMenuOption", Enum.AvatarContextMenuOption.Emote)
@@ -119,18 +132,21 @@ local function undoUISetup(componentData: { [any]: any })
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Fire")
 	StarterGui:SetCore("RemoveAvatarContextMenuOption", "Blacklist")
 
+	componentData._debug("v1_interface_destroy", "Disconnecting events...")
 	componentData.Disconnect(Maid)
 	Maid = nil
 
+	componentData._debug("v1_interface_destroy", "Destroying bindable events...")
 	for _, binds in pairs(eventHolder) do
 		binds:Destroy()
 	end
-	eventHolder = {}
+	table.clear(eventHolder)
 
 	if isUIContextEnabled == true then
 		return
 	end
 
+	componentData._debug("v1_interface_destroy", "Disabling 'AvatarContextMenu'.")
 	StarterGui:SetCore("AvatarContextMenuEnabled", false)
 end
 

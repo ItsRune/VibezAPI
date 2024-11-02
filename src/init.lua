@@ -288,7 +288,6 @@ local function onServerInvoke(
 		repeat
 			task.wait()
 		until #resolvedPromises == #Targets
-		warn(resolvedPromises, #Targets)
 
 		local requiresAndMore = #resolvedPromises > 3
 		local maxResolved = requiresAndMore and 3 or #resolvedPromises

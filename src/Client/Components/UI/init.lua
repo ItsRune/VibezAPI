@@ -243,9 +243,21 @@ function onDestroy(componentData: { [any]: any })
 end
 
 function onSetup(componentData: { [any]: any })
+	local staffInformation = componentData.remoteFunction:InvokeServer("staffCheck", "Interface")
+	if
+		typeof(staffInformation) ~= "table"
+		or not staffInformation.Rank
+		or staffInformation.Rank < componentData.Data.MinRank
+	then
+		componentData._debug("staff_check", "Staff check failed for Interface.")
+		return
+	end
+
 	if not componentData.Data.useBeta then
 		componentData._warn("Vibez Setup", "Setting up V1 Interface.")
-		return oldUIData.Setup
+
+		oldUIData.Setup(componentData)
+		return
 	end
 
 	onDestroy(componentData)
@@ -256,16 +268,6 @@ function onSetup(componentData: { [any]: any })
 			"Vibez Beta",
 			"You've opted to use our beta UI, please keep in mind that this UI is still being worked on and can contain bugs!"
 		)
-	end
-
-	local staffInformation = componentData.remoteFunction:InvokeServer("staffCheck", "Interface")
-	if
-		typeof(staffInformation) ~= "table"
-		or not staffInformation.Rank
-		or staffInformation.Rank < componentData.Data.MinRank
-	then
-		componentData._debug("staff_check", "Staff check failed for Interface.")
-		return
 	end
 
 	local interfaceData = componentData.Data
