@@ -5,8 +5,8 @@
 -- September 13, 2017
 
 --[=[
-	@class TableUtil
 	@ignore
+	@class TableUtil2
 
 	A collection of helpful table utility functions. Many of these functions are carried over from JavaScript or
 	Python that are not present in Lua.
@@ -23,7 +23,7 @@ local HttpService = game:GetService("HttpService")
 local rng = Random.new()
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Copy
 	@param tbl table -- Table to copy
 	@param deep boolean? -- Whether or not to perform a deep copy
@@ -55,7 +55,7 @@ local function Copy<T>(t: T, deep: boolean?): T
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Sync
 	@param srcTbl table -- Source table
 	@param templateTbl table -- Template table
@@ -129,7 +129,7 @@ local function Sync<S, T>(srcTbl: S, templateTbl: T): T
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Reconcile
 	@param source table
 	@param template table
@@ -181,7 +181,7 @@ local function Reconcile<S, T>(src: S, template: T): S & T
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function SwapRemove
 	@param tbl table -- Array
 	@param i number -- Index
@@ -214,7 +214,7 @@ local function SwapRemove<T>(t: { T }, i: number)
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function SwapRemoveFirstValue
 	@param tbl table -- Array
 	@param v any -- Value to find
@@ -241,7 +241,7 @@ local function SwapRemoveFirstValue<T>(t: { T }, v: T): number?
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Map
 	@param tbl table
 	@param predicate (value: any, key: any, tbl: table) -> newValue: any
@@ -271,7 +271,7 @@ local function Map<T, M>(t: { T }, f: (T, number, { T }) -> M): { M }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Filter
 	@param tbl table
 	@param predicate (value: any, key: any, tbl: table) -> keep: boolean
@@ -313,7 +313,7 @@ local function Filter<T>(t: { T }, predicate: (T, any, { T }) -> boolean): { T }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Reduce
 	@param tbl table
 	@param predicate (accumulator: any, value: any, index: any, tbl: table) -> result: any
@@ -360,7 +360,7 @@ local function Reduce<T, R>(t: { T }, predicate: (R, T, any, { T }) -> R, init: 
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Assign
 	@param target table
 	@param ... table
@@ -387,7 +387,7 @@ local function Assign<T>(target: { T }, ...: { any }): { T } & { any }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Extend
 	@param target table
 	@param extension table
@@ -414,7 +414,7 @@ local function Extend<T, E>(target: { T }, extension: { E }): { T } & { E }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Reverse
 	@param tbl table
 	@return table
@@ -440,7 +440,7 @@ local function Reverse<T>(tbl: { T }): { T }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Shuffle
 	@param tbl table
 	@param rngOverride Random?
@@ -469,7 +469,7 @@ local function Shuffle<T>(tbl: { T }, rngOverride: Random?): { T }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Sample
 	@param tbl table
 	@param sampleSize number
@@ -515,7 +515,7 @@ local function Sample<T>(tbl: { T }, size: number, rngOverride: Random?): { T }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Flat
 	@param tbl table
 	@param depth number?
@@ -552,7 +552,7 @@ local function Flat<T>(tbl: { T }, depth: number?): { T }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function FlatMap
 	@param tbl table
 	@param predicate (key: any, value: any, tbl: table) -> newValue: any
@@ -577,7 +577,7 @@ local function FlatMap<T, M>(tbl: { T }, callback: (T, number, { T }) -> M): { M
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Keys
 	@param tbl table
 	@return table
@@ -607,7 +607,7 @@ local function Keys<K, V>(tbl: { [K]: V }): { K }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Values
 	@param tbl table
 	@return table
@@ -637,7 +637,7 @@ local function Values<K, V>(tbl: { [K]: V }): { V }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Find
 	@param tbl table
 	@param callback (value: any, index: any, tbl: table) -> boolean
@@ -677,7 +677,7 @@ local function Find<K, V>(tbl: { [K]: V }, callback: (V, K, { [K]: V }) -> boole
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Every
 	@param tbl table
 	@param callback (value: any, index: any, tbl: table) -> boolean
@@ -706,7 +706,7 @@ local function Every<K, V>(tbl: { [K]: V }, callback: (V, K, { [K]: V }) -> bool
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Some
 	@param tbl table
 	@param callback (value: any, index: any, tbl: table) -> boolean
@@ -735,7 +735,7 @@ local function Some<K, V>(tbl: { [K]: V }, callback: (V, K, { [K]: V }) -> boole
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Truncate
 	@param tbl table
 	@param length number
@@ -758,7 +758,7 @@ local function Truncate<T>(tbl: { T }, len: number): { T }
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Zip
 	@param ... table
 	@return (iter: (t: table, k: any) -> (key: any?, values: table?), tbl: table, startIndex: any?)
@@ -820,7 +820,7 @@ local function Zip(...: { [any]: any }): ((t: { any }, k: any) -> (any, any), { 
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Lock
 	@param tbl table
 	@return table
@@ -850,7 +850,7 @@ local function Lock<T>(tbl: T): T
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function IsEmpty
 	@param tbl table
 	@return boolean
@@ -872,7 +872,7 @@ local function IsEmpty(tbl: { any }): boolean
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function EncodeJSON
 	@param value any
 	@return string
@@ -884,7 +884,7 @@ local function EncodeJSON(value: any): string
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function DecodeJSON
 	@param value any
 	@return string
@@ -896,7 +896,7 @@ local function DecodeJSON(str: string): any
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function Count
 	@param tbl { any }
 	@return number
@@ -920,7 +920,7 @@ local function Count(tbl: any): number
 end
 
 --[=[
-	@within TableUtil
+	@within TableUtil2
 	@function ForEach
 	@param tbl { any }
 	@param callback (value: any, index: any, tbl: {any}) -> ()

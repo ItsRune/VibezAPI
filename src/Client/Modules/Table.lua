@@ -5,6 +5,7 @@
 -- September 13, 2017
 
 --[=[
+	@ignore
 	@class TableUtil
 
 	A collection of helpful table utility functions. Many of these functions are carried over from JavaScript or
@@ -22,6 +23,7 @@ local HttpService = game:GetService("HttpService")
 local rng = Random.new()
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Copy
 	@param tbl table -- Table to copy
@@ -54,6 +56,7 @@ local function Copy<T>(t: T, deep: boolean?): T
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Sync
 	@param srcTbl table -- Source table
@@ -128,6 +131,7 @@ local function Sync<S, T>(srcTbl: S, templateTbl: T): T
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Reconcile
 	@param source table
@@ -182,6 +186,7 @@ local function Reconcile<S, T>(src: S, template: T): S & T
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function SwapRemove
 	@param tbl table -- Array
@@ -215,6 +220,7 @@ local function SwapRemove<T>(t: { T }, i: number)
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function SwapRemoveFirstValue
 	@param tbl table -- Array
@@ -242,6 +248,7 @@ local function SwapRemoveFirstValue<T>(t: { T }, v: T): number?
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Map
 	@param tbl table
@@ -272,6 +279,7 @@ local function Map<T, M>(t: { T }, f: (T, number, { T }) -> M): { M }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Filter
 	@param tbl table
@@ -314,6 +322,7 @@ local function Filter<T>(t: { T }, predicate: (T, any, { T }) -> boolean): { T }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Reduce
 	@param tbl table
@@ -361,6 +370,7 @@ local function Reduce<T, R>(t: { T }, predicate: (R, T, any, { T }) -> R, init: 
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Assign
 	@param target table
@@ -388,6 +398,7 @@ local function Assign<T>(target: { T }, ...: { any }): { T } & { any }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Extend
 	@param target table
@@ -415,6 +426,7 @@ local function Extend<T, E>(target: { T }, extension: { E }): { T } & { E }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Reverse
 	@param tbl table
@@ -441,6 +453,7 @@ local function Reverse<T>(tbl: { T }): { T }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Shuffle
 	@param tbl table
@@ -470,6 +483,7 @@ local function Shuffle<T>(tbl: { T }, rngOverride: Random?): { T }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Sample
 	@param tbl table
@@ -516,6 +530,7 @@ local function Sample<T>(tbl: { T }, size: number, rngOverride: Random?): { T }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Flat
 	@param tbl table
@@ -553,6 +568,7 @@ local function Flat<T>(tbl: { T }, depth: number?): { T }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function FlatMap
 	@param tbl table
@@ -578,6 +594,7 @@ local function FlatMap<T, M>(tbl: { T }, callback: (T, number, { T }) -> M): { M
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Keys
 	@param tbl table
@@ -608,6 +625,7 @@ local function Keys<K, V>(tbl: { [K]: V }): { K }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Values
 	@param tbl table
@@ -638,6 +656,7 @@ local function Values<K, V>(tbl: { [K]: V }): { V }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Find
 	@param tbl table
@@ -678,6 +697,7 @@ local function Find<K, V>(tbl: { [K]: V }, callback: (V, K, { [K]: V }) -> boole
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Every
 	@param tbl table
@@ -707,6 +727,7 @@ local function Every<K, V>(tbl: { [K]: V }, callback: (V, K, { [K]: V }) -> bool
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Some
 	@param tbl table
@@ -736,6 +757,7 @@ local function Some<K, V>(tbl: { [K]: V }, callback: (V, K, { [K]: V }) -> boole
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Truncate
 	@param tbl table
@@ -759,6 +781,7 @@ local function Truncate<T>(tbl: { T }, len: number): { T }
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Zip
 	@param ... table
@@ -821,6 +844,7 @@ local function Zip(...: { [any]: any }): ((t: { any }, k: any) -> (any, any), { 
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function Lock
 	@param tbl table
@@ -851,6 +875,7 @@ local function Lock<T>(tbl: T): T
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function ForEach
 	@param tbl table
@@ -864,6 +889,7 @@ local function ForEach(tbl: { [any]: any }, callback: (value: any, index: any, t
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function IsEmpty
 	@param tbl table
@@ -886,6 +912,7 @@ local function IsEmpty(tbl: { any }): boolean
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function EncodeJSON
 	@param value any
@@ -898,6 +925,7 @@ local function EncodeJSON(value: any): string
 end
 
 --[=[
+	@ignore	
 	@within TableUtil
 	@function DecodeJSON
 	@param value any

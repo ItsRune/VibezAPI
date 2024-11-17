@@ -3091,7 +3091,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	--[=[
 		@class VibezAPI
-		:::important
+		:::info
 		Hey there! We recommend beginning at the introduction page! [Click Here](/docs/intro)
 		:::
 	]=]
