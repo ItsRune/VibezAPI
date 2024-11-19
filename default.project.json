@@ -1,0 +1,13 @@
+{
+    "name": "VibezLite",
+    "tree": {
+        "$className": "DataModel",
+
+        "ServerScriptService": {
+            "VibezLite": {
+                "$ignoreUnknownInstances": true,
+                "$path": "./src"
+            }
+        }
+    }
+}
