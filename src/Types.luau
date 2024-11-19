@@ -1,5 +1,3 @@
-local Result = require(script.Parent.Result)
-
 export type VibezLiteKind = {
 	_apiKey: string,
 }
@@ -38,9 +36,11 @@ export type RequestResponse = {
 
 export type VibezLiteMetatable = {
 	__index: VibezLiteMetatable,
-	_http: (self: VibezLite, Options: RequestOptions) -> Result.Result<RequestResponse, string>,
-	setRank: (self: VibezLite, userId: string | number, rankId: string | number) -> Result.Result<string, string>,
-	Promote: (self: VibezLite, userId: number) -> Result.Result<string, string>,
+	_http: (self: VibezLite, Options: RequestOptions) -> RequestResponse | string,
+	setRank: (self: VibezLite, userId: string | number, rankId: number) -> (boolean, string),
+	Promote: (self: VibezLite, userId: number) -> (boolean, string),
+	Demote: (self: VibezLite, userId: number) -> (boolean, string),
+	Fire: (self: VibezLite, userId: number) -> (boolean, string),
 }
 
 export type VibezLite = typeof(setmetatable({} :: VibezLiteKind, {} :: VibezLiteMetatable))
