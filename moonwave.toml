@@ -1,0 +1,69 @@
+gitRepoUrl = "https://github.com/ItsRune/VibezAPI/tree/lite"
+classOrder = ["Constructor", "Activity", "Blacklists", "Ranking", "Utils"]
+
+# Docusaurus settings
+[docusaurus]
+onBrokenLinks = "warn"
+onBrokenMarkdownLinks = "warn"
+favicon = "https://github.com/ItsRune/VibezAPI/blob/903c060edf6b7982f6c04bc68626f07c2a653255/.moonwave/static/favicon.png?raw=true"
+
+# Home page settings
+[home]
+enabled = false
+includeReadme = false
+
+# Navigation bar items
+[navbar]
+title = ""
+
+[[navbar.items]]
+href = "https://discord.gg/vdev"
+label = "Discord"
+position = "right"
+
+[navbar.logo]
+alt = "Vibez"
+src = "https://github.com/ItsRune/VibezAPI/blob/10a41c5c42e209e883cab36f7f2c24d2489c4039/.moonwave/static/typography.png?raw=true"
+width = 64
+height = 64
+
+# Footer
+[footer]
+style = "light"
+copyright = "Copyright © 2024 ItsRune."
+
+# Footer Documentation
+[[footer.links]]
+title = "Documentation"
+
+[[footer.links.items]]
+label = "Getting Started"
+href = "/VibezAPI/docs/intro"
+
+[[footer.links.items]]
+label = "API Reference"
+href = "/VibezAPI/api/VibezAPI"
+
+# Footer Community
+[[footer.links]]
+title = "Community"
+
+[[footer.links.items]]
+label = "Roblox Group"
+href = "https://www.roblox.com/groups/4604891/Vibez-Development#!/about"
+
+[[footer.links.items]]
+label = "Discord"
+href = "https://discord.gg/vdev"
+
+# Footer Other
+[[footer.links]]
+title = "Other"
+
+[[footer.links.items]]
+label = "Developer's Profile"
+href = "https://www.roblox.com/users/107392833/profile"
+
+[[footer.links.items]]
+label = "Github"
+href = "https://github.com/ItsRune/VibezAPI"
