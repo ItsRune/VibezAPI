@@ -1,9 +1,10 @@
-local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
+--!strict
+
 --[=[
     @class Utils
 ]=]
-
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
 local Types = require(script.Parent.Parent.Types)
 local Env = {}
 
@@ -110,11 +111,11 @@ function Env:Http(Options: Types.RequestOptions): Types.RequestResponse | string
 	local jsonOk, JSON = pcall(HttpService.JSONEncode, HttpService, Options.Body)
 	Options.Body = (jsonOk and JSON or Options.Body)
 
-	local _, response = pcall(HttpService.RequestAsync, HttpService, Options)
-	local decodeOk, decoded = pcall(HttpService.JSONDecode, HttpService, response.Body)
+	local _, response = pcall(HttpService.RequestAsync, HttpService, Options :: any)
+	local decodeOk, decoded = pcall(HttpService.JSONDecode, HttpService, response.Body :: any)
 
 	response.Body = (decodeOk and decoded or response.Body)
-	return response
+	return response :: Types.RequestResponse
 end
 
 --[=[
@@ -150,10 +151,33 @@ function Env:getUserIdByName(username: string): number
 	return isOk and userId or -1
 end
 
+--[=[
+	Gets the group's ID associated with the api key.
+	@return number?
+	@yields
+	@within Utils
+]=]
+function Env:getGroupId(): number?
+	if self.base.GroupId then
+		return self.base.GroupId
+	end
+
+	local response = self:Http({
+		Url = "/ranking/groupid",
+		Method = "Post",
+	})
+
+	if response.Success then
+		self.base.GroupId = response.Body.groupId
+	end
+
+	return response.Body.groupId
+end
+
 return function(parent: Types.VibezLightWeight): Types.VibezUtilsPackage
 	return setmetatable({
 		base = parent,
-	}, Env) :: Types.VibezUtilsPackage
+	}, Env :: any) :: Types.VibezUtilsPackage
 end
 
 --[=[

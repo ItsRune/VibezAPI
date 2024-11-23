@@ -1,8 +1,12 @@
+--!strict
 --[=[
 	@class Activity
 ]=]
 
+local Cache = require(script.Parent.Parent.classes.Cache)
 local Types = require(script.Parent.Parent.Types)
+
+local ACTIVITY_REFRESH_RATE = 45 -- Seconds
 local Env = {}
 
 --[=[
@@ -19,6 +23,12 @@ function Env:Get(User: Types.UserKind?): (boolean, { [any]: any })
 		local userId = self:_verifyUser(User, "UserId")
 		assert(userId, "Supplied User was not valid.")
 
+		local cachedData = self.Cache:Get(userId)
+		local now = DateTime.now().UnixTimestamp
+		if cachedData ~= nil and now - cachedData.Refresh < ACTIVITY_REFRESH_RATE then
+			return true, cachedData.Data
+		end
+
 		local response = self.base.Utils:Http({
 			Url = "/activity/fetch2",
 			Method = "Post",
@@ -27,15 +37,23 @@ function Env:Get(User: Types.UserKind?): (boolean, { [any]: any })
 			},
 		})
 
-		return response.Body.Success, response.Body.errorMessage
+		if response.Success then
+			self.Cache:Remove(userId)
+			self.Cache:Add(userId, {
+				Data = response.Body,
+				Refresh = now,
+			})
+		end
+
+		return response.Success, response.Body
 	end
 
 	local response = self.base.Utils:Http({
 		Url = "/activity/fetch2",
 		Method = "Post",
-	})
+	} :: any)
 
-	return response.Body.Success, response.Body.errorMessage
+	return response.Success, response.Body.errorMessage
 end
 
 --[=[
@@ -52,27 +70,13 @@ end
 ]=]
 ---
 function Env:Delete(User: Types.UserKind): (boolean, string)
-	local userId = self:_verifyUser(User, "UserId") :: number
+	local userId = self.base.Utils:verifyUser(User, "UserId")
 	assert(userId, "Invalid User was supplied.")
 
-	return false, "Not implemented"
+	local activityFetchOk, currentActivity = self:Get(userId)
+	assert(activityFetchOk, "Internal Server Error: Failed to fetch User's current activity!")
 
-	-- Get the current activity and negate the activity to remove it. (Temporary Solution)
-	-- local currentActivity = self:Get(userId)
-	-- if not currentActivity or not currentActivity["secondsUserHasSpent"] then
-	-- 	self:_debug("remove_activity", "Internal server error.")
-	-- 	return false
-	-- end
-
-	-- local userGroupInformation = self:_getGroupFromUser(self.GroupId, userId)
-
-	-- local secondsSpent = currentActivity.secondsUserHasSpent
-	-- local messagesSent = currentActivity.messagesUserHasSent
-	-- local fixedSeconds, fixedMessages =
-	-- 	(secondsSpent == 0) and 0 or -secondsSpent, (messagesSent == 0) and 0 or -messagesSent
-
-	-- local response: any = self:saveActivity(userId, userGroupInformation.Rank, fixedSeconds, fixedMessages)
-	-- return response.success or false
+	return self:Add(userId, -currentActivity.secondsUserHasSpent, -currentActivity.messagesUserHasSent)
 end
 
 --[=[
@@ -94,71 +98,53 @@ function Env:Add(User: Types.UserKind, secondsSpent: number?, messagesSent: (num
 		or 0
 	secondsSpent = tonumber(secondsSpent) or 0
 
-	return false, "Not implemented."
+	local userRank = self.base.Utils:getGroupRankFromUser(self.base.GroupId, userId)
+	local response = self.base.Utils:Http({
+		Url = "/activity/save2",
+		Method = "post",
+		Body = {
+			userId = userId,
+			userRank = userRank,
+			secondsUserHasSpent = secondsSpent,
+			messagesUserHasSent = messagesSent,
+		},
+	})
 
-	-- local userId = self:_verifyUser(User, "UserId") :: number
-	-- messagesSent = (typeof(messagesSent) == "table") and #messagesSent
-	-- 	or (tonumber(messagesSent) ~= nil) and messagesSent
-	-- 	or nil
-	-- userRank = (typeof(userRank) == "number" or tonumber(userRank) ~= nil) and userRank or -1
-
-	-- if not tonumber(messagesSent) then
-	-- 	local errMessage = "Cannot save activity with an invalid 'number' as the 'messagesSent' parameter!"
-	-- 	self:_warn(errMessage)
-	-- 	return {
-	-- 		success = false,
-	-- 		errorMessage = errMessage,
-	-- 	}
-	-- elseif not tonumber(secondsSpent) then
-	-- 	local errMessage = "Cannot save activity with an invalid 'number' as the 'secondsSpent' parameter!"
-	-- 	self:_warn(errMessage)
-	-- 	return {
-	-- 		success = false,
-	-- 		errorMessage = errMessage,
-	-- 	}
-	-- end
-
-	-- if shouldFetchGroupRank == true then
-	-- 	local groupData = self:_getGroupFromUser(self.GroupId, userId)
-
-	-- 	if typeof(groupData) ~= "table" then
-	-- 		self:_warn(`Could not fetch group data.`)
-	-- 		return
-	-- 	end
-
-	-- 	userRank = groupData.Rank
-	-- end
-
-	-- secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
-
-	-- local _, response: any = self:_http("/activity/save2", "post", nil, {
-	-- 	userId = userId,
-	-- 	userRank = userRank,
-	-- 	secondsUserHasSpent = secondsSpent,
-	-- 	messagesUserHasSent = messagesSent,
-	-- })
-
-	-- return response.Body
+	return response.Success, response.Body.message
 end
 
 --[=[
-	TODO: Method needs implementation!
+	Removes seconds or messages from a user's activity total.
+	@param User Player | string | number
+	@param secondsToRemove number
+	@param messagesToRemove number
+	@return (boolean, string)
 	@within Activity
 ]=]
-function Env:Remove(User: Types.UserKind, secondsToRemove: number?, messagesToRemove: number?): (boolean, string)
+function Env:Remove(User: Types.UserKind, secondsToRemove: number, messagesToRemove: number): (boolean, string)
 	secondsToRemove = tonumber(secondsToRemove) or 0
 	messagesToRemove = tonumber(messagesToRemove) or 0
 
+	assert(User ~= nil, "Please specify a User to remove activity from.")
 	assert(
 		secondsToRemove ~= 0 or messagesToRemove ~= 0,
 		"Both 'secondsToRemove' and 'messagesToRemove' parameters are set to 0!"
 	)
 
-	return false, "Not implemented."
+	if math.abs(secondsToRemove) == secondsToRemove then
+		secondsToRemove = -secondsToRemove
+	end
+
+	if math.abs(messagesToRemove) == messagesToRemove then
+		messagesToRemove = -messagesToRemove
+	end
+
+	return self:Add(User, secondsToRemove, messagesToRemove)
 end
 
 return function(parent: Types.VibezLightWeight): Types.VibezActivityPackage
 	return setmetatable({
 		base = parent,
-	}, Env) :: Types.VibezActivityPackage
+		Cache = Cache.new(),
+	}, Env :: any) :: Types.VibezActivityPackage
 end

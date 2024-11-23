@@ -1,3 +1,4 @@
+--!strict
 --[=[
     @class Ranking
 ]=]
@@ -45,7 +46,7 @@ function Env:setRank(
 		},
 	})
 
-	return response.Body.Success, response.Body.message
+	return response.Success, response.Body.message
 end
 
 --[=[
@@ -70,7 +71,7 @@ function Env:Promote(User: string | number, whoCalled: { userName: string, userI
 		},
 	})
 
-	return response.Body.Success, response.Body.message
+	return response.Success, response.Body.message
 end
 
 --[=[
@@ -95,7 +96,7 @@ function Env:Demote(User: string | number, whoCalled: { userName: string, userId
 		},
 	})
 
-	return response.Body.Success, response.Body.message
+	return response.Success, response.Body.message
 end
 
 --[=[
@@ -120,11 +121,11 @@ function Env:Fire(User: string | number, whoCalled: { userName: string, userId: 
 		},
 	})
 
-	return response.Body.Success, response.Body.message
+	return response.Success, response.Body.message
 end
 
 return function(parent: Types.VibezLightWeight): Types.VibezRankingPackage
 	return setmetatable({
 		base = parent,
-	}, Env) :: Types.VibezRankingPackage
+	}, Env :: any) :: Types.VibezRankingPackage
 end

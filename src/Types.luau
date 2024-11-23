@@ -1,8 +1,10 @@
+local Cache = require(script.Parent.classes.Cache)
+
 export type RequestOptions = {
 	Url: string,
 	Method: string,
-	Headers: { [string]: string },
-	Body: any,
+	Headers: { [string]: string }?,
+	Body: any?,
 }
 
 export type RequestResponse = {
@@ -29,15 +31,21 @@ export type VibezActivityPackage = typeof(setmetatable(
 		Remove: (
 			self: VibezBlacklistsPackage,
 			User: UserKind,
-			secondsToRemove: number?,
-			messagesToRemove: number?
+			secondsToRemove: number,
+			messagesToRemove: number
 		) -> (boolean, string),
 	}
 ))
 
 export type VibezBlacklistsPackage = typeof(setmetatable(
-	{} :: { base: VibezLightWeight },
+	{} :: { base: VibezLightWeight, Cache: Cache.T_Cache<any> },
 	{} :: {
+		Add: (
+			self: VibezBlacklistsPackage,
+			User: UserKind,
+			Reason: string?,
+			blacklistExecutedBy: UserKind?
+		) -> (boolean, string),
 		Delete: (self: VibezBlacklistsPackage, userToDelete: UserKind) -> (boolean, string),
 	}
 ))
@@ -67,11 +75,13 @@ export type VibezUtilsPackage = typeof(setmetatable(
 			User: Player | number | string,
 			typeToReturn: "UserId" | "Id" | "Name" | "Player"
 		) -> Player | number | string,
+		getGroupId: () -> number?,
 	}
 ))
 
 export type VibezLightWeightKind = {
 	_apiKey: string,
+	GroupId: number,
 	Activity: VibezActivityPackage,
 	Blacklists: VibezBlacklistsPackage,
 	Ranking: VibezRankingPackage,
