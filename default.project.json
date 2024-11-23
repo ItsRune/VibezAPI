@@ -1,10 +1,10 @@
 {
-    "name": "VibezLite",
+    "name": "VibezLightweight",
     "tree": {
         "$className": "DataModel",
 
         "ServerScriptService": {
-            "VibezLite": {
+            "VibezLightweight": {
                 "$ignoreUnknownInstances": true,
                 "$path": "./src"
             }

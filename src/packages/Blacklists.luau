@@ -85,7 +85,8 @@ function Env:Get(
 	local userId = self.base.Utils:verifyUser(User)
 	assert(userId, "User parameter is not supplied correctly.")
 
-	if self.Cache:Has(userId) then
+	local now = DateTime.now().UnixTimestamp
+	if self.Cache:Has(userId) and now - self.Cache:Get(userId).Refresh < BLACKLIST_REFRESH_RATE then
 		return self.Cache:Get(userId)
 	end
 
@@ -96,13 +97,16 @@ function Env:Get(
 
 	if response.Success then
 		local data = {
-			Blacklisted = response.Body.data.blacklisted,
-			Reason = response.Body.data.reason,
-			blacklistedBy = response.Body.data.blacklistedBy,
+			Data = {
+				Blacklisted = response.Body.data.blacklisted,
+				Reason = response.Body.data.reason,
+				blacklistedBy = response.Body.data.blacklistedBy,
+			},
+			Refresh = now,
 		}
 
 		self.Cache:Add(userId, data)
-		return data
+		return data.Data
 	end
 
 	return nil
