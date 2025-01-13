@@ -44,13 +44,16 @@ local function onSetup(componentData: { [any]: any })
 	onDestroy(componentData)
 
 	local function handleStickMode(actionName: string, child: Tool)
-		if componentData.rankStickMode == "DetectionInFront" or componentData.rankStickMode == "Default" then -- Default
+		if componentData.Data.Mode == "DetectionInFront" or componentData.Data.Mode == "Default" then -- Default
 			local cf, size = Character:GetBoundingBox()
 			local newPart = Instance.new("Part")
 			local Weld = Instance.new("WeldConstraint")
 			local primaryPart = Character.PrimaryPart
 
+			componentData._debug("rankstick_detect_in_front", "Creating new 'Part' & 'Weld'.")
+
 			if not primaryPart then
+				newPart:Destroy()
 				return false
 			end
 
@@ -64,14 +67,19 @@ local function onSetup(componentData: { [any]: any })
 			newPart.CanCollide = false
 			newPart.Parent = _getTempFolder()
 
+			componentData._debug("rankstick_detect_in_front", "Resizing and positioning part.")
+
 			Weld.Name = newPart.Name
 			Weld.Part0 = newPart
 			Weld.Part1 = primaryPart
 			Weld.Parent = newPart
 
+			componentData._debug("rankstick_detect_in_front", "Welding new part to character.")
+
 			local closestTargets, closestTarget = {}, nil
 			local hasReceived, secondsSpent, connection = false, 0, nil
 
+			componentData._debug("rankstick_detect_in_front", "Applying '.Touched' connection to part.")
 			connection = newPart.Touched:Connect(function()
 				hasReceived = true
 				local partsWithinPart = Workspace:GetPartsInPart(newPart)
@@ -91,6 +99,7 @@ local function onSetup(componentData: { [any]: any })
 				end
 			end)
 
+			componentData._debug("rankstick_detect_in_front", "Awaiting 3 seconds for part input...")
 			while hasReceived == false do
 				if secondsSpent >= 3 then -- max amount of time the part will be active for
 					hasReceived = false
@@ -109,6 +118,7 @@ local function onSetup(componentData: { [any]: any })
 				secondsSpent += 1
 			end
 
+			componentData._debug("rankstick_detect_in_front", "Deleting part.")
 			Debris:AddItem(newPart, 0)
 
 			if not hasReceived or child:IsDescendantOf(Player) then
@@ -152,19 +162,25 @@ local function onSetup(componentData: { [any]: any })
 
 			remoteFunction:InvokeServer(string.lower(actionName), "Sticks", closestTarget)
 			return true
-		elseif componentData.rankStickMode == "ClickOnPlayer" then
+		elseif componentData.Data.Mode == "ClickOnPlayer" then
 			local mouse = Player:GetMouse()
 			local mouseTarget = mouse.Target
-			local primPart = Character.PrimaryPart
+			local primPart = Player.Character.PrimaryPart
 
-			if not primPart or (mouseTarget and (primPart.Position - mouseTarget.Position).Magnitude > 20) then
-				return false
-			end
-
+			componentData._debug("rankstick_click_on_player", "Checking if player's mouse has a target")
 			if not mouseTarget then
 				return false
 			end
 
+			componentData._debug(
+				"rankstick_click_on_player",
+				"Checking if LocalPlayer's position is too far away. (Using 'clickOnPlayerRadius' setting)"
+			)
+			if (primPart.Position - mouseTarget.Position).Magnitude > componentData.Data.clickOnPlayerRadius then
+				return false
+			end
+
+			componentData._debug("rankstick_click_on_player", "Checking if 'Target' exists as a Player")
 			local player = Players:GetPlayerFromCharacter(mouseTarget.Parent)
 			if not player or player == Player then
 				return false
@@ -214,6 +230,7 @@ local function onSetup(componentData: { [any]: any })
 			if child:GetAttribute(custScriptName) == "RankSticks" and child:IsA("Tool") then
 				local existingMaid = Maid[child.Name] :: { RBXScriptConnection }
 				if existingMaid ~= nil then
+					componentData._debug("ranksticks_destroy", "Disconnected '" .. #existingMaid .. "' connection(s).")
 					for _, v: RBXScriptConnection in pairs(existingMaid) do
 						v:Disconnect()
 					end

@@ -6,6 +6,15 @@ local UserInputService = game:GetService("UserInputService")
 local Maid = {}
 
 --// Functions \\--
+local function markAFK(componentData, isAfk: boolean)
+	componentData._debug(
+		"activity_marking_afk",
+		string.format("Marking the LocalPlayer as %s.", isAfk and "AFK" or "not AFK")
+	)
+
+	return componentData.remoteFunction:InvokeServer("Afk", isAfk)
+end
+
 local function onDestroy(componentData: { [any]: any })
 	componentData._debug("activity_destroy", "Destroy method triggered.")
 	if not Maid then
@@ -21,8 +30,6 @@ local function onDestroy(componentData: { [any]: any })
 end
 
 local function onSetup(componentData: { [any]: any })
-	local remoteFunction = componentData.remoteFunction
-
 	onDestroy(componentData)
 
 	if not componentData.Data.AfkTracker.Status then
@@ -37,7 +44,7 @@ local function onSetup(componentData: { [any]: any })
 	table.insert(
 		Maid,
 		UserInputService.WindowFocused:Connect(function()
-			remoteFunction:InvokeServer("Afk", false)
+			markAFK(componentData, false)
 		end)
 	)
 
@@ -45,7 +52,7 @@ local function onSetup(componentData: { [any]: any })
 	table.insert(
 		Maid,
 		UserInputService.WindowFocusReleased:Connect(function()
-			remoteFunction:InvokeServer("Afk", true)
+			markAFK(componentData, true)
 		end)
 	)
 
@@ -54,7 +61,7 @@ local function onSetup(componentData: { [any]: any })
 		Maid,
 		UserInputService.InputBegan:Connect(function()
 			if Counter >= 30 then
-				remoteFunction:InvokeServer("Afk", false)
+				markAFK(componentData, false)
 			end
 
 			Counter = 0
@@ -83,7 +90,7 @@ local function onSetup(componentData: { [any]: any })
 			Counter += 1
 
 			if Counter == afkDelayOffset then
-				remoteFunction:InvokeServer("Afk", true)
+				markAFK(componentData, true)
 			end
 		end)
 	end)

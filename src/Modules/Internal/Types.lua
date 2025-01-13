@@ -111,6 +111,8 @@ export type vibezSettings = {
 		Enabled: boolean,
 		Mode: "DetectionInFront" | "ClickOnPlayer" | "Default",
 
+		clickOnPlayerRadius: number,
+
 		MinRank: number,
 		MaxRank: number,
 

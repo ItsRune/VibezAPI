@@ -46,7 +46,15 @@ local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
 local _privateKeys = {} :: { [string]: string? }
 
 --// Local Functions \\--
--- https://devforum.roblox.com/t/your-name-color-in-chat-%E2%80%94-history-and-how-it-works/2702247
+--[=[
+	https://devforum.roblox.com/t/your-name-color-in-chat-%E2%80%94-history-and-how-it-works/2702247
+	Generates a name color to use for Player -> All Client's notifications.
+	@param username string
+	@return Color3
+
+	@within VibezAPI
+	@ignore
+]=]
 local function generateNameColorForNotification(username: string): Color3
 	local NAME_COLORS = {
 		Color3.new(253 / 255, 41 / 255, 67 / 255), -- BrickColor.new("Bright red").Color,
@@ -78,6 +86,14 @@ local function generateNameColorForNotification(username: string): Color3
 	return NAME_COLORS[(GetNameValue(username) % #NAME_COLORS) + 1]
 end
 
+--[=[
+	Converts an invoking method into a valid action name.
+	@param Action string
+	@return string
+
+	@within VibezAPI
+	@ignore
+]=]
 local function getActionFunctionFromInvoke(Action: string)
 	Action = string.lower(Action)
 
@@ -98,6 +114,18 @@ local function getActionFunctionFromInvoke(Action: string)
 	return "nil"
 end
 
+--[=[
+	Main handler for client invokation on the module.
+	@param self VibezAPI
+	@param Player Player
+	@param Action string
+	@param Origin "Interface" | "Sticks" | "Commands",
+	@param ... ...any
+	@return any
+
+	@within VibezAPI
+	@ignore
+]=]
 local function onServerInvoke(
 	self: any,
 	Player: Player,
@@ -423,6 +451,16 @@ local function onServerInvoke(
 	return
 end
 
+--[=[
+	Handler for main remote event.
+	@param self VibezAPI
+	@param Player Player
+	@param Command string
+	@param ... ...any
+
+	@within VibezAPI
+	@ignore
+]=]
 local function onServerEvent(self: any, Player: Player, Command: string, ...: any)
 	local Data = { ... }
 
@@ -456,11 +494,13 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 	elseif Command == "Animate" then
 		local Character = Player.Character
 		if not Character then
+			self:_warn("No Character.")
 			return
 		end
 
 		local Tool = Character:FindFirstChildOfClass("Tool")
 		if Tool == nil or Tool:GetAttribute(self._private.clientScriptName) == nil then
+			self:_debug("ranksticks_animation", "Improper tool detected.")
 			return
 		end
 
@@ -476,13 +516,18 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 
 		local humanoid: Humanoid? = Character:FindFirstChildOfClass("Humanoid")
 		if not humanoid then
+			self:_debug("ranksticks_animation", "No humanoid.")
 			return
 		end
 
 		local animator = humanoid:FindFirstChildOfClass("Animator")
 		local animationId: number? = self.Settings.RankSticks.Animation[humanoid.RigType.Name]
 
-		if not animationId or not tonumber(animationId) or not animator then
+		if not animationId or not tonumber(animationId) then
+			self:_debug("ranksticks_animation", "Animation ID is not a valid number. (Settings check has failed you.)")
+			return
+		elseif not animator then
+			self:_debug("ranksticks_animation", "Humanoid's Animator is not loaded yet.")
 			return
 		end
 
@@ -492,6 +537,7 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 
 		local isOk, animationTrack = pcall(animator.LoadAnimation, animator, animationInstance)
 		if not isOk then
+			self:_debug("ranksticks_animation", "Internal Server Error: " .. tostring(animationTrack))
 			return
 		end
 
@@ -499,6 +545,13 @@ local function onServerEvent(self: any, Player: Player, Command: string, ...: an
 	end
 end
 
+--[=[
+	Invokes a protected-call to google.com
+	@return (boolean, string)
+
+	@within VibezAPI
+	@ignore
+]=]
 local function checkHttp()
 	return pcall(HttpService.GetAsync, HttpService, "https://google.com/")
 end
@@ -1081,6 +1134,10 @@ function api:_onPlayerAdded(Player: Player)
 			local blacklistedByUsernameIsOk, blacklistedByUsername =
 				pcall(Players.GetNameFromUserIdAsync, Players, blacklistedBy)
 
+			if not blacklistedByUsernameIsOk and blacklistedBy == -1 then
+				blacklistedByUsernameIsOk, blacklistedByUsername = true, "System"
+			end
+
 			local kickReason = self:_fixFormattedString(self.Settings.Blacklists.userIsBlacklistedMessage, Player, {
 				onlyApplyCustom = true,
 				Codes = {
@@ -1098,7 +1155,8 @@ function api:_onPlayerAdded(Player: Player)
 				"'"
 					.. Player.Name
 					.. "' was blacklisted by '"
-					.. (blacklistedByUsernameIsOk and blacklistedByUsername or blacklistedBy)("' for '")
+					.. (blacklistedByUsernameIsOk and blacklistedByUsername or blacklistedBy)
+					.. "' for '"
 					.. blacklistReason
 					.. "'!"
 			)
@@ -1956,6 +2014,7 @@ function api:_buildAttributes()
 		RankSticks = {
 			Status = self.Settings.RankSticks.Enabled,
 			Mode = self.Settings.RankSticks.Mode,
+			clickOnPlayerRadius = self.Settings.RankSticks.clickOnPlayerRadius,
 		},
 
 		Misc = {
@@ -2681,7 +2740,6 @@ function api:getBlacklists(
 	end
 
 	local res = {}
-
 	if response.Body["isBlacklisted"] ~= nil then
 		res = {
 			success = true,

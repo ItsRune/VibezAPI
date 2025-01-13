@@ -19,8 +19,10 @@ return {
 		MinRank = 255,
 		MaxRank = 255,
 
-		sticksModel = nil, -- Uses default
+		Model = nil, -- Uses default
 		Removed = { "settings_check_ignore_nil_tbl" }, -- Won't insert if the name is in this table.
+
+		clickOnPlayerRadius = 20, -- If 'mode' is on 'ClickOnPlayer' then this setting will be used.
 
 		Animation = {
 			R6 = 17838471144,
