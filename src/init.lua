@@ -10,14 +10,14 @@
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
-	Updated: 7/23/2024 11:18 EST
-	Version: 0.11.0
+	Updated: 1/13/2025 10:08 EST
+	Version: 0.11.1
 
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything. We don't offer
 	support for modified modules.
 ]]
-local _VERSION = "0.11.0"
+local _VERSION = "0.11.1"
 
 --// Services \\--
 local Debris = game:GetService("Debris")

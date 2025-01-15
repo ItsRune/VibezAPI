@@ -20,10 +20,11 @@ The main pro of this method is that you get auto-updates and you don't have to w
 This method is recommended if you'd like more control over our module. With this method, you also get the autocomplete feature in Roblox Studio.
 
 1. Get the [Module](https://www.roblox.com/library/14946453963/VibezAPI)
-2. Insert the module into `ServerScriptService`
-3. Use `require(game:GetService("ServerScriptService").VibezAPI)` to fetch the module within your script
+2. Rename the module to `VibezAPI`.
+3. Insert the module into `ServerScriptService`
+4. Use `require(game:GetService("ServerScriptService").VibezAPI)` to fetch the module within your script
     - Anywhere you see `require(14946453963)` in the documentation, replace it with `require(game:GetService("ServerScriptService").VibezAPI)`
-4. Done!
+5. Done!
 
 <!-- TODO: Update the version everytime you update! -->
 <!-- 1. Download the [Module](https://github.com/ItsRune/VibezAPI/releases/download/v0.10.7/VibezAPI.rbxm)
