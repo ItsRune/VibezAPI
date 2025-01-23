@@ -2,6 +2,9 @@
 --// Services \\--
 local RunService = game:GetService("RunService")
 
+--// Modules \\--
+local Utils = require(script.Parent.Utils)
+
 --// Variables \\--
 local Activity = { Keys = {}, Processing = {} }
 local Class = {}
@@ -87,7 +90,7 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 	end
 
 	-- Rotate the characters within the key to prevent any bad-actors. (If this module ends up in a client-replicated service)
-	local reversedKey = VibezAPI._private._modules.Utils.rotateCharacters(string.reverse(VibezAPI.apiKey), 128)
+	local reversedKey = Utils.rotateCharacters(string.reverse(VibezAPI.apiKey), 128)
 	local keyTracker = Activity.Keys[reversedKey] or {}
 	local existingTracker = keyTracker[forPlayer.UserId]
 
