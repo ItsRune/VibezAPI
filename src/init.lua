@@ -161,11 +161,15 @@ local function onServerInvoke(
 				if Player == Target then
 					self:_warn(Player.Name .. "(" .. Player.UserId .. ") attempted to '" .. Action .. "' themselves.")
 					return reject("Player and Target are the same.")
-				elseif -- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
-					typeof(Target) ~= "table"
-					or typeof(Target["Name"]) ~= "string"
-					or typeof(Target["UserId"]) ~= "number"
-				then
+				-- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
+				elseif typeof(Target) ~= "table" then
+					local userId, name = self:_verifyUser(Target, "UserId"), self:_verifyUser(Target, "Name")
+					Target = {
+						["Name"] = name,
+						["UserId"] = userId,
+					}
+				-- Partial target information
+				elseif typeof(Target["Name"]) ~= "string" or typeof(Target["UserId"]) ~= "number" then
 					local targetItem = Table.Find(Table.Flat(Target), function(item)
 						return typeof(item) == "string" or typeof(item) == "number"
 					end)

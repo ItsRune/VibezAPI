@@ -8,10 +8,10 @@ local Workspace = game:GetService("Workspace")
 --// Variables \\--
 local isUIContextEnabled = false
 local eventHolder, Maid = {}, {}
-local onSetupUI, undoUISetup
+local undoUISetup
 
 --// Functions \\--
-onSetupUI = function(componentData: { [any]: any })
+local function onSetupUI(componentData: { [any]: any })
 	if #eventHolder > 0 then
 		undoUISetup(componentData)
 	end
@@ -28,19 +28,19 @@ onSetupUI = function(componentData: { [any]: any })
 	eventHolder["Blacklist"] = Instance.new("BindableEvent")
 
 	local function promote(target)
-		remoteFunction:InvokeServer("promote", "Interface", { target })
+		remoteFunction:InvokeServer("promote", "Interface", { target.UserId })
 	end
 
 	local function demote(target)
-		remoteFunction:InvokeServer("demote", "Interface", { target })
+		remoteFunction:InvokeServer("demote", "Interface", { target.UserId })
 	end
 
 	local function fire(target)
-		remoteFunction:InvokeServer("fire", "Interface", { target })
+		remoteFunction:InvokeServer("fire", "Interface", { target.UserId })
 	end
 
 	local function blacklist(target)
-		remoteFunction:InvokeServer("blacklist", "Interface", { target })
+		remoteFunction:InvokeServer("blacklist", "Interface", { target.UserId })
 	end
 
 	componentData._debug("v1_interface_initialization", "Binding event connections...")

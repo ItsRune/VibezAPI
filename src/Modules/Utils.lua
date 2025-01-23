@@ -31,7 +31,7 @@ function Utils.deepChange(tbl: { any }, index: string | number, value: any)
 end
 
 -- Stringifies a table's keys and values for outputting to the console.
-function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
+function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?, showTypes: boolean?): string
 	local tabsToApply = tabbing or 1
 	local str = "{\n"
 
@@ -69,9 +69,11 @@ function Utils.stringifyTableDeep(tbl: { any }, tabbing: number?): string
 				continue
 			end
 
-			str ..= Utils.stringifyTableDeep(value, tabsToApply + 1) .. ","
+			str ..= Utils.stringifyTableDeep(value, tabsToApply + 1) .. "," .. (showTypes and "-- table" or "")
 		else
-			str ..= (typeof(value) == "string" and string.format('"%s"', value) or string.format("%s,", tostring(value)))
+			str ..= (typeof(value) == "string" and string.format('"%s"', value) or string.format("%s,", tostring(value))) .. (showTypes and "-- " .. typeof(
+				value
+			) or "")
 		end
 
 		str ..= "\n"
