@@ -140,7 +140,7 @@ local function onServerInvoke(
 	if actionIndex ~= nil then
 		local Targets = Data[1]
 
-		if typeof(Targets) ~= "table" then
+		if typeof(Targets[1]) ~= "table" then
 			Targets = { Targets }
 		end
 
@@ -161,14 +161,29 @@ local function onServerInvoke(
 				if Player == Target then
 					self:_warn(Player.Name .. "(" .. Player.UserId .. ") attempted to '" .. Action .. "' themselves.")
 					return reject("Player and Target are the same.")
-				end
+				elseif -- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
+					typeof(Target) ~= "table"
+					or typeof(Target["Name"]) ~= "string"
+					or typeof(Target["UserId"]) ~= "number"
+				then
+					local targetItem = Table.Find(Table.Flat(Target), function(item)
+						return typeof(item) == "string" or typeof(item) == "number"
+					end)
 
-				-- If the Target is a partial of their user, then we need to create a fake Player 'userdata'
-				local userId, name = self:_verifyUser(Target, "UserId"), self:_verifyUser(Target, "Name")
-				Target = {
-					["Name"] = name,
-					["UserId"] = userId,
-				}
+					if not targetItem then
+						self:_debug(
+							"serverinvoke_resolve_target",
+							"Flattening of table did not possess a valid 'number' or 'string'! (CRITICAL)"
+						)
+						return reject("Target could not be properly resolved! (Internal Issue)")
+					end
+
+					local userId, name = self:_verifyUser(targetItem, "UserId"), self:_verifyUser(targetItem, "Name")
+					Target = {
+						["Name"] = name,
+						["UserId"] = userId,
+					}
+				end
 
 				local targetGroupData = self:_playerIsValidStaff(Target)
 				local targetGroupRank = (targetGroupData ~= nil) and targetGroupData.Rank
@@ -187,7 +202,7 @@ local function onServerInvoke(
 							Player.UserId,
 							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
 							Target.Name,
-							userId
+							Target.UserId
 						)
 					)
 					return reject("Unauthorized")
@@ -244,14 +259,14 @@ local function onServerInvoke(
 							Player.UserId,
 							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action)),
 							Target.Name,
-							userId
+							Target.UserId
 						)
 					)
 					self:notifyPlayer(Player, "Error: No.")
 					return reject("Too high to rank")
 				end
 
-				local theirCooldown = self._private.rankingCooldowns[userId]
+				local theirCooldown = self._private.rankingCooldowns[Target.UserId]
 				if
 					theirCooldown ~= nil
 					and DateTime.now().UnixTimestamp - theirCooldown < self.Settings.Misc.rankingCooldown
@@ -276,13 +291,18 @@ local function onServerInvoke(
 				if actionFunc == "Blacklist" then
 					local reason = Data[2] or "Unspecified"
 
-					result = self[actionFunc](self, userId, reason, Player)
+					result = self[actionFunc](self, Target.UserId, reason, Player)
 					table.insert(extraData, reason)
 				elseif actionFunc == "setRank" then
 					local newRank = Data[2]
-					result = self[actionFunc](self, userId, newRank, { userName = Player.Name, userId = Player.UserId })
+					result = self[actionFunc](
+						self,
+						Target.UserId,
+						newRank,
+						{ userName = Player.Name, userId = Player.UserId }
+					)
 				else
-					result = self[actionFunc](self, userId, { userName = Player.Name, userId = Player.UserId })
+					result = self[actionFunc](self, Target.UserId, { userName = Player.Name, userId = Player.UserId })
 				end
 
 				self:_addLog(Player, logAction, Origin, { Target }, table.unpack(extraData))
@@ -303,7 +323,7 @@ local function onServerInvoke(
 							"Error: Attempting to %s %s (%d) resulted in an internal server error!",
 							actionFunc == "Blacklist" and "blacklist" or "rank",
 							Target.Name,
-							userId
+							Target.UserId
 						)
 					)
 					self:_warn(
@@ -313,7 +333,7 @@ local function onServerInvoke(
 				end
 
 				result.Target = Target
-				self._private.rankingCooldowns[userId] = DateTime.now().UnixTimestamp
+				self._private.rankingCooldowns[Target.UserId] = DateTime.now().UnixTimestamp
 
 				resolve(result)
 			end):andThen(function(result: { [any]: any })

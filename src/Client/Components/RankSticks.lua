@@ -1,5 +1,4 @@
---!nocheck
---!nolint
+--!strict
 --// Services \\--
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
@@ -147,7 +146,7 @@ local function onSetup(componentData: { [any]: any })
 							> (localPrimaryPart.Position - targetPrimaryPart.Position).Magnitude
 					)
 				then
-					closestTarget = target
+					closestTarget = target :: any
 				end
 			end
 
@@ -165,7 +164,7 @@ local function onSetup(componentData: { [any]: any })
 		elseif componentData.Data.Mode == "ClickOnPlayer" then
 			local mouse = Player:GetMouse()
 			local mouseTarget = mouse.Target
-			local primPart = Player.Character.PrimaryPart
+			local primPart = (Player.Character :: any).PrimaryPart
 
 			componentData._debug("rankstick_click_on_player", "Checking if player's mouse has a target")
 			if not mouseTarget then
@@ -181,7 +180,7 @@ local function onSetup(componentData: { [any]: any })
 			end
 
 			componentData._debug("rankstick_click_on_player", "Checking if 'Target' exists as a Player")
-			local player = Players:GetPlayerFromCharacter(mouseTarget.Parent)
+			local player = Players:GetPlayerFromCharacter(mouseTarget.Parent :: any)
 			if not player or player == Player then
 				return false
 			end
