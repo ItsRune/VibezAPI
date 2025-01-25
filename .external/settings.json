@@ -1,0 +1,149 @@
+{
+  "ActivityTracker": {
+    "Enabled": "boolean",
+    "MinRank": "number",
+    "delayBeforeMarkedAFK": "number",
+    "disableWhenAFK": "boolean",
+    "disableWhenInPrivateServer": "boolean",
+    "disableWhenInStudio": "boolean",
+    "failMessage": "string",
+    "kickIfFails": "boolean"
+  },
+  "Blacklists": {
+    "Enabled": "boolean",
+    "userIsBlacklistedMessage": "string"
+  },
+  "Commands": {
+    "Alias": [
+      "string"
+    ],
+    "Enabled": "boolean",
+    "MaxRank": "number",
+    "MinRank": "number",
+    "Prefix": "string",
+    "Removed": [
+      "string"
+    ],
+    "useDefaultNames": "boolean"
+  },
+  "Cooldowns": {
+    "Blacklisting": "number",
+    "Enabled": "boolean",
+    "Ranking": "number"
+  },
+  "Debug": {
+    "logClientMessages": "boolean",
+    "logMessages": "boolean"
+  },
+  "Interface": {
+    "Activation": {
+      "Keybind": {
+        "__ATTR": [
+          "RightShift"
+        ],
+        "__SUBCATEGORY": "KeyCode",
+        "__TYPE": "Enum"
+      },
+      "allowMobileUsers": "boolean",
+      "iconButtonImage": "string",
+      "iconButtonPosition": "string",
+      "iconToolTip": "string"
+    },
+    "Enabled": "boolean",
+    "Logs": {
+      "Enabled": "boolean",
+      "MinRank": "number"
+    },
+    "MaxRank": "number",
+    "MinRank": "number",
+    "Suggestions": {
+      "outsideServerTagColor": {
+        "__ATTR": [
+          255,
+          50,
+          50
+        ],
+        "__SUBCATEGORY": "fromRGB",
+        "__TYPE": "Color3"
+      },
+      "outsideServerTagText": "string",
+      "searchPlayersOutsideServer": "boolean"
+    },
+    "maxUsersForSelection": "number",
+    "nonViewableTabs": [
+      "string"
+    ],
+    "useBetaUI": "boolean"
+  },
+  "Misc": {
+    "createGlobalVariables": "boolean",
+    "ignoreWarnings": "boolean",
+    "originLoggerText": {
+      "__ATTR": {},
+      "__SUBCATEGORY": "Name",
+      "__TYPE": "game"
+    },
+    "overrideGroupCheckForStudio": "boolean"
+  },
+  "Notifications": {
+    "Enabled": "boolean",
+    "Font": {
+      "__ATTR": [
+        "Gotham"
+      ],
+      "__SUBCATEGORY": "Font",
+      "__TYPE": "Enum"
+    },
+    "FontSize": "number",
+    "delayUntilRemoval": "number",
+    "entranceTweenInfo": {
+      "Direction": {
+        "__ATTR": [
+          "Out"
+        ],
+        "__SUBCATEGORY": "EasingDirection",
+        "__TYPE": "Enum"
+      },
+      "Style": {
+        "__ATTR": [
+          "Quint"
+        ],
+        "__SUBCATEGORY": "EasingStyle",
+        "__TYPE": "Enum"
+      },
+      "timeItTakes": "number"
+    },
+    "exitTweenInfo": {
+      "Direction": {
+        "__ATTR": [
+          "In"
+        ],
+        "__SUBCATEGORY": "EasingDirection",
+        "__TYPE": "Enum"
+      },
+      "Style": {
+        "__ATTR": [
+          "Quint"
+        ],
+        "__SUBCATEGORY": "EasingStyle",
+        "__TYPE": "Enum"
+      },
+      "timeItTakes": "number"
+    },
+    "keyboardFontSizeMultiplier": "number"
+  },
+  "RankSticks": {
+    "Animation": {
+      "R15": "number",
+      "R6": "number"
+    },
+    "Enabled": "boolean",
+    "MaxRank": "number",
+    "MinRank": "number",
+    "Mode": "string",
+    "Removed": [
+      "string"
+    ],
+    "clickOnPlayerRadius": "number"
+  }
+}
