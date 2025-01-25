@@ -1,0 +1,27 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '/docs/*'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '/docs/*'
+
+jobs:
+  publish_docs:
+    name: Publish Docs
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    - run: npm i -D moonwave
+    - run: moonwave build --publish
