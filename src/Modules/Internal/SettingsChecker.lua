@@ -27,7 +27,7 @@ end
 	local Default = { ["Test"] = "Hello!" }
 	local Data = { ["Test"] = 1, ["Something"] = "Else!" }
 
-	Data = fixDiscrepencies(_, Data, Default)
+	Data = fixDiscrepencies(VibezApi, Data, Default)
 	
 	print(Data) --> { ["Test"] = "Hello!" }
 	```
@@ -80,13 +80,13 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 			return Data
 		elseif test(self, typeof(Data) == "table" and typeof(Default) == "table", "same_type_tables_key_removal") then
 			-- Remove non-existant keys
-			for key: string, value: any in pairs(Default) do
-				if typeof(Data[key]) == typeof(value) and typeof(value) ~= "table" then
+			for key: string, value: any in pairs(Data) do
+				if typeof(Default[key]) == typeof(value) and typeof(value) ~= "table" then
 					continue
 				end
 
 				self:_debug("settings_check", "Applying checks to nested table '" .. path .. "'.")
-				Data[key] = fixDiscrepencies(self, Data[key], value, path .. "." .. key)
+				Data[key] = fixDiscrepencies(self, Data[key], Default[key], path .. "." .. key)
 			end
 
 			return Data
@@ -145,17 +145,21 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 	return Default
 end
 
-local function removeAllIgnoreNilChecks<T>(Data: T, currentCount: number?): (T?, number)
+local function removeAllIgnoreNilChecks(
+	self: Types.vibezApi,
+	Data: any,
+	currentCount: number?
+): ({ [any]: any }?, number)
 	local removedCount = currentCount or 0
 
-	if typeof(Data) == "table" then
+	if test(self, typeof(Data) == "table", "remove_ignore_checks_table_check") then
 		for key: string, value: any in next, Data do
-			local result, newCount = removeAllIgnoreNilChecks(value, removedCount)
+			local result, newCount = removeAllIgnoreNilChecks(self, value, removedCount)
 
 			Data[key] = result
 			removedCount = newCount
 		end
-	elseif Data == "settings_check_ignore_nil_tbl" then
+	elseif test(self, Data == "settings_check_ignore_nil_tbl", "remove_ignore_checks_main_check") then
 		removedCount += 1
 		return nil, removedCount
 	end
@@ -163,9 +167,25 @@ local function removeAllIgnoreNilChecks<T>(Data: T, currentCount: number?): (T?,
 	return Data, removedCount
 end
 
+local function applyMissing(self: Types.vibezApi, Data: any, Default: { [any]: any })
+	for i in Default do
+		local TYPE = typeof(Data[i])
+		if test(self, TYPE == "table" and Table.Count(Data[i]) ~= 0, "apply_missing_nil_and_length_check") then
+			Data[i] = applyMissing(self, Data[i], Default[i])
+		elseif
+			test(self, TYPE ~= "table" and TYPE ~= "nil" and TYPE ~= typeof(Default[i]), "apply_missing_value_check")
+		then
+			Data[i] = Default[i]
+		end
+	end
+
+	return Data
+end
+
 return {
 	settingsCheck = fixDiscrepencies,
 	removeNilChecks = removeAllIgnoreNilChecks,
+	applyMissing = applyMissing,
 }
 
 -- Old Settings check
