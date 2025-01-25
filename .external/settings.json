@@ -29,6 +29,7 @@
   "Cooldowns": {
     "Blacklisting": "number",
     "Enabled": "boolean",
+    "Mode": "Default | PerTarget | PerStaff | Both",
     "Ranking": "number"
   },
   "Debug": {
@@ -140,7 +141,7 @@
     "Enabled": "boolean",
     "MaxRank": "number",
     "MinRank": "number",
-    "Mode": "string",
+    "Mode": "Default | ClickOnPlayer | DetectionInFront",
     "Removed": [
       "string?"
     ],

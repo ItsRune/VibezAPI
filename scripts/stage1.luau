@@ -14,7 +14,7 @@ return {
 
 	RankSticks = {
 		Enabled = false,
-		Mode = "Default",
+		Mode = "Default", -- DetectionInFront(Default) / ClickOnPlayer
 
 		MinRank = 255,
 		MaxRank = 255,
@@ -103,6 +103,7 @@ return {
 
 	Cooldowns = {
 		Enabled = false, -- Toggles whether cooldowns should be enabled.
+		Mode = "Default", -- PerTarget(Default) / PerStaff / Both
 		Ranking = 15, -- A single user cannot be re-ranked every X seconds.
 		Blacklisting = 15, -- A single user cannot be blacklisted/unblacklisted for X seconds.
 	},
