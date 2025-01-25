@@ -353,14 +353,47 @@ Tweening info that determines how notifications will act when they leave the scr
 #### Enabled
 
 Toggles the blacklisting module. <br/>
-`boolean`
+`boolean` <br/>
 `false`
 
 #### userIsBlacklistedMessage
 
 The message presented to the user when they've been blacklisted. <br/>
-`string`
+`string` <br/>
 `You have been blacklisted from the game by &lt;BLACKLISTED_BY&gt; for: &lt;BLACKLIST_REASON&gt;
+
+</details>
+
+<details>
+<summary>Cooldowns</summary>
+
+#### Enabled
+
+Toggles whether different actions will have cooldowns associated with the specified **mode**. <br/>
+`boolean` <br/>
+`false`
+
+#### Mode
+
+Determines how the cooldowns will behave:
+- *PerTarget* will add a cooldown to a specific target only. <br/>
+- *PerStaff* will add a cooldown to the staff member who used the action. <br/>
+- *Both* will add a cooldown to both the staff member and the target. <br/>
+
+`"PerTarget" | "PerStaff" | "Both"` <br/>
+`PerTarget`
+
+#### Ranking
+
+Seconds each ranking action will be. <br/>
+`number` <br/>
+`30`
+
+#### Blacklisting
+
+Seconds each blacklisting action will be. <br/>
+`number` <br/>
+`30`
 
 </details>
 
@@ -372,12 +405,6 @@ The message presented to the user when they've been blacklisted. <br/>
 This text is used in an embed sent from your bot to a logs channel, specifically changes the 'Origin' portion of the embed. <br/>
 `string` <br/>
 `Game`
-
-#### rankingCooldown
-
-A number of seconds the staff would have to wait until chain ranking another player. <br/>
-`number` <br/>
-`30`
 
 #### ignoreWarnings
 
