@@ -40,7 +40,8 @@ local function recursive(data: any)
 			toReturn[i] = recursive(data[i])
 		end
 	else
-		toReturn = typeof(data)
+		local TYPE = typeof(data)
+		toReturn = (data == "settings_check_ignore_nil_tbl") and TYPE .. "?" or TYPE
 	end
 
 	return toReturn

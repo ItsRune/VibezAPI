@@ -15,14 +15,14 @@
   },
   "Commands": {
     "Alias": [
-      "string"
+      "string?"
     ],
     "Enabled": "boolean",
     "MaxRank": "number",
     "MinRank": "number",
     "Prefix": "string",
     "Removed": [
-      "string"
+      "string?"
     ],
     "useDefaultNames": "boolean"
   },
@@ -71,7 +71,7 @@
     },
     "maxUsersForSelection": "number",
     "nonViewableTabs": [
-      "string"
+      "string?"
     ],
     "useBetaUI": "boolean"
   },
@@ -142,7 +142,7 @@
     "MinRank": "number",
     "Mode": "string",
     "Removed": [
-      "string"
+      "string?"
     ],
     "clickOnPlayerRadius": "number"
   }
