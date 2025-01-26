@@ -6,11 +6,13 @@ on:
       - master
     paths:
       - 'docs/**.md'
+      - 'moonwave.toml'
   pull_request:
     branches:
       - master
     paths:
       - 'docs/**.md'
+      - 'moonwave.toml'
 
 jobs:
   status:
