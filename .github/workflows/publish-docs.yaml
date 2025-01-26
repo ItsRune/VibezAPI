@@ -24,4 +24,4 @@ jobs:
       with:
         node-version: '20.x'
     - run: npm i -D moonwave
-    - run: moonwave build --publish
+    - run: node ~/usr/local/lib/node_modules/moonwave/dist/index.ts build --publish
