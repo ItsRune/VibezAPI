@@ -454,7 +454,7 @@ Sends a debug message on the client's end about information of what it's doing. 
 | (rankname)            | The players' group rank's name. |              `A (rankname) has just joined the server!` |
 | (groupid)             |      The id of the group.       |                          `The group's ID is (groupid).` |
 | (userid)              |   The user ID of the player.    |                              `Your UserID is: (userid)` |
-| (player)              |       The player object.        |                             `game:GetService('ROBLOX')` |
+| (player)              |       The player object.        |               `game:GetService('Players')[User_Name]` |
 | (replicatedstorage)   |        ReplicatedStorage        |                  `game:GetService('ReplicatedStorage')` |
 | (replicatedfirst)     |         ReplicatedFirst         |                  `game:GetService('ReplicatedStorage')` |
 | (serverstorage)       |          ServerStorage          |                      `game:GetService('ServerStorage')` |

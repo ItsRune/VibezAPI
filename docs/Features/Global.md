@@ -44,6 +44,15 @@ Decrements a player's rank by 1.
 globalsAPI.Ranking.Demote:Invoke(1)
 ```
 
+<a href="#ranking/fire"><h3>Fire</h3></a>
+Sets the player's rank back to 1.
+
+`userId: number`
+
+```lua
+globalsAPI.Ranking.Fire:Invoke(1)
+```
+
 <a href="#ranking/setrank"><h3>setRank</h3></a>
 Sets a player's rank to a specific rank.
 
@@ -56,17 +65,17 @@ globalsAPI.Ranking.setRank:Invoke(1, 2)
 
 ---
 
-### Activity
-<a href="#activity/get"><h3>getActivity</h3></a>
+### ActivityTracker
+<a href="#activity/get"><h3>Fetch</h3></a>
 Gets the activity of a player.
 
 `userId: number`
 
 ```lua
-globalsAPI.Activity.Fetch:Invoke(1)
+globalsAPI.ActivityTracker.Fetch:Invoke(1)
 ```
 
-<a href="#activity/save"><h3>saveActivity</h3></a>
+<a href="#activity/save"><h3>Save</h3></a>
 Gets the activity of a player.
 
 `userId: number` <br />
@@ -76,32 +85,45 @@ Gets the activity of a player.
 `forceFetchRank: boolean`
 
 ```lua
-globalsAPI.Activity.Save:Invoke(1, 0, 20, 0, false)
+globalsAPI.ActivityTracker.Save:Invoke(1, 0, 20, 0, false)
+```
+
+<a href="#activity/delete"><h3>Delete</h3></a>
+Gets the activity of a player.
+
+`userId: number` <br />
+`userRank: number` <br />
+`seconds: number` <br />
+`messages: number` <br />
+`forceFetchRank: boolean`
+
+```lua
+globalsAPI.ActivityTracker.Save:Invoke(1, 0, 20, 0, false)
 ```
 
 ---
 
 ### Hooks
-<a href="#hooks/new"><h3>new</h3></a>
+<a href="#hooks/create"><h3>Create</h3></a>
 Creates a new webhook.
 
 `webhook: string`
 
 ```lua
-globalsAPI.Hooks:Invoke("https://discord.com/api/webhooks/")
+globalsAPI.Hooks.Create:Invoke("https://discord.com/api/webhooks/")
 ```
 
 ---
 
 ### Notifications
-<a href="#notifications/new"><h3>new</h3></a>
-Creates a notification for a player.
+<a href="#notifications/send"><h3>Send</h3></a>
+Send a notification to the player. Please note that there are specific keywords that are used to color code the notification messages. Please visit [this page](/docs/Features/Notifications) to see the full list of keywords.
 
 `player: Player` <br />
 `message: string`
 
 ```lua
-globalsAPI.Notifications:Invoke(game.Players.ltsRune, "Hello World!")
+globalsAPI.Notifications.Send:Invoke(game.Players.ltsRune, "Hello World!")
 ```
 
 ---
@@ -136,6 +158,38 @@ Gets a player's group role.
 ```lua
 globalsAPI.General.getGroupRole:Invoke(game.Players.ltsRune, 0)
 ```
+
+---
+### Blacklists
+<a href="#blacklists/get"><h3>Get</h3></a>
+Gets a player's blacklist information.
+
+`player: Player | string | number` <br />
+
+```lua
+globalsAPI.Blacklists.Get:Invoke(game.Players.ltsRune)
+```
+
+<a href="#blacklists/add"><h3>Add</h3></a>
+Adds a player to the blacklist.
+
+`userToBlacklist: Player` <br />
+`Reason: string?` <br />
+`blacklistExecutedBy: (Player | string | number)?` <br />
+
+```lua
+globalsAPI.Blacklists.Add:Invoke(game.Players.ltsRune)
+```
+
+<a href="#blacklists/delete"><h3>Delete</h3></a>
+Deletes a player from being blacklisted.
+
+`player: Player | string | number` <br />
+
+```lua
+globalsAPI.Blacklists.Delete:Invoke(game.Players.ROBLOX)
+```
+
 
 ---
 

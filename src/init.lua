@@ -845,66 +845,81 @@ function api:_setupGlobals(): ()
 	globalsFolder.Name = self._private.clientScriptName
 	globalsFolder.Parent = ServerStorage :: any
 
-	globalsFolder.Ranking.Promote.OnInvoke = function(...: any): any
-		return self:Promote(...)
+	-- Ranking
+	do
+		globalsFolder.Ranking.Promote.OnInvoke = function(...: any): any
+			return self:Promote(...)
+		end
+
+		globalsFolder.Ranking.Demote.OnInvoke = function(...: any): any
+			return self:Demote(...)
+		end
+
+		globalsFolder.Ranking.Fire.OnInvoke = function(...: any): any
+			return self:Fire(...)
+		end
+
+		globalsFolder.Ranking.setRank.OnInvoke = function(...: any): any
+			return self:setRank(...)
+		end
 	end
 
-	globalsFolder.Ranking.Demote.OnInvoke = function(...: any): any
-		return self:Demote(...)
+	-- Activity Tracker
+	do
+		globalsFolder.ActivityTracker.Save.OnInvoke = function(...: any): any
+			return self:saveActivity(...)
+		end
+
+		globalsFolder.ActivityTracker.Fetch.OnInvoke = function(...: any): any
+			return self:getActivity(...)
+		end
+
+		globalsFolder.ActivityTracker.Delete.OnInvoke = function(...: any): any
+			return self:removeActivity(...)
+		end
 	end
 
-	globalsFolder.Ranking.Fire.OnInvoke = function(...: any): any
-		return self:Fire(...)
+	-- Misc
+	do
+		globalsFolder.Notifications.Send.OnInvoke = function(...: any): any
+			return self:notifyPlayer(...)
+		end
+
+		globalsFolder.Webhooks.Create.OnInvoke = function(...: any): any
+			return self:getWebhookBuilder(...)
+		end
 	end
 
-	globalsFolder.Ranking.setRank.OnInvoke = function(...: any): any
-		return self:setRank(...)
+	-- General
+	do
+		globalsFolder.General.getGroup.OnInvoke = function(...: any): any
+			return self:_getGroupFromUser(...)
+		end
+
+		globalsFolder.General.getGroupRank.OnInvoke = function(...: any): any
+			local data = self:_getGroupFromUser(...)
+			return data["Rank"]
+		end
+
+		globalsFolder.General.getGroupRole.OnInvoke = function(...: any): any
+			local data = self:_getGroupFromUser(...)
+			return data["Role"]
+		end
 	end
 
-	globalsFolder.ActivityTracker.Save.OnInvoke = function(...: any): any
-		return self:saveActivity(...)
-	end
+	-- Blacklists
+	do
+		globalsFolder.Blacklists.Get.OnInvoke = function(...: any): any
+			return self:getBlacklists(...)
+		end
 
-	globalsFolder.ActivityTracker.Fetch.OnInvoke = function(...: any): any
-		return self:getActivity(...)
-	end
+		globalsFolder.Blacklists.Add.OnInvoke = function(...: any): any
+			return self:addBlacklist(...)
+		end
 
-	globalsFolder.ActivityTracker.Delete.OnInvoke = function(...: any): any
-		return self:removeActivity(...)
-	end
-
-	globalsFolder.Notifications.Send.OnInvoke = function(...: any): any
-		return self:notifyPlayer(...)
-	end
-
-	globalsFolder.Webhooks.Create.OnInvoke = function(...: any): any
-		return self:getWebhookBuilder(...)
-	end
-
-	globalsFolder.General.getGroup.OnInvoke = function(...: any): any
-		return self:_getGroupFromUser(...)
-	end
-
-	globalsFolder.General.getGroupRank.OnInvoke = function(...: any): any
-		local data = self:_getGroupFromUser(...)
-		return data["Rank"]
-	end
-
-	globalsFolder.General.getGroupRole.OnInvoke = function(...: any): any
-		local data = self:_getGroupFromUser(...)
-		return data["Role"]
-	end
-
-	globalsFolder.Blacklists.Get.OnInvoke = function(...: any): any
-		return self:getBlacklists(...)
-	end
-
-	globalsFolder.Blacklists.Add.OnInvoke = function(...: any): any
-		return self:addBlacklist(...)
-	end
-
-	globalsFolder.Blacklists.Delete.OnInvoke = function(...: any): any
-		return self:deleteBlacklist(...)
+		globalsFolder.Blacklists.Delete.OnInvoke = function(...: any): any
+			return self:deleteBlacklist(...)
+		end
 	end
 end
 
