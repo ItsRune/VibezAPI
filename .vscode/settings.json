@@ -1,8 +1,9 @@
 {
-    "luau-lsp.require.directoryAliases": {
-        "@lune/": "~/.lune/.typedefs/0.8.8/",
-        "@private/": "../private/"
-    },
-    "stylua.targetReleaseVersion": "latest",
-    "stylua.disableVersionCheck": true
+  "luau-lsp.require.directoryAliases": {
+    "@lune/": "~/.lune/.typedefs/0.8.9/",
+    "@private/": "../private/"
+  },
+  "stylua.targetReleaseVersion": "latest",
+  "stylua.disableVersionCheck": true,
+  "luau-lsp.require.mode": "relativeToFile"
 }

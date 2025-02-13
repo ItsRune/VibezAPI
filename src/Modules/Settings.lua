@@ -14,7 +14,7 @@ return {
 
 	RankSticks = {
 		Enabled = false,
-		Mode = "Default",
+		Mode = "Default", -- DetectionInFront(Default) / ClickOnPlayer
 
 		MinRank = 255,
 		MaxRank = 255,
@@ -101,12 +101,19 @@ return {
 		userIsBlacklistedMessage = "You have been blacklisted from the game by <BLACKLIST_BY> for: <BLACKLIST_REASON>", -- Message displayed when a player is kicked for being blacklisted.
 	},
 
+	Cooldowns = {
+		Enabled = false, -- Toggles whether cooldowns should be enabled.
+		Mode = "Default", -- PerTarget(Default) / PerStaff / Both
+		Ranking = 15, -- A single user cannot be re-ranked every X seconds.
+		Blacklisting = 15, -- A single user cannot be blacklisted/unblacklisted for X seconds.
+	},
+
 	Misc = {
 		originLoggerText = game.Name, -- Text of logger for Vibez provided embeds. (Ranking)
 		ignoreWarnings = false, -- Ignores warning messages from different features.
 		overrideGroupCheckForStudio = false, -- Overrides group rank checks for developers.
 		createGlobalVariables = false, -- Creates a Folder in ServerStorage providing another script access to the API.
-		rankingCooldown = 30, -- How long until a player can be ranked.
+		-- rankingCooldown = 30, -- How long until a player can be ranked.
 		-- isAsync = false, -- Broken
 		-- autoReportErrors = false, -- It's best to use this when a developer asks you to within a ticket. (Removed)
 		-- checkForUpdates = false, -- Checks github for an updated version of the module. (Removed)

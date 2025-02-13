@@ -199,12 +199,17 @@ export type vibezSettings = {
 		userIsBlacklistedMessage: string,
 	},
 
+	Cooldowns: {
+		Enabled: boolean,
+		Ranking: number,
+		Blacklisting: number,
+	},
+
 	Misc: {
 		originLoggerText: string,
 		ignoreWarnings: boolean,
 		overrideGroupCheckForStudio: boolean,
 		createGlobalVariables: boolean,
-		rankingCooldown: number,
 		-- isAsync: boolean,
 		-- checkForUpdates: boolean,
 		-- autoReportErrors: boolean,

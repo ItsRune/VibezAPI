@@ -10,14 +10,14 @@
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EST
-	Updated: 1/13/2025 10:08 EST
-	Version: 0.11.1
+	Updated: 1/24/2025 14:34 EST
+	Version: 0.11.2
 
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything. We don't offer
 	support for modified modules.
 ]]
-local _VERSION = "0.11.1"
+local _VERSION = "0.11.2"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -136,6 +136,8 @@ local function onServerInvoke(
 	local rankingActions = { "promote", "demote", "fire", "setrank", "blacklist", "unblacklist" }
 	local Data = { ... }
 	local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
+
+	warn(actionIndex, Action)
 
 	if actionIndex ~= nil then
 		local Targets = Data[1]
@@ -266,25 +268,28 @@ local function onServerInvoke(
 							Target.UserId
 						)
 					)
-					self:notifyPlayer(Player, "Error: No.")
 					return reject("Too high to rank")
 				end
 
-				local theirCooldown = self._private.rankingCooldowns[Target.UserId]
-				if
-					theirCooldown ~= nil
-					and DateTime.now().UnixTimestamp - theirCooldown < self.Settings.Misc.rankingCooldown
-				then
-					local message = string.format(
-						"%s (%d) still has %d seconds left on their ranking cooldown!",
-						Target.Name,
-						Target.UserId,
-						math.abs(self.Settings.Misc.rankingCooldown - (DateTime.now().UnixTimestamp - theirCooldown))
-					)
+				-- TODO: Handle different modes: "PerTarget" | "PerStaff" | "Both"
+				if self.Settings.Cooldowns.Enabled then
+					local theirCooldown = self._private.Cooldowns.Ranking[Target.UserId]
+					local now = DateTime.now().UnixTimestampMillis / 1000
 
-					self:_warn(message)
-					self:notifyPlayer(Player, "Error: " .. message)
-					return reject("Ranking cooldown")
+					if now - theirCooldown < self.Settings.Cooldowns.Ranking then
+						local message = string.format(
+							"%s (%d) still has %d seconds left on their ranking cooldown!",
+							Target.Name,
+							Target.UserId,
+							math.abs(self.Settings.Cooldowns.Ranking - (DateTime.now().UnixTimestamp - theirCooldown))
+						)
+
+						self:_warn(message)
+						self:notifyPlayer(Player, "Error: " .. message)
+						return reject("Ranking cooldown")
+					end
+
+					self._private.Cooldowns.Ranking[Target.UserId] = now
 				end
 
 				local actionFunc = getActionFunctionFromInvoke(Action)
@@ -292,6 +297,7 @@ local function onServerInvoke(
 				local logAction = (Action == "blacklist") and "Blacklist"
 					or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
 
+				warn(actionFunc, Data)
 				if actionFunc == "Blacklist" then
 					local reason = Data[2] or "Unspecified"
 
@@ -337,8 +343,6 @@ local function onServerInvoke(
 				end
 
 				result.Target = Target
-				self._private.rankingCooldowns[Target.UserId] = DateTime.now().UnixTimestamp
-
 				resolve(result)
 			end):andThen(function(result: { [any]: any })
 				table.insert(resolvedPromises, result)
@@ -373,20 +377,29 @@ local function onServerInvoke(
 
 		local fullNotificationString = "Success: %s <b>%s</b>."
 		local notificationStringFilledWithUsers: { string } = {}
+		local likelyErrors: { { any } } = {}
 
 		for i = 1, #resolvedPromises do
 			local this = resolvedPromises[i]
 			local resultingSuccess = false
 
-			for key: string, keyValue: boolean in pairs(this) do
-				if string.lower(key) == "success" and keyValue then
-					resultingSuccess = keyValue
-					break
-				end
+			if this["success"] ~= nil and this["success"] ~= resultingSuccess then
+				resultingSuccess = this["success"]
 			end
 
-			if not resultingSuccess then
+			if not resultingSuccess and this["message"] ~= nil then
 				maxResolved += 1
+
+				local _, index = Table.Find(likelyErrors, function(item)
+					return item[1] == this["message"]
+				end)
+
+				if index then
+					likelyErrors[index] = { this.message, likelyErrors[index][2] + 1 }
+				else
+					table.insert(likelyErrors, { this.message, 1 })
+				end
+
 				continue
 			end
 
@@ -395,6 +408,16 @@ local function onServerInvoke(
 			if i >= maxResolved then
 				break
 			end
+		end
+
+		table.sort(likelyErrors, function(a, b)
+			return a[2] < b[2]
+		end)
+
+		local firstErr = likelyErrors[1]
+		if firstErr and firstErr[2] >= #Targets then
+			self:notifyPlayer(Player, "Error: Internal issue - <b>" .. firstErr[1] .. "</b>")
+			return false
 		end
 
 		local firstCharOfAction = string.sub(string.lower(Action), 1, 1)
@@ -817,57 +840,10 @@ function api:_setupGlobals(): ()
 		return
 	end
 
-	local serializedData = {
-		["Ranking"] = {
-			["Promote"] = "BindableFunction",
-			["Fire"] = "BindableFunction",
-			["Demote"] = "BindableFunction",
-			["setRank"] = "BindableFunction",
-		},
-		["Activity"] = {
-			["Save"] = "BindableFunction",
-			["Fetch"] = "BindableFunction",
-			["Remove"] = "BindableFunction",
-		},
-		["General"] = {
-			["getGroup"] = "BindableFunction",
-			["getGroupRank"] = "BindableFunction",
-			["getGroupRole"] = "BindableFunction",
-		},
-		["Notifications"] = "BindableFunction",
-		["Webhooks"] = "BindableFunction",
-	}
+	local globalsFolder = script.baseGlobalsFolder:Clone() :: any
 
-	local function deserialize(item: any): any
-		if typeof(item) == "table" then
-			local folder = Instance.new("Folder")
-
-			for key: string, value: any in pairs(item) do
-				local newInst = deserialize(value)
-				if not newInst then
-					continue
-				end
-
-				newInst.Name = key
-				newInst.Parent = folder
-			end
-
-			return folder
-		elseif typeof(item) == "string" then
-			local isOk, newInst = pcall(Instance.new, item)
-			if not isOk then
-				return nil
-			end
-
-			return newInst
-		end
-
-		return nil
-	end
-
-	local globalsFolder = deserialize(serializedData)
 	globalsFolder.Name = self._private.clientScriptName
-	globalsFolder.Parent = ServerStorage
+	globalsFolder.Parent = ServerStorage :: any
 
 	globalsFolder.Ranking.Promote.OnInvoke = function(...: any): any
 		return self:Promote(...)
@@ -885,23 +861,23 @@ function api:_setupGlobals(): ()
 		return self:setRank(...)
 	end
 
-	globalsFolder.Activity.Save.OnInvoke = function(...: any): any
+	globalsFolder.ActivityTracker.Save.OnInvoke = function(...: any): any
 		return self:saveActivity(...)
 	end
 
-	globalsFolder.Activity.Fetch.OnInvoke = function(...: any): any
+	globalsFolder.ActivityTracker.Fetch.OnInvoke = function(...: any): any
 		return self:getActivity(...)
 	end
 
-	globalsFolder.Activity:FindFirstChild("Remove").OnInvoke = function(...: any): any
+	globalsFolder.ActivityTracker.Delete.OnInvoke = function(...: any): any
 		return self:removeActivity(...)
 	end
 
-	globalsFolder.Notifications.OnInvoke = function(...: any): any
+	globalsFolder.Notifications.Send.OnInvoke = function(...: any): any
 		return self:notifyPlayer(...)
 	end
 
-	globalsFolder.Webhooks.OnInvoke = function(...: any): any
+	globalsFolder.Webhooks.Create.OnInvoke = function(...: any): any
 		return self:getWebhookBuilder(...)
 	end
 
@@ -917,6 +893,18 @@ function api:_setupGlobals(): ()
 	globalsFolder.General.getGroupRole.OnInvoke = function(...: any): any
 		local data = self:_getGroupFromUser(...)
 		return data["Role"]
+	end
+
+	globalsFolder.Blacklists.Get.OnInvoke = function(...: any): any
+		return self:getBlacklists(...)
+	end
+
+	globalsFolder.Blacklists.Add.OnInvoke = function(...: any): any
+		return self:addBlacklist(...)
+	end
+
+	globalsFolder.Blacklists.Delete.OnInvoke = function(...: any): any
+		return self:deleteBlacklist(...)
 	end
 end
 
@@ -1876,7 +1864,7 @@ end
 ]=]
 ---
 function api:_debug(starter: string, ...: string)
-	if not self.Settings.Debug.logMessages then
+	if not self.Settings or not self.Settings.Debug or not self.Settings.Debug.logMessages then
 		return
 	end
 
@@ -2531,10 +2519,10 @@ function api:updateKey(newApiKey: string): boolean
 	self._private.recentlyChangedKey = true
 
 	local groupId = self:getGroupId()
-
 	if groupId == -1 and savedKey ~= nil then
 		self.apiKey = savedKey
 		self:_debug("update_key", "New api key '" .. newApiKey .. "' was invalid and was reverted to the previous one!")
+		self:_warn("We attempted to update your API key, however it resulted in being invalid!")
 		return false
 	elseif groupId == -1 and not savedKey then
 		self:_debug(
@@ -2542,6 +2530,10 @@ function api:updateKey(newApiKey: string): boolean
 			"Api key '"
 				.. newApiKey
 				.. "' was invalid! Please make sure there are no special characters or spaces in your key!"
+		)
+		warn(
+			"[Vibez]: Hey! The API key provided was invalid! Please ensure your key has no special characters (including spaces). If this error persists, please DM our Support Bot.\n\n",
+			debug.traceback(nil, 4)
 		)
 		return false
 	end
@@ -3052,7 +3044,6 @@ function api:_initialize(apiKey: string): ()
 
 	-- Update the api key using the public function, in case of errors it'll log them.
 	local isOk = self:updateKey(apiKey)
-	self.Loaded = true
 
 	if not isOk then
 		self:Destroy()
@@ -3224,7 +3215,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 
 	--[=[
-		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, rankingCooldowns: {[number]: number}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
+		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, Cooldowns: {Ranking:{[number]: number},Blacklisting:{[number]: number}}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
 		@since 0.1.0
 		@private
 		@within VibezAPI
@@ -3246,7 +3237,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		lastLoadedExternalConfig = DateTime.now().UnixTimestamp - 600,
 
 		Maid = {},
-		rankingCooldowns = {},
+		Cooldowns = {
+			Ranking = table.create(#Players:GetPlayers()),
+			Blacklisting = table.create(#Players:GetPlayers()),
+		},
 
 		usersWithSticks = {},
 		stickTypes = '["Promote","Demote","Fire"]', -- JSON
@@ -3391,9 +3385,16 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 	-- Only run the settings check if extra options were changed.
 	if wereOptionsAttempted then
+		if extraOptions and extraOptions["Debug"] ~= nil and extraOptions.Debug["logMessages"] then
+			self.Settings.Debug = extraOptions.Debug
+		else
+			self.Settings.Debug = baseSettings.Debug
+		end
+
 		-- Recursively fixes the settings table with custom logic for certain sections.
-		local modified = checkingMethods.settingsCheck(self, extraOptions, self.Settings, "Settings")
-		local removedUnknownKeys, removalCount = checkingMethods.removeNilChecks(modified)
+		local modified = checkingMethods.settingsCheck(self, extraOptions, baseSettings, "Settings")
+		modified = checkingMethods.applyMissing(self, modified, baseSettings)
+		local removedUnknownKeys, removalCount = checkingMethods.removeNilChecks(self, modified)
 
 		self.Settings = removedUnknownKeys
 		self:_debug("settings_nil_keys_removal", "Removed '" .. removalCount .. "' unknown keys.")
@@ -3552,26 +3553,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	_privateKeys[self.apiKey] = self._private.clientScriptName
 	TestService:Message(string.format("Vibez v%s has successfully been loaded into this server!", _VERSION))
 
+	self.Loaded = true
+
 	-- Cast to the Vibez API Type.
 	return self :: Types.vibezApi
 end
-
---[=[
-	@function awaitGlobals
-	
-	Awaits for the Global API to be loaded.
-	@return VibezAPI
-
-	```lua
-	local globals = VibezAPI.awaitGlobals()
-	```
-
-	@yields
-	@within VibezAPI
-	@deprecated 0.10.9
-	@since 0.1.0
-]=]
----
 
 --[=[
 	@function getGlobalsForKey
@@ -3775,6 +3761,16 @@ return setmetatable({
 	@within VibezAPI
 ]=]
 
+-- Cooldowns
+--[=[
+	@interface cooldownOptions
+	.Enabled boolean
+	.Ranking number
+	.Blacklisting number
+	@private
+	@within VibezAPI
+]=]
+
 -- Misc
 --[=[
 	@interface miscOptions
@@ -3782,12 +3778,11 @@ return setmetatable({
 	.ignoreWarnings boolean
 	.overrideGroupCheckForStudio boolean
 	.createGlobalVariables boolean
-	.rankingCooldown number
 	@private
 	@within VibezAPI
 ]=]
 
--- Misc
+-- Debug
 --[=[
 	@interface debugOptions
 	.logMessages boolean
@@ -3803,6 +3798,7 @@ return setmetatable({
 	.Notifications notificationsOptions
 	.Interface interfaceOptions
 	.ActivityTracker activityTrackerOptions
+	.Cooldowns cooldownOptions
 	.Misc miscOptions
 	.Debug debugOptions
 	@within VibezAPI

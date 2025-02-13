@@ -173,7 +173,7 @@ local function applyMissing(self: Types.vibezApi, Data: any, Default: { [any]: a
 		if test(self, TYPE == "table" and Table.Count(Data[i]) ~= 0, "apply_missing_nil_and_length_check") then
 			Data[i] = applyMissing(self, Data[i], Default[i])
 		elseif
-			test(self, TYPE ~= "table" and TYPE ~= "nil" and TYPE ~= typeof(Default[i]), "apply_missing_value_check")
+			test(self, (TYPE ~= "table" and TYPE ~= typeof(Default[i])) or TYPE == "nil", "apply_missing_value_check")
 		then
 			Data[i] = Default[i]
 		end
