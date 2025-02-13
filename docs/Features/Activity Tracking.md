@@ -76,7 +76,7 @@ local function onGameShutdown()
 end
 
 --// Connections \\--
-game.OnClose:Connect(onGameShutdown)
+game:BindToClose(onGameShutdown)
 ```
 
 </details>
@@ -87,13 +87,9 @@ game.OnClose:Connect(onGameShutdown)
 <br />
 
 ```lua
-local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
-
-local function addActivity(playerUserId: number, secondsSpent: number, messagesSent: number)
-    Vibez:saveActivity(playerUserId, secondsSpent, messagesSent)
-end
-
-addActivity(107392833, 10, 5) -- 107392833 is the user id of the staff member
+local Vibez = require(14946453963)("API Key")
+-- Staff_Id, Seconds_Spent, Messages_Sent
+Vibez:saveActivity(107392833, 10, 5)
 ```
 
 </details>
