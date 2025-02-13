@@ -66,7 +66,7 @@ VibezApi:saveActivity(107392833, 200, 10, 5)
 local DataStoreService = game:GetService("DataStoreService")
 
 --// Variables \\--
-local Vibez = require(14946453963)("API Key"):waitUntilLoaded()
+local Vibez = require(14946453963)("API Key")
 local backupDataStore = DataStoreService:GetDataStore("PlayerActivity")
 
 --// Functions \\--
@@ -77,19 +77,6 @@ end
 
 --// Connections \\--
 game:BindToClose(onGameShutdown)
-```
-
-</details>
-
-<details>
-
-<summary>Adding seconds to a player's activity</summary>
-<br />
-
-```lua
-local Vibez = require(14946453963)("API Key")
--- Staff_Id, Seconds_Spent, Messages_Sent
-Vibez:saveActivity(107392833, 10, 5)
 ```
 
 </details>
