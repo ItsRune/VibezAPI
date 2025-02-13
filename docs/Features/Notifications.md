@@ -19,6 +19,17 @@ Example:
 VibezAPI:notifyPlayer(Player, "Hello there!")
 ```
 
+### General Information
+
+We use select words as prefixes that may be useful to you. These words cause the notification to be a specific color:
+
+|   Prefix  |  Color |
+| :-------: | :----: |
+|  `Error`  |  `Red`   |
+| `Warning` | `Orange` |
+|  `Info`   |  `Blue`  |
+| `Success` | `Green`  |
+
 ### Notification Settings
 
 ```lua
