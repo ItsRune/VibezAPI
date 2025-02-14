@@ -4,10 +4,11 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 --// Variables \\--
+local Definitions = require(script.Parent.Parent.Definitions)
 local Maid = {}
 
 --// Functions \\--
-local function markAFK(componentData, isAfk: boolean)
+local function markAFK(componentData: Definitions.componentData, isAfk: boolean)
 	componentData._debug(
 		"activity_marking_afk",
 		string.format("Marking the LocalPlayer as %s.", isAfk and "AFK" or "not AFK")
@@ -16,7 +17,7 @@ local function markAFK(componentData, isAfk: boolean)
 	return componentData.remoteFunction:InvokeServer("Afk", isAfk)
 end
 
-local function onDestroy(componentData: { [any]: any })
+local function onDestroy(componentData: Definitions.componentData)
 	componentData._debug("activity_destroy", "Destroy method triggered.")
 	if not Maid then
 		return

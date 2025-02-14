@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 --// Variables \\--
+local Definitions = require(script.Parent.Parent.Definitions)
 local notifGui = script.Notifications
 local Maid = {}
 
@@ -47,7 +48,7 @@ local function _verifyDynamicEnum(parentEnum: any, dynamicProperty: string): any
 	return enumItem
 end
 
-local function _onNotification(componentData: { [any]: any }, dontAllowFormatting: boolean, Message: string)
+local function _onNotification(componentData: Definitions.componentData, dontAllowFormatting: boolean, Message: string)
 	local Tweens, Table = componentData.Tweens, componentData.Table
 
 	local Settings = HttpService:JSONDecode(tostring(Workspace:GetAttribute(script.Parent.Parent.Name)))
@@ -108,9 +109,9 @@ local function _onNotification(componentData: { [any]: any }, dontAllowFormattin
 	tweenIn:Play()
 
 	-- Filter others to move upwards
-	local children = Table.Filter(notifGui.Holder:GetChildren(), function(v: TextLabel)
+	local children = Table.Filter(notifGui.Holder:GetChildren(), function(v: any)
 		return v ~= newItem
-	end)
+	end) :: { any }
 
 	if #children > 0 then
 		coroutine.wrap(function()
@@ -124,7 +125,7 @@ local function _onNotification(componentData: { [any]: any }, dontAllowFormattin
 
 	coroutine.wrap(function()
 		task.wait(notificationSettings.delayUntilRemoval)
-		tweenOut:setCallback(function(state: Enum.PlaybackState)
+		tweenOut:setCallback(function(state: Enum.PlaybackState?)
 			if state ~= Enum.PlaybackState.Completed then
 				return
 			end

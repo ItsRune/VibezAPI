@@ -14,8 +14,9 @@ type tweenServiceElement = {
 type Tweens = (Inst: Instance, TweenInfo, { [string]: any }) -> tweenServiceElement
 
 --// Variables \\--
-local frameComponents = script.Frames
+local Definitions = require(script.Parent.Parent.Definitions)
 local oldUIData = require(script.oldUI)
+local frameComponents = script.Frames
 local notifiedAboutBetaUsage = false
 local Maid = {
 	Parent = {},
@@ -57,7 +58,7 @@ local function _safelyLoadModuleAndRun(module: ModuleScript, subCommand: string,
 	pcall(requiredModule[subCommand], ...)
 end
 
-local function _openFrame(componentData: { [any]: any }, frameName: string)
+local function _openFrame(componentData: Definitions.componentData, frameName: string)
 	local newFrame = Content:FindFirstChild(frameName)
 	local tweenInOutInfo = TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
 	local Tweens: Tweens = componentData.Tweens
@@ -116,12 +117,12 @@ local function _openFrame(componentData: { [any]: any }, frameName: string)
 end
 
 -- Safely disconnects and destroys any active frames.
-local function _onExitButtonClicked(componentData: { [any]: any }): ()
+local function _onExitButtonClicked(componentData: Definitions.componentData): ()
 	_toggleUI(componentData)
 end
 
 -- Toggles the 'Enabled' property of the GUI & destroys any existing modular connections.
-function _toggleUI(componentData: { [any]: any })
+function _toggleUI(componentData: Definitions.componentData)
 	isToggled = not isToggled
 
 	if not isToggled then
@@ -219,7 +220,7 @@ function _toggleUI(componentData: { [any]: any })
 	_openFrame(componentData, foundFrameThatsVisible.Name)
 end
 
-function onDestroy(componentData: { [any]: any })
+function onDestroy(componentData: Definitions.componentData)
 	if not componentData.Data.useBeta then
 		return oldUIData.Destroy
 	end
@@ -242,7 +243,7 @@ function onDestroy(componentData: { [any]: any })
 	return
 end
 
-function onSetup(componentData: { [any]: any })
+function onSetup(componentData: Definitions.componentData)
 	local staffInformation = componentData.remoteFunction:InvokeServer("staffCheck", "Interface")
 	if
 		typeof(staffInformation) ~= "table"

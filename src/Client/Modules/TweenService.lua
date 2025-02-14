@@ -8,7 +8,7 @@ local Class = {}
 Class.__index = Class
 
 --// Types \\--
-export type tweenService = {
+type Public = {
 	_id: string,
 	_instance: Instance,
 	_dontCare: boolean,
@@ -16,16 +16,11 @@ export type tweenService = {
 	_callback: (state: Enum.PlaybackState?) -> (),
 	_completedCallback: () -> (),
 	_connection: RBXScriptConnection?,
-
-	Play: (self: tweenService) -> tweenService,
-	Cancel: (self: tweenService) -> tweenService,
-	Pause: (self: tweenService) -> tweenService,
-	setCallback: (self: tweenService, callback: (state: Enum.PlaybackState?) -> ()) -> tweenService,
-	onCompleted: (self: tweenService, callback: () -> ()) -> tweenService,
-	Destroy: (self: tweenService) -> (),
 }
+type Private = typeof(Class)
+export type tweenService = typeof(setmetatable({} :: Public, {} :: Private))
 
-local function Constructor(Inst: Instance, tweenInfo: TweenInfo, propertyTable: { [any]: any }): tweenService
+local function Constructor(Inst: Instance | any, tweenInfo: TweenInfo, propertyTable: { [any]: any }): tweenService
 	local self = setmetatable({}, Class) :: any
 
 	self._id = HttpService:GenerateGUID(false)

@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 --// Variables \\--
 local Player = Players.LocalPlayer
 local Maid: { [any]: RBXScriptConnection | { RBXScriptConnection } } = {}
+local Definitions = require(script.Parent.Parent.Definitions)
 
 --// Functions \\--
 local function _getTempFolder()
@@ -23,17 +24,17 @@ local function _getTempFolder()
 	return folder
 end
 
-local function onDestroy(componentData: { [any]: any })
+local function onDestroy(componentData: Definitions.componentData)
 	componentData._debug("ranksticks_destroy", "Destroy method triggered.")
 	if Maid == nil then
 		return
 	end
 
-	componentData.Disconnect(Maid)
+	componentData.Disconnect(Maid :: any)
 	table.clear(Maid)
 end
 
-local function onSetup(componentData: { [any]: any })
+local function onSetup(componentData: Definitions.componentData)
 	local _warn, remoteFunction = componentData._warn, componentData.remoteFunction
 
 	local custScriptName = string.split(script.Parent.Parent.Name, "-")[1]

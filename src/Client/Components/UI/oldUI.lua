@@ -6,12 +6,13 @@ local StarterGui = game:GetService("StarterGui")
 local Workspace = game:GetService("Workspace")
 
 --// Variables \\--
+local Definitions = require(script.Parent.Parent.Parent.Definitions)
 local isUIContextEnabled = false
 local eventHolder, Maid = {}, {}
 local undoUISetup
 
 --// Functions \\--
-local function onSetupUI(componentData: { [any]: any })
+local function onSetupUI(componentData: Definitions.componentData)
 	if #eventHolder > 0 then
 		undoUISetup(componentData)
 	end

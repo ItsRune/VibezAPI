@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local UserService = game:GetService("UserService")
 
 --// Variables \\--
+local Definitions = require(script.Parent.Parent.Parent.Parent.Definitions)
 local defaultThumbnail = "rbxasset://textures/AvatarCompatibilityPreviewer/user.png"
 local usernameTextBox = nil
 local lastPerformedTruncation = 0
@@ -119,7 +120,7 @@ local function _fullCheckForFilter(Target: Player | cachedUserContent)
 end
 
 local function _createTargetTemplate(
-	componentData: { [any]: any },
+	componentData: Definitions.componentData,
 	Target: Player | cachedUserContent,
 	layoutOrder: number?
 )
@@ -184,7 +185,7 @@ local function _createTargetTemplate(
 	)
 end
 
-local function _updateUserSuggestions(componentData: { [any]: any }, filteredPlayers: { Player })
+local function _updateUserSuggestions(componentData: Definitions.componentData, filteredPlayers: { Player })
 	local suggestionFrame = usernameTextBox.Parent.Suggestions
 	local templateFrame = suggestionFrame:FindFirstChild("Template")
 
@@ -232,7 +233,7 @@ local function _updateUserSuggestions(componentData: { [any]: any }, filteredPla
 	end
 end
 
-local function onDestroy(Frame: any, componentData: { [any]: any })
+local function onDestroy(Frame: any, componentData: Definitions.componentData)
 	componentData._debug("interface_notifications_destroy", "Destroy has been triggered.")
 	table.clear(selectedUsers)
 	selectedUsers = {}
@@ -251,12 +252,12 @@ local function onDestroy(Frame: any, componentData: { [any]: any })
 	end
 
 	Frame.User.Selected.Text = "0 User(s) Selected"
-	componentData.Disconnect(Maid)
+	componentData.Disconnect(Maid :: any)
 	table.clear(Maid)
 	task.wait()
 end
 
-local function onSetup(Frame: any, componentData: { [any]: any })
+local function onSetup(Frame: any, componentData: Definitions.componentData)
 	onDestroy(Frame, componentData)
 
 	usernameTextBox = Frame.User.Username

@@ -5,6 +5,7 @@ local UserService = game:GetService("UserService")
 local GroupService = game:GetService("GroupService")
 
 --// Variables \\--
+local Definitions = require(script.Parent.Parent.Parent.Parent.Definitions)
 local Player = Players.LocalPlayer
 local defaultThumbnail = "rbxasset://textures/AvatarCompatibilityPreviewer/user.png"
 local usernameTextBox = nil
@@ -122,7 +123,7 @@ local function _fullCheckForFilter(Target: Player | cachedUserContent)
 end
 
 local function _createTargetTemplate(
-	componentData: { [any]: any },
+	componentData: Definitions.componentData,
 	Target: Player | cachedUserContent,
 	layoutOrder: number?
 )
@@ -209,7 +210,7 @@ local function _createTargetTemplate(
 	)
 end
 
-local function _updateUserSuggestions(componentData: { [any]: any }, filteredPlayers: { Player })
+local function _updateUserSuggestions(componentData: Definitions.componentData, filteredPlayers: { Player })
 	local suggestionFrame = usernameTextBox.Parent.Suggestions
 	local templateFrame = suggestionFrame:FindFirstChild("Template")
 
@@ -271,7 +272,7 @@ local function _checkTextAfterDelay<A>(
 	end
 end
 
-local function _handleExternalUserSearch(componentData: { [any]: any })
+local function _handleExternalUserSearch(componentData: Definitions.componentData)
 	local Text = usernameTextBox.Text
 	local isOk, userId, userInfo: { [any]: any }
 
@@ -315,7 +316,7 @@ local function _handleExternalUserSearch(componentData: { [any]: any })
 end
 
 --// Functions \\--
-local function onDestroy(Frame: any, componentData: { [any]: any })
+local function onDestroy(Frame: any, componentData: Definitions.componentData)
 	componentData._debug("interface_ranking_destroy", "Destroy method triggered.")
 	table.clear(selectedUsers)
 	selectedUsers = {}
@@ -334,12 +335,12 @@ local function onDestroy(Frame: any, componentData: { [any]: any })
 	end
 
 	Frame.User.Selected.Text = "0 User(s) Selected"
-	componentData.Disconnect(Maid)
+	componentData.Disconnect(Maid :: any)
 	table.clear(Maid)
 	task.wait()
 end
 
-local function onSetup(Frame: any, componentData: { [any]: any })
+local function onSetup(Frame: any, componentData: Definitions.componentData)
 	local remoteFunction = componentData.remoteFunction
 	usernameTextBox = Frame.User.Username
 

@@ -19,6 +19,7 @@ type LogInformation = {
 }
 
 --// Variables \\--
+local Definitions = require(script.Parent.Parent.Parent.Parent.Definitions)
 local hasWarned = false
 local nextLayoutOrder = 999999
 local Maid = {}
@@ -49,7 +50,7 @@ local function _applyColorToLogText(logText: string, colorType: "Admin" | "Actio
 	)
 end
 
-local function _fixStringForAction(componentData: { [any]: any }, logInfo: LogInformation): string
+local function _fixStringForAction(componentData: Definitions.componentData, logInfo: LogInformation): string
 	local userNamesAndIds = componentData.Table.Map(logInfo.affectedUsers, function(Target: Player)
 		return string.format("%s (%d)", Target.Name, Target.UserId)
 	end)
@@ -79,7 +80,7 @@ local function _createErrorLog(newError: string)
 	}
 end
 
-local function _addLog(Frame: any, componentData: { [any]: any }, newLog: LogInformation)
+local function _addLog(Frame: any, componentData: Definitions.componentData, newLog: LogInformation)
 	local templateFrame = Frame.Scroll.Template
 	local nextNumber = #Frame.Scroll:GetChildren() - 3
 	local newTemplate = templateFrame:Clone()
@@ -119,7 +120,7 @@ local function _addLog(Frame: any, componentData: { [any]: any }, newLog: LogInf
 	nextLayoutOrder -= 1
 end
 
-local function onDestroy(Frame: any, componentData: { [any]: any })
+local function onDestroy(Frame: any, componentData: Definitions.componentData)
 	componentData._debug("interface_logs_destroy", "Destroy method triggered.")
 	nextLayoutOrder = 999999
 
@@ -128,7 +129,7 @@ local function onDestroy(Frame: any, componentData: { [any]: any })
 	table.clear(Maid)
 end
 
-local function onSetup(Frame: any, componentData: { [any]: any })
+local function onSetup(Frame: any, componentData: Definitions.componentData)
 	onDestroy(Frame, componentData)
 
 	if not hasWarned then
