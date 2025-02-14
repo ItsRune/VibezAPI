@@ -1,7 +1,7 @@
-local Table = require(script.Parent.Modules.Table)
-local TopbarPlus = require(script.Parent.Modules.TopbarPlus)
-local TweenModule = require(script.Parent.Modules.TweenService)
-local buttonBubbleClick = require(script.Parent.Modules.ButtonClickBubble)
+local _Table = require(script.Parent.Modules.Table)
+local _TopbarPlus = require(script.Parent.Modules.TopbarPlus)
+local _TweenModule = require(script.Parent.Modules.TweenService)
+local _buttonBubbleClick = require(script.Parent.Modules.ButtonClickBubble)
 
 export type componentData = {
 	remoteFunction: RemoteFunction,
@@ -10,10 +10,10 @@ export type componentData = {
 	GroupId: number,
 	Data: { [any]: any },
 
-	TopbarPlus: typeof(TopbarPlus),
-	Tweens: typeof(TweenModule),
-	buttonClickBubble: typeof(buttonBubbleClick),
-	Table: typeof(Table),
+	TopbarPlus: typeof(_TopbarPlus),
+	Tweens: typeof(_TweenModule),
+	buttonClickBubble: typeof(_buttonBubbleClick),
+	Table: typeof(_Table),
 
 	clearAllChildren: (Parent: Instance, excludedClassNames: { string }?) -> (),
 	Disconnect: (data: { [any]: RBXScriptConnection } | RBXScriptConnection) -> (),
