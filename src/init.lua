@@ -137,8 +137,6 @@ local function onServerInvoke(
 	local Data = { ... }
 	local actionIndex = table.find(rankingActions, string.lower(tostring(Action)))
 
-	warn(actionIndex, Action)
-
 	if actionIndex ~= nil then
 		local Targets = Data[1]
 

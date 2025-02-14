@@ -115,7 +115,7 @@ local function onAttributeChanged()
 		return
 	end
 
-	System.isWarningsAllowed = not States.Misc.ignoreWarnings
+	System.isWarningsAllowed = States.Misc.ignoreWarnings
 	System.areDebugPrintsAllowed = States.Misc.showDebugMessages
 
 	for key: string, data: { [any]: any } in pairs(States) do
