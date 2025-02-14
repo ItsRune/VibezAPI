@@ -18,8 +18,8 @@ export type componentData = {
 	clearAllChildren: (Parent: Instance, excludedClassNames: { string }?) -> (),
 	Disconnect: (data: { [any]: RBXScriptConnection } | RBXScriptConnection) -> (),
 
-	_warn: (...any) -> (),
-	_debug: (...any) -> (),
+	_warn: (starter: string, ...any) -> (),
+	_debug: (starter: string, ...any) -> (),
 }
 
 return nil

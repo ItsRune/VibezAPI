@@ -18,6 +18,7 @@ local Definitions = require(script.Parent.Parent.Definitions)
 local oldUIData = require(script.oldUI)
 local frameComponents = script.Frames
 local notifiedAboutBetaUsage = false
+local truncHistory, truncMaxFrames = {}, 0
 local Maid = {
 	Parent = {},
 	Children = {},
@@ -77,6 +78,12 @@ local function _openFrame(componentData: Definitions.componentData, frameName: s
 			return
 		end
 
+		-- Detect when the opening frame is already being tweened. (Hot fix for when switching tabs quickly)
+		local endPosition = UDim2.fromScale(-0.5, 0.5)
+		if truncHistory[1] == currentOpenFrame.Name and currentOpenFrame.Position.X.Scale > 0.5 then
+			endPosition = UDim2.fromScale(1.5, 0.5)
+		end
+
 		local newCurrentReference = currentOpenFrame
 		local previousFrameModule = frameComponents:FindFirstChild(newCurrentReference.Name)
 
@@ -85,7 +92,7 @@ local function _openFrame(componentData: Definitions.componentData, frameName: s
 		end
 
 		local Tween = Tweens(newCurrentReference, tweenInOutInfo, {
-			Position = UDim2.fromScale(-0.5, 0.5),
+			Position = endPosition,
 		})
 
 		Tween:setCallback(function(playBackState)
@@ -111,6 +118,12 @@ local function _openFrame(componentData: Definitions.componentData, frameName: s
 	})
 
 	Tween:Play()
+
+	table.insert(truncHistory, 1, frameName)
+	if #truncHistory > truncMaxFrames then
+		componentData._debug("interface_tabs", "Truncating tab history...")
+		truncHistory = componentData.Table.Truncate(truncHistory, truncMaxFrames)
+	end
 
 	_safelyLoadModuleAndRun(frameModule, "Setup", newFrame, componentData)
 	_changeSelectorHighlight(componentData.Tweens, frameName)
@@ -183,7 +196,6 @@ function _toggleUI(componentData: Definitions.componentData)
 				end
 
 				local distX, distY = startX - Mouse.X, startY - Mouse.Y
-
 				componentData
 					.Tweens(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
 						Position = startFramePos - UDim2.fromOffset(distX, distY),
@@ -207,13 +219,16 @@ function _toggleUI(componentData: Definitions.componentData)
 		Frame.Size = UDim2.fromScale(1, 0.45)
 	end
 
-	local foundFrameThatsVisible = componentData.Table.Find(Top.Buttons:GetChildren(), function(button: GuiBase2d)
+	local visibleFrames = componentData.Table.Filter(Top.Buttons:GetChildren(), function(button: GuiBase2d)
 		return button:IsA("TextButton") and button.Visible == true
 	end)
 
+	local foundFrameThatsVisible = visibleFrames[1]
 	if not foundFrameThatsVisible then
 		return -- Odd, why enable the UI if you have no tabs to open?
 	end
+
+	truncMaxFrames = #visibleFrames
 
 	-- CANCEL: Ensure the ranking frame is always the first to open.
 	-- - If developers can remove tabs, why hard-code 'Ranking' frame?
@@ -267,7 +282,7 @@ function onSetup(componentData: Definitions.componentData)
 		notifiedAboutBetaUsage = nil
 		componentData._warn(
 			"Vibez Beta",
-			"You've opted to use our beta UI, please keep in mind that this UI is still being worked on and can contain bugs!"
+			"Your group owner has opted to use our in-development UI, please keep in mind that this UI is still being worked on and can contain bugs!"
 		)
 	end
 
