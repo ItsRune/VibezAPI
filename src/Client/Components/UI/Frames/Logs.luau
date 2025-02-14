@@ -100,12 +100,11 @@ local function _addLog(Frame: any, componentData: Definitions.componentData, new
 	newTemplate.LayoutOrder = nextLayoutOrder
 
 	--stylua: ignore
-	local textSize = (newTemplate.TextBounds.Y > newTemplate.UITextSizeConstraint.MaxTextSize) and newTemplate.TextBounds.Y / 2 or newTemplate.TextBounds.Y
 	local isOk, frameSize = pcall(
 		TextService.GetTextSize,
 		TextService,
 		newTemplate.ContentText,
-		textSize,
+		newTemplate.UITextSizeConstraint.MaxTextSize,
 		newTemplate.Font,
 		templateFrame.Parent.AbsoluteSize
 	)
@@ -118,6 +117,93 @@ local function _addLog(Frame: any, componentData: Definitions.componentData, new
 	newTemplate.Size = UDim2.new(1, 0, 0, frameSize.Y)
 	newTemplate.Visible = true
 	nextLayoutOrder -= 1
+end
+
+local function _updateSearchParams(Frame: any, componentData: Definitions.componentData)
+	local Table = componentData.Table
+
+	Table.ForEach(Frame.Scroll:GetChildren(), function(item: TextLabel)
+		if item.Name == "Template" then
+			return
+		end
+
+		local isOk, bool = pcall(function()
+			return string.match(string.lower(item.Text), string.lower(Frame.Top.Search.Box.Text)) ~= nil
+		end)
+
+		if not isOk then
+			return
+		elseif not bool then
+			item.Visible = false
+		else
+			item.Visible = true
+		end
+	end)
+end
+
+local function _setupSearchBox(Frame: any, componentData: Definitions.componentData)
+	local searchBoxTweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+	local searchFrame = Frame.Top.Search
+	local searchBox = searchFrame.Box
+	local searchImg = searchFrame.Img
+
+	table.insert(
+		Maid,
+		searchBox.Focused:Connect(function()
+			local boxTween = componentData.Tweens(searchFrame.UIAspectRatioConstraint, searchBoxTweenInfo, {
+				AspectRatio = 5.3,
+			})
+
+			local searchTween = componentData.Tweens(searchBox.UIPadding, searchBoxTweenInfo, {
+				PaddingRight = UDim.new(0, 0),
+				PaddingLeft = UDim.new(0.15, 0),
+			})
+
+			local imgTween = componentData.Tweens(searchImg, searchBoxTweenInfo, {
+				Position = UDim2.fromScale(0.05, 0.5),
+				AnchorPoint = Vector2.new(0, 0.5),
+			})
+
+			boxTween:Play()
+			searchTween:Play()
+			imgTween:Play()
+		end)
+	)
+
+	table.insert(
+		Maid,
+		searchBox.FocusLost:Connect(function()
+			if string.match(searchBox.Text, "[a-zA-Z0-9%[%]%(%)%?!@#$%%%^&%*%-_]") then
+				return
+			end
+
+			searchBox.Text = ""
+			local boxTween = componentData.Tweens(searchFrame.UIAspectRatioConstraint, searchBoxTweenInfo, {
+				AspectRatio = 1,
+			})
+
+			local searchTween = componentData.Tweens(searchBox.UIPadding, searchBoxTweenInfo, {
+				PaddingRight = UDim.new(0.2, 0),
+				PaddingLeft = UDim.new(0.2, 0),
+			})
+
+			local imgTween = componentData.Tweens(searchImg, searchBoxTweenInfo, {
+				Position = UDim2.fromScale(0.5, 0.5),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+			})
+
+			boxTween:Play()
+			searchTween:Play()
+			imgTween:Play()
+		end)
+	)
+
+	table.insert(
+		Maid,
+		searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+			_updateSearchParams(Frame, componentData)
+		end)
+	)
 end
 
 local function onDestroy(Frame: any, componentData: Definitions.componentData)
@@ -134,16 +220,15 @@ local function onSetup(Frame: any, componentData: Definitions.componentData)
 
 	if not hasWarned then
 		hasWarned = true
-		Frame.Top.Visible = false
+		Frame.Top.Filter.Visible = false
 
-		Frame.Scroll.Size = UDim2.fromScale(1, 1)
-		Frame.Scroll.Position = UDim2.fromScale(0, 0)
-
-		componentData._warn("Vibez Logs", "Filters are currently under construction and cannot be used in production.")
+		componentData._warn("Logs Interface", "General filters are not available at this time.")
 	end
 
 	local logCompData = componentData.Data.Logs
 	local staffData = componentData.remoteFunction:InvokeServer("staffCheck")
+
+	_setupSearchBox(Frame, componentData)
 
 	if not staffData or logCompData.Status == false or staffData.Rank < logCompData.MinRank then
 		local fakeError: any = _createErrorLog("You don't have permission to view these logs.")
