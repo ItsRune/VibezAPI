@@ -249,10 +249,7 @@ Determines the behavior the sticks should use. There's currently 2 modes; 'Detec
 
 Removes specified rank stick types from being handed to the staff member. <br/>
 `array<string>` <br/>
-
-```lua
-{}
-```
+`{}`
 
 #### MinRank
 
@@ -276,13 +273,7 @@ The model/tool to use as the rank sticks. <br/>
 
 The animation id to use when the stick is activated. <br/>
 `table` <br/>
-
-```lua
-{
-    R6 = 17838471144,
-    R15 = 17837716782,
-}
-```
+`{ R6 = 17838471144, R15 = 17837716782 }`
 
 </details>
 
@@ -323,27 +314,13 @@ How many seconds until the notification disappears. <br/>
 
 Tweening info that determines how notifications will act when they appear on screen. <br/>
 `table` <br/>
-
-```lua
-{
-    Style = "Quint",
-    Direction = "InOut",
-    timeItTakes = 1,
-}
-```
+`{ Style = "Quint", Direction = "InOut", timeItTakes = 1 }`
 
 #### exitTweenInfo
 
 Tweening info that determines how notifications will act when they leave the screen. <br/>
 `table` <br/>
-
-```lua
-{
-    Style = "Quint",
-    Direction = "InOut",
-    timeItTakes = 1,
-}
-```
+`{ Style = "Quint", Direction = "InOut", timeItTakes = 1 }`
 
 </details>
 
