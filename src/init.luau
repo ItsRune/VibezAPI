@@ -35,6 +35,7 @@ local Types = require(script.Modules.Internal.Types)
 local checkingMethods = require(script.Modules.Internal.SettingsChecker)
 local Hooks = require(script.Modules.Hooks)
 local ActivityTracker = require(script.Modules.Activity)
+local Cooldowns = require(script.Modules.Internal.Cooldowns)
 local RateLimit = require(script.Modules.RateLimit)
 local Table = require(script.Modules.Table)
 local Promise = require(script.Modules.Promise)
@@ -269,33 +270,56 @@ local function onServerInvoke(
 					return reject("Too high to rank")
 				end
 
-				-- TODO: Handle different modes: "PerTarget" | "PerStaff" | "Both"
 				if self.Settings.Cooldowns.Enabled then
-					local theirCooldown = self._private.Cooldowns.Ranking[Target.UserId]
-					local now = DateTime.now().UnixTimestampMillis / 1000
+					local typedActions = {
+						["promote"] = "Ranking",
+						["demote"] = "Ranking",
+						["fire"] = "Ranking",
+						["setrank"] = "Ranking",
 
-					if now - theirCooldown < self.Settings.Cooldowns.Ranking then
-						local message = string.format(
-							"%s (%d) still has %d seconds left on their ranking cooldown!",
+						["blacklist"] = "Blacklisting",
+						["unblacklist"] = "Blacklisting",
+					}
+
+					local cooldownActionType = typedActions[Action]
+					local cooldownWaitTime = self.Settings.Cooldowns.waitTimes[cooldownActionType]
+
+					local staff, target =
+						Cooldowns.Get(Player, cooldownWaitTime), Cooldowns.Get(Target, cooldownWaitTime)
+					local staffOk, targetOk = staff:Check(), target:Check()
+
+					if
+						(self.Settings.Cooldowns.Mode == "Both" and not (staffOk and targetOk))
+						or (self.Settings.Cooldowns.Mode == "PerStaff" and not staffOk)
+						or (self.Settings.Cooldowns.Mode == "PerTarget" and not targetOk)
+					then
+						local reason = string.format(
+							"Either you (%s) or %s (%d) has a cooldown of %d seconds.",
+							Player.Name,
 							Target.Name,
 							Target.UserId,
-							math.abs(self.Settings.Cooldowns.Ranking - (DateTime.now().UnixTimestamp - theirCooldown))
+							math.max(staff.checkResult, target.checkResult)
 						)
 
-						self:_warn(message)
-						self:notifyPlayer(Player, "Error: " .. message)
-						return reject("Ranking cooldown")
+						self:_warn(reason)
+						self:notifyPlayer(Player, "Error: " .. reason)
+						return reject(reason)
 					end
 
-					self._private.Cooldowns.Ranking[Target.UserId] = now
+					if self.Settings.Cooldowns.Mode == "Both" or self.Settings.Cooldowns.Mode == "PerStaff" then
+						staff:Update()
+					end
+
+					if self.Settings.Cooldowns.Mode == "Both" or self.Settings.Cooldowns.Mode == "PerTarget" then
+						target:Update()
+					end
 				end
 
 				local actionFunc = getActionFunctionFromInvoke(Action)
 				local result, extraData = nil, {}
 				local logAction = (Action == "blacklist") and "Blacklist"
-					or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
+					or string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, -#Action + 1))
 
-				warn(actionFunc, Data)
 				if actionFunc == "Blacklist" then
 					local reason = Data[2] or "Unspecified"
 
@@ -3222,6 +3246,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				["default"] = "DetectionInFront",
 				["detectioninfront"] = "DetectionInFront",
 				["clickonplayer"] = "ClickOnPlayer",
+			},
+			Cooldowns = {
+				["default"] = "PerTarget",
+				["pertarget"] = "PerTarget",
+				["perstaff"] = "PerStaff",
+				["both"] = "Both",
 			},
 		},
 
