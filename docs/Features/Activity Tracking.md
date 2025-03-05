@@ -5,8 +5,6 @@ sidebar_position: 2
 ## How does the activity tracking work?
 The activity tracker works by using object orientated programming that creates specific functions to call upon each staff member within the game. This allows for a more efficient way of tracking staff members and their activity. The activity tracker is also able to track the amount of time a staff member has been active for, and the amount of time they have been inactive for. This allows for a more accurate representation of how active a staff member is.
 
-**NOTE:** Inactivity is not sent to Vibez API, it is only used for the activity tracker.
-
 ## Setup
 All you need to do is require the main module and change an option to `true`. Then you're all set up to use the activity tracker within your game.
 
