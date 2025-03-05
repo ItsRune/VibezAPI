@@ -12,3 +12,16 @@ The modes we offer are:
 | :--------------: | :--------------------------------------: | :-----:|
 | DetectionInFront | When clicked, the size of the staff member is projected in front and checks for any character's within the size. | ✔️ |
 | ClickOnPlayer | Only performs the ranking request when a player is clicked on. | ✖️ |
+
+### Setup
+**NOTE:** Rank sticks follows the removed <a href="/docs/Features/Commands/About">Commands</a> format to determine whether to add a stick type or not.
+
+```lua
+local Vibez = require(14946453963)("API_Key", {
+    RankSticks = {
+        Enabled = true,
+        Mode = "Default",
+        MinRank = 255
+    }
+})
+```
