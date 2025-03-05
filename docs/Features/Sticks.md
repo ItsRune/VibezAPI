@@ -14,7 +14,7 @@ The modes we offer are:
 | ClickOnPlayer | Only performs the ranking request when a player is clicked on. | ✖️ |
 
 ### Setup
-**NOTE:** Rank sticks follows the removed <a href="/docs/Features/Commands/About">Commands</a> format to determine whether to add a stick type or not.
+**NOTE:** Rank sticks follows the removed <a href="/VibezAPI/docs/Features/Commands/About">Commands</a> format to determine whether to add a stick type or not.
 
 ```lua
 local Vibez = require(14946453963)("API_Key", {
