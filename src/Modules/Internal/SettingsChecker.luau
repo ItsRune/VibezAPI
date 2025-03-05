@@ -16,7 +16,7 @@ local function test(self: Types.vibezApi, expr: boolean, checkName: string): boo
 		return expr
 	end
 
-	self:_debug("settings_check", "Test for '" .. checkName .. "' returned " .. (expr and "✅" or "❌"))
+	self:_debug("settings_check", "Test for '" .. checkName .. "' returned " .. (expr and "✔️" or "✖️"))
 	return expr
 end
 
@@ -120,16 +120,18 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 		elseif
 			test(
 				self,
-				typeof(Data) == "string" and latestKey == "Mode" and parentKey == "RankSticks",
+				typeof(Data) == "string"
+					and latestKey == "Mode"
+					and (parentKey == "RankSticks" or parentKey == "Cooldowns"),
 				"ranksticks_mode_validation"
 			)
 		then
-			if self._private.validModes[string.lower(tostring(Data))] then
+			if self._private.validModes[parentKey][string.lower(tostring(Data))] then
 				return Data
 			end
 
 			self:_warn(
-				string.format("%s '%s' is not a valid 'Mode' for RankSticks.", optionalKeyStarter, tostring(Data))
+				string.format("%s '%s' is not a valid 'Mode' for %s.", optionalKeyStarter, tostring(Data), parentKey)
 			)
 			return Default
 		elseif
