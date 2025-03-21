@@ -1,0 +1,75 @@
+{
+    "AppCenter": {
+        "apiKey": "string",
+        "autoSaveInterval": "number",
+
+        "reversalPlaceId": "number",
+        "timezoneToUse": "string",
+
+        "UI": {
+            "Header": "string",
+            "appSelectionNotStartedText": "Not Started",
+
+            "backgroundColor": "Color3",
+            "foregroundColor": "Color3",
+            "textColor": "Color3",
+            "buttonStrokeColor": "Color3"
+        },
+
+        "Messages": {
+            "uninitializedApi": "string",
+            "failedToRank": "string",
+            "rankedSuccessfully": "string",
+            "sentToDiscordSuccessfully": "string"
+        },
+
+        "Applications": [
+            {
+                "Title": "string",
+
+                "webhookToUse": "string?",
+                "webhookEmbedTitle": "string",
+                "webhookEmbedDescription": "string",
+
+                "durationsAndAmounts": {
+                    "sendApplicationDuration": "number|-1",
+                    "amountOfApplicationsFromPlayer": "number|-1"
+                },
+
+                "AutoRank": {
+                    "Enabled": "boolean",
+                    "toRankTo": "number",
+                    "MinimumScore": "number"
+                },
+
+                "Questions": [
+                    {
+                        "Question": "string",
+                        "Type": "Long Answer|Short Answer|Multiple Choice|Multi Select",
+                        "Meta": {
+                            "Max": "number?",
+                            "Buttons": [
+                                {
+                                    "Text": "Banana?",
+                                    "isCorrect": "boolean?"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+
+    "QuestionTypeMetadata": {
+        "Multi Select": {
+            "Max": "number",
+            "Buttons": [
+                {
+                    "Text": "string",
+                    "isCorrect": "boolean"
+                }
+            ]
+        }
+    }
+}
