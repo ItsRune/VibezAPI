@@ -1,6 +1,5 @@
 --!strict
 --// Services \\--
-local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 
 --// Types \\--
@@ -85,37 +84,28 @@ local function _addLog(Frame: any, componentData: Definitions.componentData, new
 	local nextNumber = #Frame.Scroll:GetChildren() - 3
 	local newTemplate = templateFrame:Clone()
 
-	local message = newLog.Action == "INTERNAL_ERROR" and newLog.errorMessage
-		or _fixStringForAction(componentData, newLog)
+	local isErrLog = newLog.Action:lower():match("error") ~= nil
+	local iconType = isErrLog and "Error" or "Info"
+	local message = isErrLog and newLog.errorMessage or _fixStringForAction(componentData, newLog)
 
 	if UserInputService.TouchEnabled then
 		newTemplate.UITextSizeConstraint.MaxTextSize /= 1.5
 	end
 
-	newTemplate.Name = "Log"
+	newTemplate.Name = nextNumber
 	newTemplate.Parent = Frame.Scroll
 
-	newTemplate.Name = nextNumber
-	newTemplate.Text = message
+	newTemplate.Message.Text = message
+	newTemplate.Message.Timestamp.Text = DateTime.fromUnixTimestamp(newLog.Timestamp):FormatLocalTime("en-us", "LTS")
+
+	-- Pcall for testing
+	pcall(function()
+		newTemplate.Icon[iconType].Visible = true
+	end)
+
 	newTemplate.LayoutOrder = nextLayoutOrder
-
-	--stylua: ignore
-	local isOk, frameSize = pcall(
-		TextService.GetTextSize,
-		TextService,
-		newTemplate.ContentText,
-		newTemplate.UITextSizeConstraint.MaxTextSize,
-		newTemplate.Font,
-		templateFrame.Parent.AbsoluteSize
-	)
-
-	if not isOk then
-		newTemplate:Destroy()
-		return
-	end
-
-	newTemplate.Size = UDim2.new(1, 0, 0, frameSize.Y)
 	newTemplate.Visible = true
+
 	nextLayoutOrder -= 1
 end
 

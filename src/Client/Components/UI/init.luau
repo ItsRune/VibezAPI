@@ -40,11 +40,11 @@ local function _changeSelectorHighlight(Tweens: Tweens, frameName: string)
 	-- Unselected color: 147, 147, 147
 
 	for _, topButton: Instance in ipairs(Top.Buttons:GetChildren()) do
-		if not topButton:IsA("TextButton") then
+		if not topButton:IsA("ImageButton") then
 			continue
 		end
 
-		local colorToShiftTo = (frameName == topButton.Name) and Color3.new(1, 1, 1) or Color3.fromRGB(147, 147, 147)
+		local colorToShiftTo = (frameName == topButton.Name) and 0 or 1
 		local Tween = Tweens(topButton, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
 			TextColor3 = colorToShiftTo,
 		})

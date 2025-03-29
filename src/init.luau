@@ -632,9 +632,10 @@ end
 
 	@private
 	@within VibezAPI
+	@method _setupCommands
 ]=]
 ---
-function api:_setupCommands()
+function api._setupCommands(self: Types.vibezApi)
 	type commandBase = { [number]: { Name: string, Alias: { string? }, Func: (Player: Player, Args: { string }) -> () } }
 	local baseCommands: commandBase = {
 		{
@@ -852,9 +853,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.4.0
+	@method _setupGlobals
 ]=]
 ---
-function api:_setupGlobals(): ()
+function api._setupGlobals(self: Types.vibezApi): ()
 	if
 		ServerStorage:FindFirstChild(self._private.clientScriptName)
 		or self.Settings.Misc.createGlobalVariables == false
@@ -942,9 +944,11 @@ end
 	@private
 	@within VibezAPI
 	@since 1.0.0
+	@method _http
 ]=]
 ---
-function api:_http(
+function api._http(
+	self: Types.vibezApi,
 	Route: string,
 	Method: any,
 	Headers: { [string]: any }?,
@@ -1033,9 +1037,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.1.0
+	@method _getGroupRankFromName
 ]=]
 ---
-function api:_getGroupRankFromName(groupRoleName: string): number?
+function api._getGroupRankFromName(self: Types.vibezApi, groupRoleName: string): number?
 	if not groupRoleName or typeof(groupRoleName) ~= "string" or groupRoleName == "" then
 		return nil
 	end
@@ -1065,9 +1070,11 @@ end
 	@private
 	@within VibezAPI
 	@since 0.1.0
+	@method _getGroupFromUser
 ]=]
 ---
-function api:_getGroupFromUser(
+function api._getGroupFromUser(
+	self: Types.vibezApi,
 	groupId: number,
 	userId: number,
 	force: boolean?
@@ -1140,9 +1147,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.5.0
+	@method _onPlayerAdded
 ]=]
 ---
-function api:_onPlayerAdded(Player: Player)
+function api._onPlayerAdded(self: Types.vibezApi, Player: Player)
 	-- Ensure API loads with all settings before initializing client.
 	local counter = 0
 	repeat
@@ -1253,9 +1261,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.5.0
+	@method _onPlayerRemoved
 ]=]
 ---
-function api:_onPlayerRemoved(Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
+function api._onPlayerRemoved(self: Types.vibezApi, Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
 	-- Check for and submit activity data.
 	for _, v in pairs(ActivityTracker.Keys) do
 		local class = v[Player.UserId]
@@ -1307,9 +1316,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.1.0
+	@method _getUserIdByName
 ]=]
 ---
-function api:_getUserIdByName(username: string): number
+function api._getUserIdByName(self: Types.vibezApi, username: string): number
 	local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, username)
 	return isOk and userId or -1
 end
@@ -1325,9 +1335,11 @@ end
 	@private
 	@within VibezAPI
 	@since 0.10.4
+	@method _fixFormattedString
 ]=]
 ---
-function api:_fixFormattedString(
+function api._fixFormattedString(
+	self: Types.vibezApi,
 	String: string,
 	Player: { Name: string, UserId: number } | Player,
 	Custom: { onlyApplyCustom: boolean, Codes: { { code: string, equates: string } } }
@@ -1372,9 +1384,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.1.0
+	@method _getNameById
 ]=]
 ---
-function api:_getNameById(userId: number): string
+function api._getNameById(self: Types.vibezApi, userId: number): string
 	local fixedUserId = tonumber(userId)
 	if not fixedUserId then
 		return tostring(userId)
@@ -1391,9 +1404,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.1.0
+	@method _createRemote
 ]=]
 ---
-function api:_createRemote()
+function api._createRemote(self: Types.vibezApi)
 	local remoteName: string = self._private.clientScriptName
 	local function findRemotes()
 		local event, func
@@ -1443,9 +1457,10 @@ end
 	@yields
 	@within VibezAPI
 	@since 0.11.0
+	@method notifyPlayer
 ]=]
 ---
-function api:notifyPlayer(Player: Player, Message: string): ()
+function api.notifyPlayer(self: Types.vibezApi, Player: Player, Message: string): ()
 	if self.Settings.Notifications.Enabled == false then
 		self:_warn(string.format("Notification request for %s (%d): ", Player.Name, Player.UserId), Message)
 		return
@@ -1464,9 +1479,11 @@ end
 	@yields
 	@within VibezAPI
 	@since 0.4.0
+	@method getUsersForCommands
 ]=]
 ---
-function api:getUsersForCommands(
+function api.getUsersForCommands(
+	self: Types.vibezApi,
 	playerWhoCalled: Player,
 	usernames: { string | number },
 	ignoreExternal: boolean?
@@ -1568,9 +1585,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.9.0
+	@method _giveSticks
 ]=]
 ---
-function api:_giveSticks(Player: Player)
+function api._giveSticks(self: Types.vibezApi, Player: Player)
 	local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
 	local rankStick = (self.Settings.RankSticks["sticksModel"] == nil) and script.RankSticks
 		or self.Settings.RankSticks["sticksModel"] :: any
@@ -1607,9 +1625,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.9.0
+	@method _removeSticks
 ]=]
 ---
-function api:_removeSticks(Player: Player): ()
+function api._removeSticks(self: Types.vibezApi, Player: Player): ()
 	local character = Player.Character
 	local backpack: Backpack? = Player.Backpack
 
@@ -1643,9 +1662,14 @@ end
 	@tag Chainable
 	@within VibezAPI
 	@since 0.9.1
+	@method giveRankSticks
 ]=]
 ---
-function api:giveRankSticks(User: Player | string | number, shouldCheckPermissions: boolean?): Types.vibezApi
+function api.giveRankSticks(
+	self: Types.vibezApi,
+	User: Player | string | number,
+	shouldCheckPermissions: boolean?
+): Types.vibezApi
 	local Player = self:_verifyUser(User, "Player") :: Player
 	if not Player then
 		return self
@@ -1671,9 +1695,10 @@ end
 	@tag Chainable
 	@within VibezAPI
 	@since 0.9.1
+	@method setRankStickTool
 ]=]
 ---
-function api:setRankStickTool(tool: any): Types.vibezApi
+function api.setRankStickTool(self: Types.vibezApi, tool: any): Types.vibezApi
 	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
 		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
 		return self
@@ -1737,9 +1762,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.1.0
+	@method _onPlayerChatted
 ]=]
 ---
-function api:_onPlayerChatted(Player: Player, message: string)
+function api._onPlayerChatted(self: Types.vibezApi, Player: Player, message: string)
 	-- Check for activity tracker to increment messages sent.
 	local token = Utils.rotateCharacters(string.reverse(self.apiKey), 128)
 	local existingTracker = (ActivityTracker.Keys[token] ~= nil) and ActivityTracker.Keys[token][Player.UserId] or nil
@@ -1798,9 +1824,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.8.0
+	@method _checkPlayerForRankChange
 ]=]
 ---
-function api:_checkPlayerForRankChange(userId: number)
+function api._checkPlayerForRankChange(self: Types.vibezApi, userId: number)
 	local target = Players:GetPlayerByUserId(userId)
 	if target == nil then
 		return
@@ -1822,9 +1849,10 @@ end
 	@private
 	@within VibezAPI
 	@since 1.0.2
+	@method _warn
 ]=]
 ---
-function api:_warn(...: string)
+function api._warn(self: Types.vibezApi, ...: string)
 	if self.Settings.Misc.ignoreWarnings then
 		return
 	end
@@ -1840,9 +1868,10 @@ end
 	@private
 	@within VibezAPI
 	@since 1.0.2
+	@method _debug
 ]=]
 ---
-function api:_debug(starter: string, ...: string)
+function api._debug(self: Types.vibezApi, starter: string, ...: string)
 	if not self.Settings or not self.Settings.Debug or not self.Settings.Debug.logMessages then
 		return
 	end
@@ -1858,9 +1887,11 @@ end
 	@private
 	@within VibezAPI
 	@since 0.7.0
+	@method _addLog
 ]=]
 ---
-function api:_addLog(
+function api._addLog(
+	self: Types.vibezApi,
 	calledBy: Player,
 	Action: string,
 	triggeringAction: "Commands" | "Interface" | "RankSticks",
@@ -1892,9 +1923,10 @@ end
 	@within VibezAPI
 	@private
 	@since 0.9.0
+	@method _buildAttributes
 ]=]
 ---
-function api:_buildAttributes()
+function api._buildAttributes(self: Types.vibezApi)
 	local function _convertEnumToString(
 		enum: Enum.Font | Enum.FontSize | Enum.EasingDirection | Enum.EasingStyle | Enum.KeyCode | string | number
 	): any
@@ -2027,7 +2059,7 @@ end
 	@within VibezAPI
 	@since 0.3.0
 ]=]
-function api:_playerIsValidStaff(Player: Player | number | string): { Rank: number, User: Player }
+function api._playerIsValidStaff(self: Types.vibezApi, Player: Player | number | string): { Rank: number, User: Player }
 	local userId = self:_verifyUser(Player, "Id") :: number
 	return self._private.requestCaches.validStaff[userId]
 end
@@ -2037,12 +2069,14 @@ end
 	@param User Player | number | string
 	@param typeToReturn "UserId" | "Player" | "Name"
 	@return number | string | Player
-
+	
 	@private
 	@within VibezAPI
 	@since 0.9.2
+	@method _verifyUser
 ]=]
-function api:_verifyUser(
+function api._verifyUser(
+	self: Types.vibezApi,
 	User: Player | number | string,
 	typeToReturn: "UserId" | "Player" | "Name" | "Id"
 ): Player | number | string
@@ -2083,13 +2117,14 @@ end
 --[=[
 	Fetches the group associated with the api key.
 	@return number | -1
-
+	
 	@yields
 	@within VibezAPI
 	@since 0.1.0
+	@method getGroupId
 ]=]
 ---
-function api:getGroupId()
+function api.getGroupId(self: Types.vibezApi)
 	-- Rather than adding yet another request on top of the rate limit, why not
 	-- just use the stored group id? Makes more sense in my mind, but we need
 	-- to ensure that the key wasn't recently changed.
@@ -2130,13 +2165,15 @@ end
 	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
-
+	
 	@yields
 	@within VibezAPI
 	@since 0.1.0
+	@method setRank
 ]=]
 ---
-function api:setRank(
+function api.setRank(
+	self: Types.vibezApi,
 	User: Player | string | number,
 	rankId: string | number,
 	whoCalled: { userName: string, userId: number }?
@@ -2192,13 +2229,15 @@ end
 	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
-
+	
 	@yields
 	@within VibezAPI
 	@since 0.1.0
+	@method Promote
 ]=]
 ---
-function api:Promote(
+function api.Promote(
+	self: Types.vibezApi,
 	User: Player | string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.rankResponse | Types.errorResponse
@@ -2241,13 +2280,15 @@ end
 	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
-
+	
 	@yields
 	@within VibezAPI
 	@since 0.1.0
+	@method Demote
 ]=]
 ---
-function api:Demote(
+function api.Demote(
+	self: Types.vibezApi,
 	User: Player | string | number,
 	whoCalled: { userName: string, userId: number }?
 ): Types.responseBody
@@ -2290,13 +2331,18 @@ end
 	@param User Player | string | number
 	@param whoCalled { userName: string, userId: number }?
 	@return rankResponse
-
+	
 	@yields
 	@within VibezAPI
 	@since 0.1.0
+	@method Fire
 ]=]
 ---
-function api:Fire(User: Player | string | number, whoCalled: { userName: string, userId: number }?): Types.responseBody
+function api.Fire(
+	self: Types.vibezApi,
+	User: Player | string | number,
+	whoCalled: { userName: string, userId: number }?
+): Types.responseBody
 	local userId = self:_verifyUser(User, "UserId")
 	local userName = self:_verifyUser(User, "Name")
 
@@ -2337,11 +2383,13 @@ end
 	@param commandAliases {string}?
 	@param commandOperation (Player: Player, Args: { string }, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }) -> ()
 	@return VibezAPI
-
+	
 	@within VibezAPI
 	@since 0.3.1
+	@method addCommand
 ]=]
-function api:addCommand(
+function api.addCommand(
+	self: Types.vibezApi,
 	commandName: string,
 	commandAliases: { string? },
 	commandOperation: (
@@ -2399,16 +2447,18 @@ end
 	@param operationCode string
 	@param operationFunction (playerToCheck: Player, incomingArgument: string, internalFunctions: { getGroupRankFromName: (groupRoleName: string) -> number?, getGroupFromUser: (groupId: number, userId: number) -> {any}?, Http: (Route: string, Method: string?, Headers: {[string]: any}, Body: {any}) -> httpResponse, addLog: ( calledBy: Player, Action: string, affectedUsers: {{ Name: string, UserId: number }}?, ...: any) -> () }) -> boolean
 	@return VibezAPI
-
+	
 	:::caution
 	This method will not work if there's already an existing operation name!
 	:::
-
+	
 	@within VibezAPI
 	@tag Chainable
 	@since 0.3.1
+	@method addArgumentPrefix
 ]=]
-function api:addArgumentPrefix(
+function api.addArgumentPrefix(
+	self: Types.vibezApi,
 	operationName: string,
 	operationCode: string,
 	operationFunction: (
@@ -2461,9 +2511,10 @@ end
 	@within VibezAPI
 	@tag Chainable
 	@since 0.3.1
+	@method removeArgumentPrefix
 ]=]
 ---
-function api:removeArgumentPrefix(operationName: string): Types.vibezApi
+function api.removeArgumentPrefix(self: Types.vibezApi, operationName: string): Types.vibezApi
 	self._private.commandOperationCodes[operationName] = nil
 	return self
 end
@@ -2474,9 +2525,10 @@ end
 	@within VibezAPI
 	@tag Chainable
 	@since 0.1.0
+	@method updateLoggerName
 ]=]
 ---
-function api:updateLoggerName(newTitle: string): Types.vibezApi
+function api.updateLoggerName(self: Types.vibezApi, newTitle: string): Types.vibezApi
 	self.Settings.Misc.originLoggerText = tostring(newTitle)
 	return self
 end
@@ -2489,9 +2541,10 @@ end
 	@yields
 	@within VibezAPI
 	@since 0.2.0
+	@method updateKey
 ]=]
 ---
-function api:updateKey(newApiKey: string): boolean
+function api.updateKey(self: Types.vibezApi, newApiKey: string): boolean
 	local savedKey = self.apiKey
 
 	self.apiKey = newApiKey
@@ -2530,9 +2583,10 @@ end
 	@private
 	@within VibezAPI
 	@since 0.1.1
+	@method isPlayerBooster
 ]=]
 ---
-function api:isPlayerABooster(User: number | string | Player): boolean?
+function api.isPlayerABooster(self: Types.vibezApi, User: number | string | Player): boolean?
 	local userId = self:_verifyUser(User, "UserId")
 
 	if not userId then
@@ -2569,9 +2623,10 @@ end
 
 	@within VibezAPI
 	@since 0.1.0
+	@method Destroy
 ]=]
 ---
-function api:Destroy()
+function api.Destroy(self: Types.vibezApi)
 	local fullMaid = Table.FlatMap(self._private.Maid, function(connectionValue: any)
 		return connectionValue
 	end)
@@ -2631,9 +2686,10 @@ end
 
 	@within VibezAPI
 	@since 0.5.0
+	@method getWebhookBuilder
 ]=]
 ---
-function api:getWebhookBuilder(webhook: string): Types.vibezHooks
+function api.getWebhookBuilder(self: Types.vibezApi, webhook: string): Types.vibezHooks
 	local newHook = Hooks.new(self, webhook)
 	return newHook
 end
@@ -2647,9 +2703,11 @@ end
 
 	@within VibezAPI
 	@since 0.6.0
+	@method addBlacklist
 ]=]
 ---
-function api:addBlacklist(
+function api.addBlacklist(
+	self: Types.vibezApi,
 	userToBlacklist: Player | string | number,
 	Reason: string?,
 	blacklistExecutedBy: Player | string | number
@@ -2690,9 +2748,11 @@ end
 
 	@within VibezAPI
 	@since 0.6.0
+	@method deleteBlacklist
 ]=]
 ---
-function api:deleteBlacklist(
+function api.deleteBlacklist(
+	self: Types.vibezApi,
 	userToDelete: Player | string | number
 ): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
 	if not userToDelete then
@@ -2721,9 +2781,11 @@ end
 
 	@within VibezAPI
 	@since 0.6.0
+	@method getBlacklists
 ]=]
 ---
-function api:getBlacklists(
+function api.getBlacklists(
+	self: Types.vibezApi,
 	userId: (string | number | Player)?
 ): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
 	userId = (userId ~= nil) and self:_verifyUser(userId, "UserId") or ""
@@ -2771,9 +2833,10 @@ end
 
 	@within VibezAPI
 	@since 0.6.0
+	@method isUserBlacklisted
 ]=]
 ---
-function api:isUserBlacklisted(User: Player | string | number): ...any
+function api.isUserBlacklisted(self: Types.vibezApi, User: Player | string | number): ...any
 	local userId = self:_verifyUser(User, "Id")
 	local blacklistData: any = self:getBlacklists(userId :: number) :: Types.userBlacklistResponse
 
@@ -2798,9 +2861,10 @@ end
 	@tag Chainable
 	@within VibezAPI
 	@since 0.8.0
+	@method waitUntilLoaded
 ]=]
 ---
-function api:waitUntilLoaded(): Types.vibezApi?
+function api.waitUntilLoaded(self: Types.vibezApi): Types.vibezApi?
 	self:_warn("Method 'waitUntilLoaded' is deprecated and shouldn't be used in newer games.")
 	self:_debug("deprecated_method_wait_until_loaded", "Attempted to use deprecated method.")
 	return self.Loaded and self or nil
@@ -2826,9 +2890,13 @@ end
 
 	@within VibezAPI
 	@since 0.3.0
+	@method getActivity
 ]=]
 ---
-function api:getActivity(User: Player | string | number): Types.activityResponse | Types.errorResponse
+function api.getActivity(
+	self: Types.vibezApi,
+	User: Player | string | number
+): Types.activityResponse | Types.errorResponse
 	local userId = self:_verifyUser(User, "UserId")
 
 	local body: any = { userId = userId }
@@ -2854,9 +2922,10 @@ end
 	@yields
 	@within VibezAPI
 	@since 0.11.0
+	@method removeActivity
 ]=]
 ---
-function api:removeActivity(User: Player | string | number): boolean
+function api.removeActivity(self: Types.vibezApi, User: Player | string | number): boolean
 	local userId = self:_verifyUser(User, "UserId") :: number
 	if not userId then
 		self:_debug("remove_activity", "Supplied user was not valid.")
@@ -2893,9 +2962,11 @@ end
 	@yields
 	@within VibezAPI
 	@since 0.3.0
+	@method saveActivity
 ]=]
 ---
-function api:saveActivity(
+function api.saveActivity(
+	self: Types.vibezApi,
 	User: Player | string | number,
 	userRank: number,
 	secondsSpent: number?,
@@ -2956,9 +3027,15 @@ end
 
 	@within VibezAPI
 	@since 0.9.0
+	@method bindToAction
 ]=]
 ---
-function api:bindToAction(name: string, action: string, callback: (result: Types.responseBody) -> ()): Types.vibezApi
+function api.bindToAction(
+	self: Types.vibezApi,
+	name: string,
+	action: string,
+	callback: (result: Types.responseBody) -> ()
+): Types.vibezApi
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[string.lower(action)] == nil then
@@ -2985,9 +3062,10 @@ end
 
 	@within VibezAPI
 	@since 0.9.0
+	@method unbindFromAction
 ]=]
 ---
-function api:unbindFromAction(name: string, action: string): Types.vibezApi
+function api.unbindFromAction(self: Types.vibezApi, name: string, action: string): Types.vibezApi
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[action] == nil then
@@ -3014,8 +3092,9 @@ end
 	@private
 	@within VibezAPI
 	@since 1.0.1
+	@method _initialize
 ]=]
-function api:_initialize(apiKey: string): ()
+function api._initialize(self: Types.vibezApi, apiKey: string): ()
 	if self._private._initialized then
 		return
 	end
