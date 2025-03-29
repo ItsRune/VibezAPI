@@ -1,5 +1,6 @@
 --!nocheck
 --// Services \\--
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
@@ -323,6 +324,12 @@ function onSetup(componentData: Definitions.componentData)
 		end)
 
 	componentData._debug("interface_initialization", "Setup completed.")
+
+	-- Apply group name as the title.
+	local groupNameLabel = Top.Left.Title
+	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, componentData.GroupId)
+
+	groupNameLabel.Text = isOk and groupInfo.Name or ""
 
 	-- Rojo doesn't recognize the .Wraps property on UIListLayouts...
 	-- - Turns out it also doesn't like using the specified fonts...
