@@ -156,4 +156,5 @@ end
 return {
 	Setup = onSetup,
 	Destroy = onDestroy,
+	Notify = _onNotification,
 }

@@ -343,6 +343,7 @@ end
 local function onSetup(Frame: any, componentData: Definitions.componentData)
 	local remoteFunction = componentData.remoteFunction
 	usernameTextBox = Frame.User.Username
+	usernameTextBox.Text = ""
 
 	-- Destroy first, in case there was an issue destroying previously.
 	onDestroy(Frame, componentData)

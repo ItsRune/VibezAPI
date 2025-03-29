@@ -29,27 +29,22 @@ local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 local UI = script.Interface
 local Frame = UI.Frame
-local Content, Top = Frame.Content, Frame.Top
+local Content, Top, Buttons = Frame.Content, Frame.Top, Frame.Buttons
 local currentOpenFrame, isToggled = nil, false
 local onSetup, onDestroy, _toggleUI, topBarButton
 
 --// Functions \\--
 -- Changes the color of the active topbar button to be a brighter white.
 local function _changeSelectorHighlight(Tweens: Tweens, frameName: string)
-	-- Selected color: 255, 255, 255
-	-- Unselected color: 147, 147, 147
-
-	for _, topButton: Instance in ipairs(Top.Buttons:GetChildren()) do
+	for _, topButton: Instance in ipairs(Buttons.Holder:GetChildren()) do
 		if not topButton:IsA("ImageButton") then
 			continue
 		end
 
-		local colorToShiftTo = (frameName == topButton.Name) and 0 or 1
-		local Tween = Tweens(topButton, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
-			TextColor3 = colorToShiftTo,
-		})
-
-		Tween:Play()
+		local transparencyToShiftTo = (frameName == topButton.Name) and 0 or 0.6
+		Tweens(topButton.Label, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
+			TextTransparency = transparencyToShiftTo,
+		}):Play()
 	end
 end
 
@@ -146,8 +141,8 @@ function _toggleUI(componentData: Definitions.componentData)
 	UI.Enabled = true
 
 	-- Setup top button tab buttons.
-	for _, componentButton: TextButton in ipairs(Top.Buttons:GetChildren()) do
-		if not componentButton:IsA("TextButton") or not componentButton.Visible then
+	for _, componentButton: TextButton in ipairs(Buttons.Holder:GetChildren()) do
+		if not componentButton:IsA("ImageButton") or not componentButton.Visible then
 			continue
 		end
 
@@ -219,8 +214,8 @@ function _toggleUI(componentData: Definitions.componentData)
 		Frame.Size = UDim2.fromScale(1, 0.45)
 	end
 
-	local visibleFrames = componentData.Table.Filter(Top.Buttons:GetChildren(), function(button: GuiBase2d)
-		return button:IsA("TextButton") and button.Visible == true
+	local visibleFrames = componentData.Table.Filter(Buttons.Holder:GetChildren(), function(button: GuiBase2d)
+		return button:IsA("ImageButton") and button.Visible == true
 	end)
 
 	local foundFrameThatsVisible = visibleFrames[1]
@@ -298,7 +293,7 @@ function onSetup(componentData: Definitions.componentData)
 	for _, viewableTab: string in ipairs(componentData.Data.nonViewableTabs) do
 		local debugView = table.create(#componentData.Data.nonViewableTabs)
 
-		for _, tab: GuiLabel in ipairs(Top.Buttons:GetChildren()) do
+		for _, tab: GuiLabel in ipairs(Buttons.Holder:GetChildren()) do
 			if string.lower(viewableTab) == string.lower(tab.Name) then
 				table.insert(debugView, tab.Name)
 				tab.Visible = false
@@ -328,6 +323,10 @@ function onSetup(componentData: Definitions.componentData)
 		end)
 
 	componentData._debug("interface_initialization", "Setup completed.")
+
+	-- Rojo doesn't recognize the .Wraps property on UIListLayouts...
+	-- - Turns out it also doesn't like using the specified fonts...
+	Content.Ranking.Actions.Body.UIListLayout.Wraps = true
 	return
 end
 

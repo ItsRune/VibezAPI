@@ -46,7 +46,7 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 		if
 			test(
 				self,
-				latestKey == "nonViewableTabs" and #Data >= #clientInterface.Frame.Top.Buttons:GetChildren() - 1,
+				latestKey == "nonViewableTabs" and #Data >= #clientInterface.Frame.Buttons:GetChildren() - 1,
 				"interface_viewable_tabs_validator"
 			)
 		then
