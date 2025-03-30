@@ -330,10 +330,6 @@ function onSetup(componentData: Definitions.componentData)
 	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, componentData.GroupId)
 
 	groupNameLabel.Text = isOk and groupInfo.Name or ""
-
-	-- Rojo doesn't recognize the .Wraps property on UIListLayouts...
-	-- - Turns out it also doesn't like using the specified fonts...
-	Content.Ranking.Actions.Body.UIListLayout.Wraps = true
 	return
 end
 
