@@ -9,8 +9,8 @@
 
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
-	Created: 9/11/2023 15:01 EST
-	Updated: 1/24/2025 14:34 EST
+	Created: 9/11/2023 15:01 EDT
+	Updated: 3/30/2025 09:10 EST
 	Version: 0.11.2
 
 	Note: If you don't know what you're doing, I would
@@ -58,9 +58,9 @@ local _privateKeys = {} :: { [string]: string? }
 ]=]
 local function generateNameColorForNotification(username: string): Color3
 	local NAME_COLORS = {
-		Color3.new(253 / 255, 41 / 255, 67 / 255), -- BrickColor.new("Bright red").Color,
-		Color3.new(1 / 255, 162 / 255, 255 / 255), -- BrickColor.new("Bright blue").Color,
-		Color3.new(2 / 255, 184 / 255, 87 / 255), -- BrickColor.new("Earth green").Color,
+		Color3.fromRGB(253, 41, 67),
+		Color3.fromRGB(1, 162, 255),
+		Color3.fromRGB(2, 184, 87),
 		BrickColor.new("Bright violet").Color,
 		BrickColor.new("Bright orange").Color,
 		BrickColor.new("Bright yellow").Color,
@@ -1345,7 +1345,7 @@ end
 	@method _getUserIdByName
 ]=]
 ---
-function api._getUserIdByName(self: Types.vibezApi, username: string): number
+function api._getUserIdByName(_self: Types.vibezApi, username: string): number
 	local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, username)
 	return isOk and userId or -1
 end
@@ -1413,7 +1413,7 @@ end
 	@method _getNameById
 ]=]
 ---
-function api._getNameById(self: Types.vibezApi, userId: number): string
+function api._getNameById(_self: Types.vibezApi, userId: number): string
 	local fixedUserId = tonumber(userId)
 	if not fixedUserId then
 		return tostring(userId)
