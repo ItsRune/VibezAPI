@@ -3,7 +3,6 @@
 local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local TextService = game:GetService("TextService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 --// Variables \\--
@@ -12,30 +11,32 @@ local notifGui = script.Notifications
 local Maid = {}
 
 --// Functions \\--
-local function _fixNotificationStatus(message: string): string
-	local statusCodes = {
-		["Error"] = '<b><font color = "rgb(255, 90, 90)">%s</font></b>',
-		["Warning"] = '<b><font color = "rgb(255, 171, 36)">%s</font></b>',
-		["Info"] = '<b><font color = "rgb(70, 163, 255)">%s</font></b>',
-		["Success"] = '<b><font color = "rgb(90, 255, 145)">%s</font></b>',
+local function _fixNotificationStatus(componentData: Definitions.componentData, message: string): string
+	local customFormatCodes: { [string]: string } = {
+		["<User>"] = "User",
+		["<Action>"] = "Action",
+		["<Error>"] = "Error",
+		["<Warn>"] = "Warning",
+		["<Info>"] = "Info",
+		["<Success>"] = "Success",
 	}
 
-	local words = string.split(message, " ")
-	local firstWord = words[1]
-	if string.match(firstWord, "[a-zA-Z0-9]:") == nil or #firstWord < 3 then
-		return message
-	end
+	for i in customFormatCodes do
+		local capture = `<{i}>([%w%s%p]+)</{i}>`
+		local matched = message:match(capture)
 
-	local splitTokens = string.split(firstWord, ":")
-	for i, v in pairs(statusCodes) do
-		if string.sub(string.lower(splitTokens[1]), 1, 3) == string.sub(string.lower(i), 1, 3) then
-			splitTokens[1] = string.format(v, splitTokens[1])
-			break
+		if not matched then
+			continue
 		end
+
+		local colorName = customFormatCodes[i]
+		local colorHex = componentData.Data.Colors[colorName]
+		local newFormat = '<b><font color="%s">%s</font></b>'
+
+		message = message:gsub(capture, newFormat:format(colorHex, capture))
 	end
 
-	words[1] = table.concat(splitTokens, ":")
-	return table.concat(words, " ")
+	return message
 end
 
 local function _verifyDynamicEnum(parentEnum: any, dynamicProperty: string): any
@@ -55,23 +56,25 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 	local notificationSettings = Settings.Notifications
 
 	if not dontAllowFormatting then
-		Message = _fixNotificationStatus(Message)
+		Message = _fixNotificationStatus(componentData, Message)
 	end
+
+	local notificationFont = Font.new(
+		componentData.Data.Font.Family,
+		(Enum.FontWeight :: any)[componentData.Data.Font.Weight],
+		(Enum.FontStyle :: any)[componentData.Data.Font.Style]
+	)
 
 	local newItem = Instance.new("TextLabel")
 	newItem.Name = "Notification"
 	newItem.Text = Message
 	newItem.RichText = true
 
-	local isOk, textSize = pcall(
-		TextService.GetTextSize,
-		TextService,
-		newItem.ContentText,
-		UserInputService.TouchEnabled and notificationSettings.FontSize
-			or notificationSettings.FontSize * notificationSettings.keyboardFontSizeMultiplier,
-		notificationSettings.Font,
-		notifGui.Holder.AbsoluteSize
-	)
+	local textBoundsParams = Instance.new("GetTextBoundsParams")
+	textBoundsParams.Font = notificationFont
+	textBoundsParams.Text = newItem.ContentText
+
+	local isOk, textSize = pcall(TextService.GetTextBoundsAsync, TextService, textBoundsParams)
 	if not isOk then
 		Debris:AddItem(newItem, 0)
 		componentData._debug("notification_request", "Failed to resize the TextLabel. Message content: " .. Message)
@@ -81,7 +84,7 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 	newItem.Parent = notifGui.Holder
 	newItem.TextWrapped = true
 	newItem.TextScaled = true
-	newItem.Font = notificationSettings.Font
+	newItem.FontFace = notificationFont
 	newItem.TextColor3 = Color3.new(1, 1, 1)
 	newItem.Size = UDim2.new(0, textSize.X, 0, 0)
 	newItem.Position = UDim2.fromScale(0.5, 1)

@@ -33,7 +33,16 @@ return {
 	Notifications = {
 		Enabled = true,
 
-		Font = Enum.Font.Gotham,
+		Colors = {
+			Users = "#cb82ff",
+			Actions = "#ffb34f",
+			Error = "#ff5a5a",
+			Warning = "#ffab24",
+			Info = "#46a3ff",
+			Success = "#5aff91",
+		},
+
+		Font = Enum.Font.GothamBlack, --Font.fromId(12187365977), -- Custom Font using the new font object. (Can also be an Enum.Font)
 		FontSize = 16,
 		keyboardFontSizeMultiplier = 1.25, -- Multiplier for fontsize keyboard users
 		delayUntilRemoval = 10, -- Seconds

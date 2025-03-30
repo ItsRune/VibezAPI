@@ -128,7 +128,7 @@ end
 	@ignore
 ]=]
 local function onServerInvoke(
-	self: any,
+	self: Types.vibezApi,
 	Player: Player,
 	Action: string,
 	Origin: "Interface" | "Sticks" | "Commands",
@@ -251,7 +251,7 @@ local function onServerInvoke(
 							string.upper(string.sub(Action, 1, 1)) .. string.lower(string.sub(Action, 2, #Action))
 						)
 					)
-					self:notifyPlayer(Player, "Error: That user's rank is higher OR equal to your rank.")
+					self:notifyPlayer(Player, "<Error>That user's rank is higher OR equal to your rank.</Error>")
 					return reject("Too high to rank")
 				end
 
@@ -337,7 +337,12 @@ local function onServerInvoke(
 					result = self[actionFunc](self, Target.UserId, { userName = Player.Name, userId = Player.UserId })
 				end
 
-				self:_addLog(Player, logAction, Origin, { Target }, table.unpack(extraData))
+				local logOrigin: any = Origin
+				if Origin == "Sticks" then
+					logOrigin = "RankSticks"
+				end
+
+				self:_addLog(Player, logAction, logOrigin, { Target }, table.unpack(extraData))
 
 				if
 					self._private.Binds[string.lower(actionFunc)] ~= nil
@@ -436,9 +441,29 @@ local function onServerInvoke(
 			return a[2] < b[2]
 		end)
 
+		--[[
+		Why are some errors formatted already?
+		{
+			"success": false,
+			"message": "Failed to change member rank: [This user](https://roblox.com/users/1945330710) is not a part of
+				[the Roblox group](https://roblox.com/groups/4543955)."
+		}
+		]]
+
 		local firstErr = likelyErrors[1]
 		if firstErr and firstErr[2] >= #Targets then
-			self:notifyPlayer(Player, "Error: Internal issue - <b>" .. firstErr[1] .. "</b>")
+			if firstErr[1]:match("roblox.com") ~= nil then
+				local tokens = firstErr[1]:split(":")
+				local userId = firstErr[1]:match("[%d]+")
+				local middleMessage = firstErr[1]:match("%)([%w%s]+)%[")
+				local playerName = self:_getNameById(userId)
+				local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, self.GroupId)
+
+				firstErr[1] =
+					`{tokens[1]}: <User>{playerName}({userId})</User> {middleMessage} <Group>{isOk and groupInfo.Name or self.GroupId}{isOk and `({self.GroupId})` or ""}</Group>`
+			end
+
+			self:notifyPlayer(Player, "<Error>Error</Error>: Internal issue - <b>" .. firstErr[1] .. "</b>")
 			return false
 		end
 
@@ -490,7 +515,8 @@ local function onServerInvoke(
 
 		return tbl
 	elseif Action == "staffCheck" then
-		local data = table.clone(self:_playerIsValidStaff(Player))
+		local x = self:_playerIsValidStaff(Player)
+		local data = table.clone(x)
 
 		-- No need to send their activity down to the client.
 		data.Tracker = nil
@@ -1937,6 +1963,31 @@ function api._buildAttributes(self: Types.vibezApi)
 		return enum
 	end
 
+	local function _convertFontToTable(font: Font | EnumItem)
+		local Obj = {
+			Family = "",
+			Weight = "",
+			Style = "",
+			Bold = false,
+		}
+
+		local ensuredFont = font :: Font
+		if typeof(font) == "EnumItem" then
+			ensuredFont = Font.fromEnum(font :: any)
+		end
+
+		local function fetchEnumItemName(enum: EnumItem)
+			return tostring(enum):split(".")[3]
+		end
+
+		Obj.Family = ensuredFont.Family
+		Obj.Bold = ensuredFont.Bold
+		Obj.Weight = fetchEnumItemName(ensuredFont.Weight)
+		Obj.Style = fetchEnumItemName(ensuredFont.Style)
+
+		return Obj
+	end
+
 	local function _serializeColor(Color: Color3 | BrickColor): string
 		local color3: Color3
 		if typeof(Color) == "BrickColor" then
@@ -1954,6 +2005,29 @@ function api._buildAttributes(self: Types.vibezApi)
 			math.floor(color3.G * 255),
 			math.floor(color3.B * 255)
 		)
+	end
+
+	local function _verifyColorTableIsHex(Colors: { [any]: string | Color3 }): { [string]: string }
+		for i in Colors do
+			local color = Colors[i]
+
+			if typeof(color) == "Color3" then
+				color = color:ToHex()
+			elseif typeof(color) == "string" then
+				local isOk = pcall(Color3.fromHex, color)
+				if not isOk then
+					color = baseSettings.Notifications.Colors[i]
+					self:_warn(`Unsupported color type expected hexidecimal, received {color}`)
+				end
+			else
+				self:_warn(`Unsupported color type expected string or Color3, received {typeof(color)}`)
+				color = baseSettings.Notifications.Colors[i]
+			end
+
+			Colors[i] = color
+		end
+
+		return Colors :: { [string]: string }
 	end
 
 	local function _handleImageIds(image: string | number): number?
@@ -1987,8 +2061,10 @@ function api._buildAttributes(self: Types.vibezApi)
 
 		Notifications = {
 			Status = self.Settings.Notifications.Enabled,
-			Font = _convertEnumToString(self.Settings.Notifications.Font),
+			Font = _convertFontToTable(self.Settings.Notifications.Font :: any),
 			FontSize = _convertEnumToString(self.Settings.Notifications.FontSize),
+
+			Colors = _verifyColorTableIsHex(self.Settings.Notifications.Colors),
 
 			keyboardFontSizeMultiplier = self.Settings.Notifications.keyboardFontSizeMultiplier,
 			delayUntilRemoval = self.Settings.Notifications.delayUntilRemoval,

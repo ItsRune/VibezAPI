@@ -128,6 +128,10 @@ export type vibezSettings = {
 	Notifications: {
 		Enabled: boolean,
 
+		Colors: {
+			[string]: string | Color3,
+		},
+
 		Font: Enum.Font | string,
 		FontSize: number,
 		keyboardFontSizeMultiplier: number,
@@ -201,8 +205,10 @@ export type vibezSettings = {
 
 	Cooldowns: {
 		Enabled: boolean,
+		Mode: "Both" | "PerStaff" | "PerTarget",
 		Ranking: number,
 		Blacklisting: number,
+		waitTimes: { [string]: number },
 	},
 
 	Misc: {
