@@ -75,7 +75,8 @@ end
 local function _createErrorLog(newError: string)
 	return {
 		Action = "INTERNAL_ERROR",
-		errorMessage = '<font color="rgb(200,50,50)">' .. newError .. "</font>",
+		errorMessage = newError,
+		Timestamp = DateTime.now().UnixTimestamp,
 	}
 end
 
@@ -94,9 +95,10 @@ local function _addLog(Frame: any, componentData: Definitions.componentData, new
 
 	newTemplate.Name = nextNumber
 	newTemplate.Parent = Frame.Scroll
+	newTemplate.Visible = true
 
 	newTemplate.Message.Text = message
-	newTemplate.Message.Timestamp.Text = DateTime.fromUnixTimestamp(newLog.Timestamp):FormatLocalTime("en-us", "LTS")
+	newTemplate.Message.Timestamp.Text = DateTime.fromUnixTimestamp(newLog.Timestamp):FormatLocalTime("LT", "en-us")
 
 	-- Pcall for testing
 	pcall(function()
@@ -104,7 +106,6 @@ local function _addLog(Frame: any, componentData: Definitions.componentData, new
 	end)
 
 	newTemplate.LayoutOrder = nextLayoutOrder
-	newTemplate.Visible = true
 
 	nextLayoutOrder -= 1
 end

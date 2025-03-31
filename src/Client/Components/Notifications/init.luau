@@ -13,27 +13,33 @@ local Maid = {}
 --// Functions \\--
 local function _fixNotificationStatus(componentData: Definitions.componentData, message: string): string
 	local customFormatCodes: { [string]: string } = {
-		["<User>"] = "User",
-		["<Action>"] = "Action",
-		["<Error>"] = "Error",
-		["<Warn>"] = "Warning",
-		["<Info>"] = "Info",
-		["<Success>"] = "Success",
+		["User"] = "Users",
+		["Action"] = "Actions",
+		["Group"] = "Group",
+		["Error"] = "Error",
+		["Warn"] = "Warning",
+		["Info"] = "Info",
+		["Success"] = "Success",
 	}
 
 	for i in customFormatCodes do
-		local capture = `<{i}>([%w%s%p]+)</{i}>`
-		local matched = message:match(capture)
+		local puncuationSet = "!%?%(%)%*&%%#%$@,%./\\"
+		local capture = `<{i}>([%w%s{puncuationSet}]+)</{i}>`
+		local matched
 
-		if not matched then
-			continue
-		end
+		repeat
+			matched = message:match(capture)
 
-		local colorName = customFormatCodes[i]
-		local colorHex = componentData.Data.Colors[colorName]
-		local newFormat = '<b><font color="%s">%s</font></b>'
+			if not matched then
+				continue
+			end
 
-		message = message:gsub(capture, newFormat:format(colorHex, capture))
+			local newFormat = '<font color="%s">%s</font>'
+			local colorName = customFormatCodes[i]
+			local colorHex = componentData.Data.Colors[colorName] or "#000000"
+
+			message = message:gsub(capture, newFormat:format(colorHex, matched))
+		until matched == nil
 	end
 
 	return message
@@ -57,6 +63,7 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 
 	if not dontAllowFormatting then
 		Message = _fixNotificationStatus(componentData, Message)
+		componentData._debug("notification_formatting_result", Message)
 	end
 
 	local notificationFont = Font.new(
@@ -151,7 +158,13 @@ local function onSetup(componentData: { [any]: any })
 	local remoteEvent = componentData.remoteEvent
 	remoteEvent.OnClientEvent:Connect(function(Command: string, dontAllowFormatting: boolean, ...: any)
 		if Command == "Notify" then
-			_onNotification(componentData, dontAllowFormatting, ...)
+			local data = { ... }
+
+			if typeof(dontAllowFormatting) == "string" then
+				table.insert(data, 1, dontAllowFormatting)
+			end
+
+			_onNotification(componentData, false, table.unpack(data))
 		end
 	end)
 end

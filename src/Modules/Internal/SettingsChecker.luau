@@ -16,7 +16,7 @@ local function test(self: Types.vibezApi, expr: boolean, checkName: string): boo
 		return expr
 	end
 
-	self:_debug("settings_check", "Test for '" .. checkName .. "' returned " .. (expr and "✔️" or "✖️"))
+	self:_debug("settings_check", "Test for '" .. checkName .. "' returned " .. (expr and "✅" or "⛔"))
 	return expr
 end
 
@@ -34,6 +34,7 @@ end
 ]]
 local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, path: string): any
 	local pathSplit = string.split(path, ".")
+	local ancestorKey = (#pathSplit > 1) and pathSplit[2] or "<UNKNOWN_ANCESTOR>"
 	local parentKey = (#pathSplit > 2) and pathSplit[#pathSplit - 1] or "<UNKNOWN_PARENT>"
 	local latestKey = (#pathSplit > 1) and pathSplit[#pathSplit] or "<UNKNOWN_CHILD>"
 
@@ -78,6 +79,14 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 			end
 
 			return Data
+		elseif
+			test(
+				self,
+				typeof(Data) == "table" and latestKey == "Colors" and ancestorKey == "Notifications",
+				"notification_color_check"
+			)
+		then
+			return Data
 		elseif test(self, typeof(Data) == "table" and typeof(Default) == "table", "same_type_tables_key_removal") then
 			-- Remove non-existant keys
 			for key: string, value: any in pairs(Data) do
@@ -104,6 +113,15 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 					and Data
 				or {}
 		elseif
+			test(
+				self,
+				latestKey == "Font" and ancestorKey == "Notifications" and typeof(Data) == "Font"
+					or (typeof(Data) == "EnumItem" and tostring(Data):split(".")[2] == "Font"),
+				"settings_check_notification_font"
+			)
+		then
+			return Data
+		elseif
 			-- Allow 'Font' keywords for Notifications.
 			test(
 				self,
@@ -116,7 +134,6 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 				"notifications_font"
 			)
 		then
-			warn(Data, Default)
 			return Data
 		elseif
 			-- Allow BrickColors for tag color
@@ -171,14 +188,14 @@ local function removeAllIgnoreNilChecks(
 ): ({ [any]: any }?, number)
 	local removedCount = currentCount or 0
 
-	if test(self, typeof(Data) == "table", "remove_ignore_checks_table_check") then
+	if test(self, typeof(Data) == "table", "remove_ignore_nested_table_check") then
 		for key: string, value: any in next, Data do
 			local result, newCount = removeAllIgnoreNilChecks(self, value, removedCount)
 
 			Data[key] = result
 			removedCount = newCount
 		end
-	elseif test(self, Data == "settings_check_ignore_nil_tbl", "remove_ignore_checks_main_check") then
+	elseif test(self, Data == "settings_check_ignore_nil_tbl", "remove_ignore_main_check") then
 		removedCount += 1
 		return nil, removedCount
 	end
@@ -189,7 +206,7 @@ end
 local function applyMissing(self: Types.vibezApi, Data: any, Default: { [any]: any })
 	for i in Default do
 		local TYPE = typeof(Data[i])
-		if test(self, TYPE == "table" and Table.Count(Data[i]) ~= 0, "apply_missing_nil_and_length_check") then
+		if test(self, TYPE == "table" and Table.Count(Data[i]) ~= 0, "apply_missing_nil_check") then
 			Data[i] = applyMissing(self, Data[i], Default[i])
 		elseif
 			test(self, (TYPE ~= "table" and TYPE ~= typeof(Default[i])) or TYPE == "nil", "apply_missing_value_check")

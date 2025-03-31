@@ -129,7 +129,13 @@ export type vibezSettings = {
 		Enabled: boolean,
 
 		Colors: {
-			[string]: string | Color3,
+			Users: string | Color3 | BrickColor,
+			Group: string | Color3 | BrickColor,
+			Action: string | Color3 | BrickColor,
+			Warning: string | Color3 | BrickColor,
+			Success: string | Color3 | BrickColor,
+			Error: string | Color3 | BrickColor,
+			Info: string | Color3 | BrickColor,
 		},
 
 		Font: Enum.Font | string,

@@ -33,16 +33,18 @@ return {
 	Notifications = {
 		Enabled = true,
 
+		-- Specific color codes that we use can be changed here.
 		Colors = {
-			Users = "#cb82ff",
-			Actions = "#ffb34f",
-			Error = "#ff5a5a",
-			Warning = "#ffab24",
-			Info = "#46a3ff",
-			Success = "#5aff91",
+			Users = Color3.fromRGB(255, 191, 0),
+			Actions = Color3.fromRGB(255, 179, 79),
+			Error = Color3.fromRGB(255, 90, 90),
+			Warning = Color3.fromRGB(255, 135, 36),
+			Info = Color3.fromRGB(70, 163, 255),
+			Success = Color3.fromRGB(90, 255, 145),
+			Group = Color3.fromRGB(255, 136, 188),
 		},
 
-		Font = Enum.Font.GothamBlack, --Font.fromId(12187365977), -- Custom Font using the new font object. (Can also be an Enum.Font)
+		Font = Font.fromId(12187365977), -- Custom Font using the new font object. (Can also be an Enum.Font)
 		FontSize = 16,
 		keyboardFontSizeMultiplier = 1.25, -- Multiplier for fontsize keyboard users
 		delayUntilRemoval = 10, -- Seconds

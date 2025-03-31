@@ -302,7 +302,7 @@ local function onServerInvoke(
 						)
 
 						self:_warn(reason)
-						self:notifyPlayer(Player, "Error: " .. reason)
+						self:notifyPlayer(Player, "<Error>Error</Error>: " .. reason)
 						return reject(reason)
 					end
 
@@ -357,7 +357,7 @@ local function onServerInvoke(
 					self:notifyPlayer(
 						Player,
 						string.format(
-							"Error: Attempting to %s %s (%d) resulted in an internal server error!",
+							"<Error>Error</Error>: Attempting to <Action>%s</Action> <User>%s (%d)</User> resulted in an internal server error!",
 							actionFunc == "Blacklist" and "blacklist" or "rank",
 							Target.Name,
 							Target.UserId
@@ -388,7 +388,7 @@ local function onServerInvoke(
 			self:notifyPlayer(
 				Player,
 				string.format(
-					"Info: Ranking %d players could take up to %d seconds",
+					"<Info>Info</Info>: Ranking %d players could take up to %d seconds",
 					#Targets,
 					#Targets * avgProcessingSpeedInSeconds
 				)
@@ -459,11 +459,20 @@ local function onServerInvoke(
 				local playerName = self:_getNameById(userId)
 				local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, self.GroupId)
 
+				--stylua: ignore
 				firstErr[1] =
-					`{tokens[1]}: <User>{playerName}({userId})</User> {middleMessage} <Group>{isOk and groupInfo.Name or self.GroupId}{isOk and `({self.GroupId})` or ""}</Group>`
+					`{tokens[1]}: <b><User>{playerName} ({userId})</User></b>{
+						middleMessage:sub(1, 1) == " " and middleMessage or " " .. middleMessage
+					}{
+						middleMessage:sub(#middleMessage,#middleMessage) == "" and " " or ""
+					}<b><Group>{
+						isOk and groupInfo.Name or self.GroupId
+					}{
+						isOk and ` ({self.GroupId})` or ""
+					}</Group></b>`
 			end
 
-			self:notifyPlayer(Player, "<Error>Error</Error>: Internal issue - <b>" .. firstErr[1] .. "</b>")
+			self:notifyPlayer(Player, "<b><Error>Error</Error></b>: Internal issue - " .. firstErr[1])
 			return false
 		end
 
@@ -475,8 +484,8 @@ local function onServerInvoke(
 			or "Unknown Ranking Action"
 
 		local moreUsersDifference = #resolvedPromises - maxResolved
-		local concatenatedUsernames = table.concat(notificationStringFilledWithUsers, ", ")
-			.. ((moreUsersDifference > 0) and " and " .. moreUsersDifference .. " more" or "")
+		local concatenatedUsernames =
+			`<User>{table.concat(notificationStringFilledWithUsers, ", ")}{(moreUsersDifference > 0) and " and " .. moreUsersDifference .. " more" or ""}</User>`
 
 		self:notifyPlayer(Player, string.format(fullNotificationString, realActionTitle, concatenatedUsernames))
 		return true
@@ -814,7 +823,7 @@ function api._setupCommands(self: Types.vibezApi)
 
 					local res: any = self:deleteBlacklist(Target.UserId)
 					if not res or not res.success then
-						self:notifyPlayer(Player, "Error: " .. res.errorMessage)
+						self:notifyPlayer(Player, "<Error>Error</Error>: " .. res.errorMessage)
 						continue
 					end
 
@@ -2007,17 +2016,24 @@ function api._buildAttributes(self: Types.vibezApi)
 		)
 	end
 
-	local function _verifyColorTableIsHex(Colors: { [any]: string | Color3 }): { [string]: string }
+	local function _verifyColorTableIsHex(Colors: { [string]: string | Color3 | BrickColor }): { [string]: string }
 		for i in Colors do
 			local color = Colors[i]
 
-			if typeof(color) == "Color3" then
-				color = color:ToHex()
+			if typeof(color) == "Color3" or typeof(color) == "BrickColor" then
+				if typeof(color) == "BrickColor" then
+					color = color.Color
+				end
+
+				color = "#" .. (color :: Color3):ToHex()
 			elseif typeof(color) == "string" then
-				local isOk = pcall(Color3.fromHex, color)
-				if not isOk then
+				if not color:match("^#?%x%x%x$") and not color:match("^#?%x%x%x%x%x%x$") then
 					color = baseSettings.Notifications.Colors[i]
 					self:_warn(`Unsupported color type expected hexidecimal, received {color}`)
+				end
+
+				if color:sub(1, 1) ~= "#" then
+					color = "#" .. color
 				end
 			else
 				self:_warn(`Unsupported color type expected string or Color3, received {typeof(color)}`)
@@ -3597,7 +3613,10 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			local message = (#Args == 1) and "" or table.concat(Args, " ", 2, #Args)
 
 			if #Users == 0 then
-				self:notifyPlayer(Player, "Please specify who you'd like to send a notification to.")
+				self:notifyPlayer(
+					Player,
+					"<Error>Error</Error>: Please specify who you'd like to send a notification to."
+				)
 				return
 			end
 
