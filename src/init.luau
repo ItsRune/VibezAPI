@@ -31,16 +31,17 @@ local Workspace = game:GetService("Workspace")
 local TestService = game:GetService("TestService")
 
 --// Modules \\--
-local Types = require(script.Modules.Internal.Types)
-local checkingMethods = require(script.Modules.Internal.SettingsChecker)
-local Hooks = require(script.Modules.Hooks)
-local ActivityTracker = require(script.Modules.Activity)
-local Cooldowns = require(script.Modules.Internal.Cooldowns)
-local RateLimit = require(script.Modules.RateLimit)
-local Table = require(script.Modules.Table)
-local Promise = require(script.Modules.Promise)
-local Utils = require(script.Modules.Utils)
-local baseSettings = require(script.Modules.Settings)
+local Types = require("./Modules/Internal/Types")
+local checkingMethods = require("./Modules/Internal/SettingsChecker")
+local Hooks = require("./Modules/Hooks")
+local ActivityTracker = require("./Modules/Activity")
+local Cooldowns = require("./Modules/Internal/Cooldowns")
+local RateLimit = require("./Modules/RateLimit")
+local Table = require("./Modules/Table")
+local Promise = require("./Modules/Promise")
+local Utils = require("./Modules/Utils")
+local baseSettings = require("./Modules/Settings")
+local Ranking = require("./Modules/VibezRanking")
 
 --// Constants \\--
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
@@ -3363,6 +3364,14 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		Holds a copy of the settings for the API.
 	]=]
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
+
+	--[=[
+		@prop Ranker VibezRanking
+		@since 11.3.0
+		@within VibezAPI
+		A class holding methods that interact with our api.
+	]=]
+	self.Ranker = Ranking.new(apiKey)
 
 	--[=[
 		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, Cooldowns: {Ranking:{[number]: number},Blacklisting:{[number]: number}}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
