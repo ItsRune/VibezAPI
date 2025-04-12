@@ -447,79 +447,59 @@ local function onSetup(Frame: any, componentData: Definitions.componentData)
 		end)
 	)
 
-	-- TODO: Add a dropdown for group ranks with the provided attribute "GroupId" on existing attr.
+	-- REVIEW: Future idea?
+	-- Add a dropdown for group ranks with the provided attribute "GroupId" on existing attr.
 	-- - Will provide easier use of users within the group along with simple suggestions that'll prevent time spent typing role names.
 	-- - Cache of group ranks to keep things simple.
 	local groupId = tonumber(componentData.GroupId) :: number
 	local rankTextBox = setRankFrame.newRank
-	local dropdownSuggestion = setRankFrame.Dropdown
+	local suggestionLabel = rankTextBox.Suggestion
+	local rankIdSuggestionLabel = rankTextBox.numSuggestion
 	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, groupId)
 
 	if not isOk or typeof(groupInfo) ~= "table" then
 		return
 	end
 
-	local function resetDropdown(disable: boolean?)
-		setRankButton.Visible = if disable == nil then false else disable
-		dropdownSuggestion.Visible = if disable == nil then dropdownSuggestion.Visible else false
-		componentData.Table.ForEach(dropdownSuggestion:GetChildren(), function(child)
-			if child:IsA("TextButton") and child.Name ~= "Template" then
-				child:Destroy()
-			end
-		end)
-	end
-
-	local function addToDropdown(roleInfo: any)
-		dropdownSuggestion.Visible = true
-		setRankButton.Visible = false
-
-		local newTemplate = dropdownSuggestion.Template:Clone()
-		newTemplate.Name = roleInfo.Name
-		newTemplate.Text = `{roleInfo.Name} ({roleInfo.Rank})`
-		newTemplate.Parent = dropdownSuggestion
-		newTemplate.Visible = true
-
-		table.insert(
-			Maid.suggestionButtons,
-			newTemplate.MouseButton1Up:Connect(function()
-				componentData._debug("setrank_dropdown_element_clicked", `Pressed '{roleInfo.Name} ({roleInfo.Rank})'`)
-				rankTextBox.Text = (tonumber(rankTextBox.Text)) and roleInfo.Rank or roleInfo.Name
-				resetDropdown(true)
-			end)
-		)
-	end
-
 	componentData._debug("interface_ranking_initialization", "Connecting textbox 'onTextChanged'.")
 	table.insert(
 		Maid.Main,
 		rankTextBox:GetPropertyChangedSignal("Text"):Connect(function()
-			local text = rankTextBox.Text
-			local id = tonumber(text)
-
-			resetDropdown()
-
-			if text == "" then
-				dropdownSuggestion.Visible = false
+			if rankTextBox.Text == "" then
+				suggestionLabel.Text = ""
+				rankIdSuggestionLabel.Text = ""
 				return
 			end
 
-			local filtered = {}
-
-			if id then
-				filtered = componentData.Table.Filter(groupInfo.Roles, function(roleInfo)
-					return roleInfo.Rank == id or roleInfo.Id == id
+			if tonumber(rankTextBox.Text) then
+				local filteredByRank = componentData.Table.Filter(groupInfo.Roles, function(role: any)
+					return role.Rank == tonumber(rankTextBox.Text) or role.Id == tonumber(rankTextBox.Text)
 				end)
-			else
-				filtered = componentData.Table.Filter(groupInfo.Roles, function(roleInfo)
-					return roleInfo.Name:lower():sub(1, #text) == text:lower()
-				end)
-			end
 
-			if #filtered > 0 then
-				for i = 1, #filtered do
-					addToDropdown(filtered[i])
+				if #filteredByRank == 0 then
+					rankIdSuggestionLabel.Text = '<font color="rgb(255,55,55)">(Unknown Rank)</font>'
+					return
 				end
+
+				rankIdSuggestionLabel.Text = string.format("(%s)", filteredByRank[1].Name)
+				return
 			end
+
+			local filteredByName = componentData.Table.Filter(groupInfo.Roles, function(role: any)
+				return string.sub(string.lower(role.Name), 1, #rankTextBox.Text) == string.lower(rankTextBox.Text)
+			end)
+
+			if #filteredByName == 0 then
+				local erroringLetter = string.sub(rankTextBox.Text, #rankTextBox.Text, #rankTextBox.Text)
+				suggestionLabel.Text = string.sub(rankTextBox.Text, 1, #rankTextBox.Text - 1)
+					.. '<font color="rgb(255,55,55)">'
+					.. erroringLetter
+					.. "</font>"
+				return
+			end
+
+			suggestionLabel.Text = rankTextBox.Text
+				.. string.sub(filteredByName[1].Name, #rankTextBox.Text + 1, #filteredByName[1].Name)
 		end)
 	)
 
@@ -527,7 +507,9 @@ local function onSetup(Frame: any, componentData: Definitions.componentData)
 	table.insert(
 		Maid.Main,
 		rankTextBox.FocusLost:Connect(function()
-			resetDropdown(true)
+			if suggestionLabel.Text ~= "" then
+				rankTextBox.Text = suggestionLabel.ContentText
+			end
 		end)
 	)
 end

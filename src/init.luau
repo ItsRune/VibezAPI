@@ -1096,48 +1096,6 @@ function api._getGroupRankFromName(self: Types.vibezApi, groupRoleName: string):
 end
 
 --[=[
-	Gets the role id of a rank.
-	@param rank number | string
-	@return number?
-
-	@yields
-	@private
-	@within VibezLightweight
-]=]
----
-function api._getRoleIdFromRank(self: Types.vibezApi, rank: number | string): number?
-	-- Don't use normal HTTP function, it'll send the api key.
-	local url = `https://groups.roproxy.com/v1/groups/{self.GroupId}/roles`
-	local isOk, response = pcall(HttpService.GetAsync, HttpService, url)
-	local decodedResponse = nil
-
-	if not isOk then
-		return nil
-	end
-
-	isOk, decodedResponse = pcall(HttpService.JSONDecode, HttpService, response)
-
-	if not isOk then
-		return nil
-	end
-
-	local toSearch = "rank"
-	local canBeNumber = (tonumber(rank) ~= nil)
-
-	if not canBeNumber then
-		toSearch = "name"
-	end
-
-	for _, roleData in pairs(decodedResponse.roles) do
-		if string.lower(tostring(roleData[toSearch])) == string.lower(tostring(rank)) then
-			return roleData.id
-		end
-	end
-
-	return nil
-end
-
---[=[
 	Uses roblox's group service to get a player's rank.
 	@param groupId number
 	@param userId number

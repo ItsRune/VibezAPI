@@ -260,14 +260,6 @@ export type vibezInternalApi = {
 		Custom: { onlyApplyCustom: boolean, Codes: { { code: string, equates: string } } }
 	) -> string,
 
-	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
-	_getGroupFromUser: (
-		self: vibezApi,
-		groupId: number,
-		userId: number,
-		force: boolean?
-	) -> { Rank: number, Role: string, Id: number?, errMessage: string? },
-	_getUserIdByName: (self: vibezApi, username: string) -> number,
 	_getRoleIdFromRank: (self: vibezApi, rank: number | string) -> number?,
 
 	_onInternalErrorLog: (self: vibezApi, message: string, stack: string) -> (),
@@ -301,6 +293,14 @@ export type vibezInternalApi = {
 		affectedUsers: { { Name: string, UserId: number } },
 		extraData: any?
 	) -> (),
+	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
+	_getGroupFromUser: (
+		self: vibezApi,
+		groupId: number,
+		userId: number,
+		force: boolean?
+	) -> { Rank: number, Role: string, Id: number?, errMessage: string? },
+	_getUserIdByName: (self: vibezApi, username: string) -> number,
 
 	_onPlayerRemoved: (self: vibezApi, Player: Player, isPlayerStillInGame: boolean?) -> (),
 	_onPlayerAdded: (self: vibezApi, Player: Player) -> (),
