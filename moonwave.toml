@@ -1,5 +1,11 @@
 gitRepoUrl = "https://github.com/ItsRune/VibezAPI"
-classOrder = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder"]
+
+[[classOrder]]
+classes = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder", "ActivityTracker"]
+
+[[classOrder]]
+section = "Ranker"
+classes = ["Ranking", "Result"]
 
 # Docusaurus settings
 [docusaurus]
