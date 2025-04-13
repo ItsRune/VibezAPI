@@ -1,3 +1,8 @@
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local VibezRanking = require(ServerScriptService.MainModule.Modules.VibezRanking)
+local VibezRanking = require(script.Parent.Parent.VibezRanking)
+
 export type RateLimit = {
 	isLimited: boolean,
 	_retryAfter: number,
@@ -294,12 +299,6 @@ export type vibezInternalApi = {
 		extraData: any?
 	) -> (),
 	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
-	_getGroupFromUser: (
-		self: vibezApi,
-		groupId: number,
-		userId: number,
-		force: boolean?
-	) -> { Rank: number, Role: string, Id: number?, errMessage: string? },
 	_getUserIdByName: (self: vibezApi, username: string) -> number,
 
 	_onPlayerRemoved: (self: vibezApi, Player: Player, isPlayerStillInGame: boolean?) -> (),
@@ -321,6 +320,7 @@ export type vibezPrivate = {
 
 	clientScriptName: string,
 	rateLimiter: RateLimit,
+	Ranker: VibezRanking.VibezRankingKind,
 
 	externalConfigCheckDelay: number,
 	lastLoadedExternalConfig: number,
