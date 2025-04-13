@@ -1,0 +1,3 @@
+[submodule "src/Modules/VibezRanking"]
+	path = src/Modules/VibezRanking
+	url = https://github.com/ItsRune/Vibez-Ranking

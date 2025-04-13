@@ -10,8 +10,8 @@
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EDT
-	Updated: 3/30/2025 09:10 EST
-	Version: 0.11.2
+	Updated: 4/13/2025 02:27 EST
+	Version: 0.12.0
 
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything. We don't offer
@@ -41,7 +41,7 @@ local Table = require("./Modules/Table")
 local Promise = require("./Modules/Promise")
 local Utils = require("./Modules/Utils")
 local baseSettings = require("./Modules/Settings")
-local Ranking = require("./Modules/VibezRanking")
+local Ranking = require(script.Modules.VibezRanking)
 
 --// Constants \\--
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
@@ -2204,53 +2204,6 @@ function api._verifyUser(
 		"Supplied user parameter does not match the types checked. ('" .. typeof(User) .. "')"
 	)
 	return User
-end
-
---// Public Functions \\--
---[=[
-	Fetches the group associated with the api key.
-	@return number | -1
-	
-	@yields
-	@within VibezAPI
-	@since 0.1.0
-	@method getGroupId
-]=]
----
-function api.getGroupId(self: Types.vibezApi)
-	-- Rather than adding yet another request on top of the rate limit, why not
-	-- just use the stored group id? Makes more sense in my mind, but we need
-	-- to ensure that the key wasn't recently changed.
-	if self.GroupId ~= -1 and not self._private.recentlyChangedKey then
-		return self.GroupId
-	end
-
-	self._private.recentlyChangedKey = false
-	local isOk, res = self:_http("/ranking/groupid", "post", nil :: any, nil)
-	local Body = res.Body :: Types.groupIdResponse
-
-	-- Make this a new thread, in case there's a failure we don't return nothing.
-	-- These lines below were for the planned dashboard, which has been placed on halt.
-	-- coroutine.wrap(function()
-	-- 	if Body ~= nil and Body["inGameConfigJSON"] ~= nil then
-	-- 		self:_warn("Loading Settings from dashboard...")
-
-	-- 		-- Convert JSON payload to lua tables
-	-- 		local jsonConversionIsOk, JSON = pcall(HttpService.JSONDecode, HttpService, Body.inGameConfigJSON)
-
-	-- 		if not jsonConversionIsOk then
-	-- 			self:_warn("Settings JSON parse error.")
-	-- 			return
-	-- 		end
-
-	-- 		-- Make current settings the template, so we can keep api key in the
-	-- 		-- settings table.
-	-- 		self.Settings = Table.Reconcile(JSON, self.Settings)
-	-- 		self:_warn("Settings have been loaded from the dashboard successfully!")
-	-- 	end
-	-- end)()
-
-	return isOk and Body.groupId or -1
 end
 
 --[=[
