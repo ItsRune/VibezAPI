@@ -17,7 +17,7 @@
 	not	recommend messing with anything. We don't offer
 	support for modified modules.
 ]]
-local _VERSION = "0.11.2"
+local _VERSION = "0.12.0"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
