@@ -1,6 +1,3 @@
-local ServerScriptService = game:GetService("ServerScriptService")
-
-local VibezRanking = require(ServerScriptService.MainModule.Modules.VibezRanking)
 local VibezRanking = require(script.Parent.Parent.VibezRanking)
 
 export type RateLimit = {
@@ -551,7 +548,7 @@ type activityTrackerContent = {
 	_afkCounter: number,
 	_increment: number,
 	_lastCheck: number,
-	_groupData: { Rank: number, Role: string, Id: number?, errMessage: string? },
+	_groupData: { Rank: number, Role: string, Id: number? }?,
 }
 
 export type ActivityTracker = typeof(setmetatable({} :: activityTrackerContent, {} :: activityTrackerMeta))

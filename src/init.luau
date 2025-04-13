@@ -42,7 +42,6 @@ local Promise = require(script.Modules.Promise)
 local Utils = require(script.Modules.Utils)
 local baseSettings = require(script.Modules.Settings)
 local VibezRanking = require(script.Modules.VibezRanking)
-local Ranking = require(script.Modules.VibezRanking)
 
 --// Constants \\--
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
@@ -2538,7 +2537,7 @@ end
 	@since 1.0.1
 	@method _initialize
 ]=]
-function api._initialize(self: Types.vibezApi, apiKey: string): ()
+function api._initialize(self: Types.vibezApi): ()
 	if self._private._initialized then
 		return
 	end

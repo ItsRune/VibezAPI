@@ -1,5 +1,7 @@
 std = "roblox"
 
+exclude=["*.d.lua","*.spec.lua", "Packages/*"]
+
 [lints]
 global_usage = "allow" # Since there's a global library, selene gets mad.
 incorrect_standard_library_use = "allow"

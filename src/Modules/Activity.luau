@@ -110,9 +110,9 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 	self._api, self._player = VibezAPI, forPlayer
 	self._seconds, self._messages, self._afkCounter, self._increment = 0, 0, 0, 1
 	self._lastCheck = DateTime.now().UnixTimestamp
-	self._groupData = self._api:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
 
-	if self._groupData then
+	local groupData = self._api._private.Ranker:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
+	if groupData:isErr() then
 		self._api:_warn(string.format("Setting up activity tracking for %s.", tostring(forPlayer)))
 
 		keyTracker[self._player.UserId] = self
@@ -139,6 +139,7 @@ function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.Activi
 		return self
 	end
 
+	self._groupData = groupData:unwrap()
 	self._api:_warn(
 		string.format(
 			"Activity tracker failed to load group rank for %s! This has resulted in activity not tracking this user!",
@@ -235,7 +236,7 @@ function Class:Left()
 		return
 	end
 
-	self._api:saveActivity(self._player.UserId, self._groupData.Rank, self._seconds, self._messages)
+	self._api._private.Ranker:saveActivity(self._player.UserId, self._groupData.Rank, self._seconds, self._messages)
 	self._api:_warn(string.format("User left and sent activity data for %s.", tostring(self._player)))
 	self:Destroy()
 end
