@@ -2786,6 +2786,67 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		commandOperationCodes = {},
 	}
 
+	-- Since the ranking methods are within the _private property, we need to create wrappers for them to work properly.
+	type whoCalledType = { userName: string, userId: number }?
+	local rankDefinitions = require(script.Modules.VibezRanking.Definitions)
+
+	--[=[
+		@method Promote
+		@since 0.1.0
+		@within VibezAPI
+		@return rankResponse
+		Increments a player's group rank by 1.
+	]=]
+	self.Promote = function(
+		this: Types.vibezApi,
+		user: Types.userType,
+		whoCalled: whoCalledType
+	): rankDefinitions.SetRankResponse | rankDefinitions.Error
+		return this._private.Ranker:Promote(user, whoCalled)
+	end
+
+	--[=[
+		@method Demote
+		@since 0.1.0
+		@within VibezAPI
+		@return rankResponse
+		Decrements a player's group rank by 1.
+	]=]
+	self.Demote = function(
+		this: Types.vibezApi,
+		user: Types.userType,
+		whoCalled: whoCalledType
+	): rankDefinitions.SetRankResponse | rankDefinitions.Error
+		return this._private.Ranker:Demote(user, whoCalled)
+	end
+
+	--[=[
+		@method Fire
+		@since 0.1.0
+		@within VibezAPI
+		@return boolean
+		Sets a player's group rank back to 1.
+	]=]
+	self.Fire = function(this: Types.vibezApi, user: Types.userType, whoCalled: whoCalledType): boolean
+		return this._private.Ranker:Fire(user, whoCalled)
+	end
+
+	--[=[
+		@method setRank
+		@since 0.1.0
+		@within VibezAPI
+		@return rankResponse
+		Sets a player's group rank to the defined rank/role.
+	]=]
+	self.setRank = function(
+		this: Types.vibezApi,
+		user: Types.userType,
+		rankId: string | number,
+		whoCalled: whoCalledType
+	): rankDefinitions.SetRankResponse | rankDefinitions.Error
+		return this._private.Ranker:setRank(user, rankId, whoCalled)
+	end
+
 	-- We'll have to set the settings debug/warning messages before
 	-- the settings check so that debug/warnings print properly.
 	self.Settings.Debug.logMessages = (
