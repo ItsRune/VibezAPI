@@ -10,14 +10,14 @@
 	Author: ltsRune
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EDT
-	Updated: 3/30/2025 09:10 EST
-	Version: 0.11.2
+	Updated: 4/13/2025 02:27 EST
+	Version: 0.12.0
 
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything. We don't offer
 	support for modified modules.
 ]]
-local _VERSION = "0.11.2"
+local _VERSION = "0.12.0"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -41,6 +41,7 @@ local Table = require(script.Modules.Table)
 local Promise = require(script.Modules.Promise)
 local Utils = require(script.Modules.Utils)
 local baseSettings = require(script.Modules.Settings)
+local VibezRanking = require(script.Modules.VibezRanking)
 
 --// Constants \\--
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
@@ -192,7 +193,7 @@ local function onServerInvoke(
 
 				local targetGroupData = self:_playerIsValidStaff(Target)
 				local targetGroupRank = (targetGroupData ~= nil) and targetGroupData.Rank
-					or self:_getGroupFromUser(self.GroupId, Target.UserId)
+					or self._private.Ranker:_getGroupFromUser(self.GroupId, Target.UserId):unwrap()
 
 				if typeof(targetGroupRank) == "table" then
 					targetGroupRank = targetGroupRank.Rank
@@ -323,18 +324,22 @@ local function onServerInvoke(
 				if actionFunc == "Blacklist" then
 					local reason = Data[2] or "Unspecified"
 
-					result = self[actionFunc](self, Target.UserId, reason, Player)
+					result = self._private.Ranker[actionFunc](self._private.Ranker, Target.UserId, reason, Player)
 					table.insert(extraData, reason)
 				elseif actionFunc == "setRank" then
 					local newRank = Data[2]
-					result = self[actionFunc](
-						self,
+					result = self._private.Ranker[actionFunc](
+						self._private.Ranker,
 						Target.UserId,
 						newRank,
 						{ userName = Player.Name, userId = Player.UserId }
 					)
 				else
-					result = self[actionFunc](self, Target.UserId, { userName = Player.Name, userId = Player.UserId })
+					result = self._private.Ranker[actionFunc](
+						self._private.Ranker,
+						Target.UserId,
+						{ userName = Player.Name, userId = Player.UserId }
+					)
 				end
 
 				local logOrigin: any = Origin
@@ -494,7 +499,7 @@ local function onServerInvoke(
 			classRouter(Player, Data[1])
 		end)
 	elseif Action == "isStaff" then
-		local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+		local groupData = self._private.Ranker:_getGroupFromUser(self.GroupId, Player.UserId):unwrap()
 		local tbl = {}
 
 		if #Data == 0 then
@@ -532,7 +537,7 @@ local function onServerInvoke(
 
 		return data
 	elseif Action == "Logs" then
-		local groupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+		local groupData = self._private.Ranker:_getGroupFromUser(self.GroupId, Player.UserId):unwrap()
 		if groupData.Rank == 0 then
 			return {}
 		end
@@ -905,31 +910,31 @@ function api._setupGlobals(self: Types.vibezApi): ()
 	globalsFolder.Parent = ServerStorage :: any
 
 	globalsFolder.Ranking.Promote.OnInvoke = function(...: any): any
-		return self:Promote(...)
+		return self._private.Ranker:Promote(...)
 	end
 
 	globalsFolder.Ranking.Demote.OnInvoke = function(...: any): any
-		return self:Demote(...)
+		return self._private.Ranker:Demote(...)
 	end
 
 	globalsFolder.Ranking.Fire.OnInvoke = function(...: any): any
-		return self:Fire(...)
+		return self._private.Ranker:Fire(...)
 	end
 
 	globalsFolder.Ranking.setRank.OnInvoke = function(...: any): any
-		return self:setRank(...)
+		return self._private.Ranker:setRank(...)
 	end
 
 	globalsFolder.ActivityTracker.Save.OnInvoke = function(...: any): any
-		return self:saveActivity(...)
+		return self._private.Ranker:saveActivity(...)
 	end
 
 	globalsFolder.ActivityTracker.Fetch.OnInvoke = function(...: any): any
-		return self:getActivity(...)
+		return self._private.Ranker:getActivity(...)
 	end
 
 	globalsFolder.ActivityTracker.Delete.OnInvoke = function(...: any): any
-		return self:removeActivity(...)
+		return self._private.Ranker:removeActivity(...)
 	end
 
 	globalsFolder.Notifications.Send.OnInvoke = function(...: any): any
@@ -941,29 +946,29 @@ function api._setupGlobals(self: Types.vibezApi): ()
 	end
 
 	globalsFolder.General.getGroup.OnInvoke = function(...: any): any
-		return self:_getGroupFromUser(...)
+		return self._private.Ranker:_getGroupFromUser(...)
 	end
 
 	globalsFolder.General.getGroupRank.OnInvoke = function(...: any): any
-		local data = self:_getGroupFromUser(...)
+		local data = self._private.Ranker:_getGroupFromUser(...)
 		return data["Rank"]
 	end
 
 	globalsFolder.General.getGroupRole.OnInvoke = function(...: any): any
-		local data = self:_getGroupFromUser(...)
+		local data = self._private.Ranker:_getGroupFromUser(...)
 		return data["Role"]
 	end
 
 	globalsFolder.Blacklists.Get.OnInvoke = function(...: any): any
-		return self:getBlacklists(...)
+		return self._private.Ranker:getBlacklists(...)
 	end
 
 	globalsFolder.Blacklists.Add.OnInvoke = function(...: any): any
-		return self:addBlacklist(...)
+		return self._private.Ranker:addBlacklist(...)
 	end
 
 	globalsFolder.Blacklists.Delete.OnInvoke = function(...: any): any
-		return self:deleteBlacklist(...)
+		return self._private.Ranker:deleteBlacklist(...)
 	end
 end
 
@@ -1002,7 +1007,7 @@ function api._http(
 				rawBody = "{}",
 				Headers = {
 					["Content-Type"] = "application/json",
-					["x-api-key"] = self.apiKey,
+					["x-api-key"] = self._private.Ranker._key,
 				},
 				Body = {
 					success = false,
@@ -1027,7 +1032,7 @@ function api._http(
 	end
 
 	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
-	generatedHeaders["x-api-key"] = self.apiKey
+	generatedHeaders["x-api-key"] = self._private.Ranker._key
 
 	-- Prevents sending api key to external URLs
 	-- Remove from 'Route' extra slash that was added
@@ -1093,86 +1098,6 @@ function api._getGroupRankFromName(self: Types.vibezApi, groupRoleName: string):
 	end
 
 	return nil
-end
-
---[=[
-	Uses roblox's group service to get a player's rank.
-	@param groupId number
-	@param userId number
-	@return { Rank: number?, Role: string?, Id: number?, errMessage: string? }
-
-	@yields
-	@private
-	@within VibezAPI
-	@since 0.1.0
-	@method _getGroupFromUser
-]=]
----
-function api._getGroupFromUser(
-	self: Types.vibezApi,
-	groupId: number,
-	userId: number,
-	force: boolean?
-): { Rank: number, Role: string, Id: number?, errMessage: string? }
-	if self._private.requestCaches.groupInfo[userId] ~= nil and not force then
-		return self._private.requestCaches.groupInfo[userId]
-	end
-
-	if RunService:IsStudio() and self.Settings.Misc.overrideGroupCheckForStudio == true then
-		self:_debug("get_group_from_user", "Studio override for permission check.")
-		return {
-			Rank = 255,
-			Role = "Unknown",
-		}
-	end
-
-	local isOk, data: { [any]: any } | string = pcall(GroupService.GetGroupsAsync, GroupService, userId)
-	local possiblePlayer = Players:GetPlayerByUserId(userId)
-	local found = nil
-
-	if not isOk then
-		self:_debug("get_group_from_user", "Failed to fetch group data for '" .. userId .. "'; Fake data provided.")
-		return {
-			Id = groupId,
-			Rank = 0,
-			Role = "Guest",
-			errMessage = data :: string,
-		}
-	end
-
-	for _, groupData in pairs(data) do
-		if groupData.Id == groupId then
-			found = groupData
-			break
-		end
-	end
-
-	if typeof(found) == "table" then
-		self._private.requestCaches.groupInfo[userId] = found
-		return found
-	end
-
-	if possiblePlayer ~= nil then
-		local rankOk, rank = pcall(possiblePlayer.GetRankInGroup, possiblePlayer, groupId)
-		local roleOk, role = pcall(possiblePlayer.GetRoleInGroup, possiblePlayer, groupId)
-
-		if rankOk and roleOk then
-			return {
-				Id = groupId,
-				Role = role,
-				Rank = rank,
-			}
-		end
-
-		self:_warn(`An error occurred whilst fetching group information from {tostring(possiblePlayer)}.`)
-	end
-
-	self:_debug("get_group_from_user", "Unexpected issue occurred.")
-	return {
-		Id = self.GroupId,
-		Role = "Guest",
-		Rank = 0,
-	}
 end
 
 --[=[
@@ -1242,8 +1167,7 @@ function api._onPlayerAdded(self: Types.vibezApi, Player: Player)
 	end
 
 	-- Get group data for setup below.
-	local theirGroupData: { Rank: number, Role: string, Id: number?, errMessage: string? } =
-		self:_getGroupFromUser(self.GroupId, Player.UserId)
+	local theirGroupData = self._private.Ranker:_getGroupFromUser(self.GroupId, Player.UserId):unwrap()
 
 	-- We want to hold all connections from users in order to
 	-- disconnect them later on, this will stop any memory
@@ -1256,7 +1180,6 @@ function api._onPlayerAdded(self: Types.vibezApi, Player: Player)
 		end)
 	)
 
-	-- Figure out a solution here to check for rank (Prevent rank 0 in validStaff table)
 	if self._private.requestCaches.validStaff[Player.UserId] == nil then
 		self._private.requestCaches.validStaff[Player.UserId] = { User = Player, Rank = theirGroupData.Rank }
 	end
@@ -1393,7 +1316,7 @@ function api._fixFormattedString(
 	-- local serScript = 'game:GetService("ServerScriptService")'
 	-- local workSpace = 'game:GetService("Workspace")'
 
-	local theirGroupData = self:_getGroupFromUser(self.GroupId, Player.UserId)
+	local theirGroupData = self._private.Ranker:_getGroupFromUser(self.GroupId, Player.UserId):unwrap()
 	local formattingCodes = Custom.onlyApplyCustom and Custom.Codes
 		or Table.Assign(Custom.Codes, {
 			{ code = "%(username%)", equates = tostring(Player.Name) },
@@ -1565,7 +1488,7 @@ function api.getUsersForCommands(
 						end,
 
 						getGroupFromUser = function(...)
-							return self:_getGroupFromUser(...)
+							return self._private.Ranker:_getGroupFromUser(...)
 						end,
 
 						addLog = function(...)
@@ -1802,7 +1725,7 @@ end
 ---
 function api._onPlayerChatted(self: Types.vibezApi, Player: Player, message: string)
 	-- Check for activity tracker to increment messages sent.
-	local token = Utils.rotateCharacters(string.reverse(self.apiKey), 128)
+	local token = Utils.rotateCharacters(string.reverse(self._private.Ranker._key), 128)
 	local existingTracker = (ActivityTracker.Keys[token] ~= nil) and ActivityTracker.Keys[token][Player.UserId] or nil
 	if existingTracker then
 		existingTracker:Chatted()
@@ -2205,270 +2128,6 @@ function api._verifyUser(
 	return User
 end
 
---// Public Functions \\--
---[=[
-	Fetches the group associated with the api key.
-	@return number | -1
-	
-	@yields
-	@within VibezAPI
-	@since 0.1.0
-	@method getGroupId
-]=]
----
-function api.getGroupId(self: Types.vibezApi)
-	-- Rather than adding yet another request on top of the rate limit, why not
-	-- just use the stored group id? Makes more sense in my mind, but we need
-	-- to ensure that the key wasn't recently changed.
-	if self.GroupId ~= -1 and not self._private.recentlyChangedKey then
-		return self.GroupId
-	end
-
-	self._private.recentlyChangedKey = false
-	local isOk, res = self:_http("/ranking/groupid", "post", nil :: any, nil)
-	local Body = res.Body :: Types.groupIdResponse
-
-	-- Make this a new thread, in case there's a failure we don't return nothing.
-	-- These lines below were for the planned dashboard, which has been placed on halt.
-	-- coroutine.wrap(function()
-	-- 	if Body ~= nil and Body["inGameConfigJSON"] ~= nil then
-	-- 		self:_warn("Loading Settings from dashboard...")
-
-	-- 		-- Convert JSON payload to lua tables
-	-- 		local jsonConversionIsOk, JSON = pcall(HttpService.JSONDecode, HttpService, Body.inGameConfigJSON)
-
-	-- 		if not jsonConversionIsOk then
-	-- 			self:_warn("Settings JSON parse error.")
-	-- 			return
-	-- 		end
-
-	-- 		-- Make current settings the template, so we can keep api key in the
-	-- 		-- settings table.
-	-- 		self.Settings = Table.Reconcile(JSON, self.Settings)
-	-- 		self:_warn("Settings have been loaded from the dashboard successfully!")
-	-- 	end
-	-- end)()
-
-	return isOk and Body.groupId or -1
-end
-
---[=[
-	Sets the rank of a player and `whoCalled` (Optional) is used for logging purposes.
-	@param User Player | string | number
-	@param whoCalled { userName: string, userId: number }?
-	@return rankResponse
-	
-	@yields
-	@within VibezAPI
-	@since 0.1.0
-	@method setRank
-]=]
----
-function api.setRank(
-	self: Types.vibezApi,
-	User: Player | string | number,
-	rankId: string | number,
-	whoCalled: { userName: string, userId: number }?
-): Types.responseBody
-	local userId = self:_verifyUser(User, "UserId")
-	local userName = self:_verifyUser(User, "Name")
-	local roleId = self:_getRoleIdFromRank(rankId)
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		self:_debug("set_rank", "Supplied UserId is not valid.")
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		}
-	end
-
-	if not tonumber(roleId) then
-		self:_debug("set_rank", "Supplied RoleId is not valid.")
-		return {
-			success = false,
-			errorMessage = "Parameter 'rankId' is an invalid rank.",
-		}
-	end
-
-	local body = {
-		userToRank = {
-			userId = tonumber(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tonumber(userId),
-		rankId = tonumber(roleId),
-	}
-
-	local isOk, response: any = self:_http("/ranking/changerank", "post", nil :: any, body)
-
-	if isOk and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, tonumber(userId) :: number)
-	end
-
-	return response.Body
-end
-
---[=[
-	Promotes a player and `whoCalled` (Optional) is used for logging purposes.
-	@param User Player | string | number
-	@param whoCalled { userName: string, userId: number }?
-	@return rankResponse
-	
-	@yields
-	@within VibezAPI
-	@since 0.1.0
-	@method Promote
-]=]
----
-function api.Promote(
-	self: Types.vibezApi,
-	User: Player | string | number,
-	whoCalled: { userName: string, userId: number }?
-): Types.rankResponse | Types.errorResponse
-	local userId = self:_verifyUser(User, "UserId")
-	local userName = self:_verifyUser(User, "Name")
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		self:_debug("promote", "Supplied UserId is not valid.")
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		}
-	end
-
-	local _, response: any = self:_http("/ranking/promote", "post", nil :: any, {
-		userToRank = {
-			userId = tostring(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tostring(userId),
-	})
-
-	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId :: number)
-	end
-
-	return response.Body
-end
-
---[=[
-	Demotes a player and `whoCalled` (Optional) is used for logging purposes.
-	@param User Player | string | number
-	@param whoCalled { userName: string, userId: number }?
-	@return rankResponse
-	
-	@yields
-	@within VibezAPI
-	@since 0.1.0
-	@method Demote
-]=]
----
-function api.Demote(
-	self: Types.vibezApi,
-	User: Player | string | number,
-	whoCalled: { userName: string, userId: number }?
-): Types.responseBody
-	local userId = self:_verifyUser(User, "UserId")
-	local userName = self:_verifyUser(User, "Name")
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		self:_debug("demote", "Supplied UserId is not valid.")
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		}
-	end
-
-	local _, response: any = self:_http("/ranking/demote", "post", nil, {
-		userToRank = {
-			userId = tostring(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tostring(userId),
-	})
-
-	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId :: number)
-	end
-
-	return response.Body
-end
-
---[=[
-	Fires a player and `whoCalled` (Optional) is used for logging purposes.
-	@param User Player | string | number
-	@param whoCalled { userName: string, userId: number }?
-	@return rankResponse
-	
-	@yields
-	@within VibezAPI
-	@since 0.1.0
-	@method Fire
-]=]
----
-function api.Fire(
-	self: Types.vibezApi,
-	User: Player | string | number,
-	whoCalled: { userName: string, userId: number }?
-): Types.responseBody
-	local userId = self:_verifyUser(User, "UserId")
-	local userName = self:_verifyUser(User, "Name")
-
-	if not whoCalled then
-		whoCalled = {
-			userName = "SYSTEM",
-			userId = -1,
-		}
-	end
-
-	if not tonumber(userId) then
-		self:_debug("fire", "Supplied UserId is not valid.")
-		return {
-			success = false,
-			errorMessage = "Parameter 'userId' must be a valid number.",
-		}
-	end
-
-	local _, response: any = self:_http("/ranking/fire", "post", nil, {
-		userToRank = {
-			userId = tostring(userId),
-			userName = userName,
-		},
-		userWhoRanked = whoCalled,
-		userId = tostring(userId),
-	})
-
-	if response.Success and response.Body and response.Body["success"] == true then
-		coroutine.wrap(self._checkPlayerForRankChange)(self, userId :: number)
-	end
-
-	return response.Body
-end
-
 --[=[
 	Creates a new command within our systems.
 	@param commandName string
@@ -2612,20 +2271,6 @@ function api.removeArgumentPrefix(self: Types.vibezApi, operationName: string): 
 end
 
 --[=[
-	Updates the logger's origin name.
-
-	@within VibezAPI
-	@tag Chainable
-	@since 0.1.0
-	@method updateLoggerName
-]=]
----
-function api.updateLoggerName(self: Types.vibezApi, newTitle: string): Types.vibezApi
-	self.Settings.Misc.originLoggerText = tostring(newTitle)
-	return self
-end
-
---[=[
 	Updates the api key.
 	@param newApiKey string
 	@return boolean
@@ -2637,14 +2282,14 @@ end
 ]=]
 ---
 function api.updateKey(self: Types.vibezApi, newApiKey: string): boolean
-	local savedKey = self.apiKey
+	local savedKey = self._private.Ranker._key
 
-	self.apiKey = newApiKey
+	self._private.Ranker._key = newApiKey
 	self._private.recentlyChangedKey = true
 
-	local groupId = self:getGroupId()
+	local groupId = self._private.Ranker:getGroupId(newApiKey)
 	if groupId == -1 and savedKey ~= nil then
-		self.apiKey = savedKey
+		self._private.Ranker._key = savedKey
 		self:_debug("update_key", "New api key '" .. newApiKey .. "' was invalid and was reverted to the previous one!")
 		self:_warn("We attempted to update your API key, however it resulted in being invalid!")
 		return false
@@ -2787,165 +2432,6 @@ function api.getWebhookBuilder(self: Types.vibezApi, webhook: string): Types.vib
 end
 
 --[=[
-	Adds a blacklist to your api key.
-	@param userToBlacklist (Player string | number)
-	@param Reason string?
-	@param blacklistExecutedBy (Player string | number)?
-	@return blacklistResponse
-
-	@within VibezAPI
-	@since 0.6.0
-	@method addBlacklist
-]=]
----
-function api.addBlacklist(
-	self: Types.vibezApi,
-	userToBlacklist: Player | string | number,
-	Reason: string?,
-	blacklistExecutedBy: Player | string | number
-): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
-	local userId, reason, blacklistedBy =
-		nil, (typeof(Reason) ~= "string" or Reason == "") and "Unknown." or Reason, nil
-
-	if not userToBlacklist then
-		self:_debug("add_blacklist", "An invalid user was supplied.")
-		return nil
-	elseif not blacklistExecutedBy then
-		blacklistExecutedBy = -1
-	end
-
-	userId = self:_verifyUser(userToBlacklist, "UserId")
-	blacklistedBy = self:_verifyUser(blacklistExecutedBy, "UserId")
-
-	local isOk, response: any = self:_http(`/blacklists/{userId}`, "put", nil, {
-		reason = reason,
-		blacklistedBy = blacklistedBy,
-	})
-
-	if not isOk then
-		self:_debug("add_blacklist", "An unexpected server issue occurred.")
-		return {
-			success = false,
-			message = "Internal server error.",
-		}
-	end
-
-	return response.Body
-end
-
---[=[
-	Deletes a blacklist from your api key.
-	@param userToDelete (Player string | number)
-	@return blacklistResponse
-
-	@within VibezAPI
-	@since 0.6.0
-	@method deleteBlacklist
-]=]
----
-function api.deleteBlacklist(
-	self: Types.vibezApi,
-	userToDelete: Player | string | number
-): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
-	if not userToDelete then
-		self:_debug("delete_blacklist", "An invalid user was supplied.")
-		return nil
-	end
-
-	local userId = self:_verifyUser(userToDelete, "UserId")
-	local isOk, response: any = self:_http(`/blacklists/{userId}`, "delete")
-
-	if not isOk then
-		self:_debug("delete_blacklist", "An unexpected server issue occurred.")
-		return {
-			success = false,
-			message = "Internal server error.",
-		}
-	end
-
-	return response.Body
-end
-
---[=[
-	Gets either a full list of blacklists or checks if a player is currently blacklisted.
-	@param userId (string | number | Player)?
-	@return blacklistResponse
-
-	@within VibezAPI
-	@since 0.6.0
-	@method getBlacklists
-]=]
----
-function api.getBlacklists(
-	self: Types.vibezApi,
-	userId: (string | number | Player)?
-): (Types.blacklistResponse | Types.errorResponse | Types.infoResponse)?
-	userId = (userId ~= nil) and self:_verifyUser(userId, "UserId") or ""
-	local isOk, response: any = self:_http(`/blacklists/{userId}`)
-
-	if not isOk or not response.Success then
-		self:_debug("get_blacklist", "An unexpected server issue occurred.")
-		return { success = false, message = response.Body.message or "Internal server error." }
-	end
-
-	local res = {}
-	if response.Body["isBlacklisted"] ~= nil then
-		res = {
-			success = true,
-			data = {
-				blacklisted = response.Body.isBlacklisted,
-				reason = response.Body.details.reason,
-				blacklistedBy = response.Body.details.blacklistedBy,
-			},
-		}
-	else
-		local newTable = {}
-		for _, value: { userId: (number | string)?, reason: string, blacklistedBy: number | string } in
-			pairs(response.Body.blacklists)
-		do
-			local userIdIndex = value.userId
-			value.userId = nil
-
-			newTable[userIdIndex] = value
-		end
-
-		res = {
-			success = true,
-			blacklists = newTable,
-		}
-	end
-
-	return res :: any
-end
-
---[=[
-	Gets either a full list of blacklists or checks if a player is currently blacklisted.
-	@param User Player | string | number
-	@return (boolean, string?, string?)
-
-	@within VibezAPI
-	@since 0.6.0
-	@method isUserBlacklisted
-]=]
----
-function api.isUserBlacklisted(self: Types.vibezApi, User: Player | string | number): ...any
-	local userId = self:_verifyUser(User, "Id")
-	local blacklistData: any = self:getBlacklists(userId :: number) :: Types.userBlacklistResponse
-
-	if blacklistData.success then
-		local data = {
-			blacklistData.data.blacklisted,
-			blacklistData.data.reason,
-			blacklistData.data.blacklistedBy,
-		}
-
-		return table.unpack(data)
-	end
-
-	return false, nil, nil
-end
-
---[=[
 	Gets a player's or everyone's current activity
 	@return VibezAPI?
 
@@ -2973,141 +2459,6 @@ function api.waitUntilLoaded(self: Types.vibezApi): Types.vibezApi?
 	-- 	task.wait(1)
 	-- 	counter += 1
 	-- until self.Loaded == true or counter >= maxCount
-end
-
---[=[
-	Gets a player's or everyone's current activity
-	@param User Player | string | number
-	@return activityResponse
-
-	@within VibezAPI
-	@since 0.3.0
-	@method getActivity
-]=]
----
-function api.getActivity(
-	self: Types.vibezApi,
-	User: Player | string | number
-): Types.activityResponse | Types.errorResponse
-	local userId = self:_verifyUser(User, "UserId")
-
-	local body: any = { userId = userId }
-	if User ~= nil and not userId then
-		self:_debug("get_activity", "Supplied user was not valid.")
-		return {
-			success = false,
-			errorMessage = "Invalid user was supplied.",
-		} :: Types.errorResponse
-	elseif not userId then
-		body = nil
-	end
-
-	local _, result = self:_http("/activity/fetch2", "post", nil, body)
-	return result.Body :: Types.activityResponse
-end
-
---[=[
-	Negates the player's activity seconds & message counts. (Does not clear detail logs array.)
-	@param User Player | string | number
-	@return boolean
-
-	@yields
-	@within VibezAPI
-	@since 0.11.0
-	@method removeActivity
-]=]
----
-function api.removeActivity(self: Types.vibezApi, User: Player | string | number): boolean
-	local userId = self:_verifyUser(User, "UserId") :: number
-	if not userId then
-		self:_debug("remove_activity", "Supplied user was not valid.")
-		return false
-	end
-
-	-- Get the current activity and negate the activity to remove it. (Temporary Solution)
-	local currentActivity = self:getActivity(userId) :: Types.activityResponse
-	if not currentActivity or not currentActivity["secondsUserHasSpent"] then
-		self:_debug("remove_activity", "Internal server error.")
-		return false
-	end
-
-	local userGroupInformation = self:_getGroupFromUser(self.GroupId, userId)
-
-	local secondsSpent = currentActivity.secondsUserHasSpent
-	local messagesSent = currentActivity.messagesUserHasSent
-	local fixedSeconds, fixedMessages =
-		(secondsSpent == 0) and 0 or -secondsSpent, (messagesSent == 0) and 0 or -messagesSent
-
-	local response: any = self:saveActivity(userId, userGroupInformation.Rank, fixedSeconds, fixedMessages)
-	return response.success or false
-end
-
---[=[
-	Saves the player's current activity
-	@param User Player | string | number
-	@param userRank number
-	@param secondsSpent number
-	@param messagesSent (number | { string })?
-	@param shouldFetchGroupRank boolean?
-	@return httpResponse
-
-	@yields
-	@within VibezAPI
-	@since 0.3.0
-	@method saveActivity
-]=]
----
-function api.saveActivity(
-	self: Types.vibezApi,
-	User: Player | string | number,
-	userRank: number,
-	secondsSpent: number?,
-	messagesSent: (number | { string })?,
-	shouldFetchGroupRank: boolean?
-): (Types.infoResponse | Types.errorResponse)?
-	local userId = self:_verifyUser(User, "UserId") :: number
-	messagesSent = (typeof(messagesSent) == "table") and #messagesSent
-		or (tonumber(messagesSent) ~= nil) and messagesSent
-		or nil
-	userRank = (typeof(userRank) == "number" or tonumber(userRank) ~= nil) and userRank or -1
-
-	if not tonumber(messagesSent) then
-		local errMessage = "Cannot save activity with an invalid 'number' as the 'messagesSent' parameter!"
-		self:_warn(errMessage)
-		return {
-			success = false,
-			errorMessage = errMessage,
-		}
-	elseif not tonumber(secondsSpent) then
-		local errMessage = "Cannot save activity with an invalid 'number' as the 'secondsSpent' parameter!"
-		self:_warn(errMessage)
-		return {
-			success = false,
-			errorMessage = errMessage,
-		}
-	end
-
-	if shouldFetchGroupRank == true then
-		local groupData = self:_getGroupFromUser(self.GroupId, userId)
-
-		if typeof(groupData) ~= "table" then
-			self:_warn(`Could not fetch group data.`)
-			return
-		end
-
-		userRank = groupData.Rank
-	end
-
-	secondsSpent, messagesSent = tonumber(secondsSpent), tonumber(messagesSent)
-
-	local _, response: any = self:_http("/activity/save2", "post", nil, {
-		userId = userId,
-		userRank = userRank,
-		secondsUserHasSpent = secondsSpent,
-		messagesUserHasSent = messagesSent,
-	})
-
-	return response.Body
 end
 
 --[=[
@@ -3186,16 +2537,15 @@ end
 	@since 1.0.1
 	@method _initialize
 ]=]
-function api._initialize(self: Types.vibezApi, apiKey: string): ()
+function api._initialize(self: Types.vibezApi): ()
 	if self._private._initialized then
 		return
 	end
 	self._private._initialized = true
 
 	-- Update the api key using the public function, in case of errors it'll log them.
-	local isOk = self:updateKey(apiKey)
 
-	if not isOk then
+	if self._private.Ranker.GroupId == -1 then
 		self:Destroy()
 		return setmetatable({}, {
 			__index = function()
@@ -3207,6 +2557,8 @@ function api._initialize(self: Types.vibezApi, apiKey: string): ()
 			end,
 		})
 	end
+
+	self.GroupId = self._private.Ranker.GroupId
 
 	-- UI communication handler
 	local remoteFunction: any, remoteEvent: any = self:_createRemote()
@@ -3354,7 +2706,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		@within VibezAPI
 		Holds the groupId associated with the API Key.
 	]=]
-	self.GroupId = -1
 
 	--[=[
 		@prop Settings extraOptionsType
@@ -3365,7 +2716,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 
 	--[=[
-		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, Cooldowns: {Ranking:{[number]: number},Blacklisting:{[number]: number}}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
+		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, Ranker: Ranking, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, Cooldowns: {Ranking:{[number]: number},Blacklisting:{[number]: number}}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
 		@since 0.1.0
 		@private
 		@within VibezAPI
@@ -3382,6 +2733,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 
 		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
 		rateLimiter = RateLimit.new(60, 60),
+		Ranker = VibezRanking.new(apiKey),
 
 		externalConfigCheckDelay = 600, -- 600 = 10 minutes | Change below if changed
 		lastLoadedExternalConfig = DateTime.now().UnixTimestamp - 600,
@@ -3433,6 +2785,67 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		commandOperations = {},
 		commandOperationCodes = {},
 	}
+
+	-- Since the ranking methods are within the _private property, we need to create wrappers for them to work properly.
+	type whoCalledType = { userName: string, userId: number }?
+	local rankDefinitions = require(script.Modules.VibezRanking.Definitions)
+
+	--[=[
+		@method Promote
+		@since 0.1.0
+		@within VibezAPI
+		@return rankResponse
+		Increments a player's group rank by 1.
+	]=]
+	self.Promote = function(
+		this: Types.vibezApi,
+		user: Types.userType,
+		whoCalled: whoCalledType
+	): rankDefinitions.SetRankResponse | rankDefinitions.Error
+		return this._private.Ranker:Promote(user, whoCalled)
+	end
+
+	--[=[
+		@method Demote
+		@since 0.1.0
+		@within VibezAPI
+		@return rankResponse
+		Decrements a player's group rank by 1.
+	]=]
+	self.Demote = function(
+		this: Types.vibezApi,
+		user: Types.userType,
+		whoCalled: whoCalledType
+	): rankDefinitions.SetRankResponse | rankDefinitions.Error
+		return this._private.Ranker:Demote(user, whoCalled)
+	end
+
+	--[=[
+		@method Fire
+		@since 0.1.0
+		@within VibezAPI
+		@return boolean
+		Sets a player's group rank back to 1.
+	]=]
+	self.Fire = function(this: Types.vibezApi, user: Types.userType, whoCalled: whoCalledType): boolean
+		return this._private.Ranker:Fire(user, whoCalled)
+	end
+
+	--[=[
+		@method setRank
+		@since 0.1.0
+		@within VibezAPI
+		@return rankResponse
+		Sets a player's group rank to the defined rank/role.
+	]=]
+	self.setRank = function(
+		this: Types.vibezApi,
+		user: Types.userType,
+		rankId: string | number,
+		whoCalled: whoCalledType
+	): rankDefinitions.SetRankResponse | rankDefinitions.Error
+		return this._private.Ranker:setRank(user, rankId, whoCalled)
+	end
 
 	-- We'll have to set the settings debug/warning messages before
 	-- the settings check so that debug/warnings print properly.
@@ -3653,63 +3066,66 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		self:_setupGlobals()
 	end
 
+	--[[
 	-- This code will be kept in case I brick the module again with my descriptive comments. :rolling_eyes:
-	-- if self.Settings.Misc.checkForUpdates then
-	-- 	-- Auto-Update with github, lets hope this doesn't hit any rate limits.
-	-- 	-- Check with _VERSION variable and warn the download link.
-	-- 	-- [%d]+.[%d]+.[%d]+
-	-- 	local isOk, response, JSON
-	-- 	isOk, response =
-	-- 		pcall(HttpService.GetAsync, HttpService, "https://api.github.com/repos/ItsRune/VibezAPI/releases/latest")
-	-- 	if not isOk then
-	-- 		return
-	-- 	end
+	if self.Settings.Misc.checkForUpdates then
+		-- Auto-Update with github, lets hope this doesn't hit any rate limits.
+		-- Check with _VERSION variable and warn the download link.
+		-- [%d]+.[%d]+.[%d]+
+		local isOk, response, JSON
+		isOk, response =
+			pcall(HttpService.GetAsync, HttpService, "https://api.github.com/repos/ItsRune/VibezAPI/releases/latest")
+		if not isOk then
+			return
+		end
 
-	-- 	isOk, JSON = pcall(HttpService.JSONDecode, HttpService, response)
-	-- 	if not isOk then
-	-- 		return
-	-- 	end
+		isOk, JSON = pcall(HttpService.JSONDecode, HttpService, response)
+		if not isOk then
+			return
+		end
 
-	-- 	local tagName = JSON.tag_name
-	-- 	local currentTag = "v" .. _VERSION
-	-- 	if currentTag ~= tagName then
-	-- 		local downloadLink = "(Can't Find)"
-	-- 		do
-	-- 			local vibezRBXM = Table.Find(JSON.assets, function(data)
-	-- 				return string.match(data.name, ".rbxm") ~= nil
-	-- 			end)
+		local tagName = JSON.tag_name
+		local currentTag = "v" .. _VERSION
+		if currentTag ~= tagName then
+			local downloadLink = "(Can't Find)"
+			do
+				local vibezRBXM = Table.Find(JSON.assets, function(data)
+					return string.match(data.name, ".rbxm") ~= nil
+				end)
 
-	-- 			if vibezRBXM then
-	-- 				downloadLink = vibezRBXM.browser_download_url
-	-- 			end
-	-- 		end
+				if vibezRBXM then
+					downloadLink = vibezRBXM.browser_download_url
+				end
+			end
 
-	-- 		local updateInfo = string.format(
-	-- 			"There's an update available whenever you're free! Your current version is v%s the latest version is %s\n\nYou can download the update here:\n%s",
-	-- 			_VERSION,
-	-- 			tagName,
-	-- 			downloadLink
-	-- 		)
-	-- 		local changelogInfo = ""
+			local updateInfo = string.format(
+				"There's an update available whenever you're free! Your current version is v%s the latest version is %s\n\nYou can download the update here:\n%s",
+				_VERSION,
+				tagName,
+				downloadLink
+			)
+			local changelogInfo = ""
 
-	-- 		if JSON.body ~= "" then
-	-- 			local fixedBody = string.gsub(JSON.body, "`[%(%)a-zA-Z]+`", function(str: string)
-	-- 				return string.format("'%s'", string.sub(str, 2, #str - 1))
-	-- 			end)
-	-- 			changelogInfo = string.format("\n\nChangelog:\n%s", fixedBody)
-	-- 		end
+			if JSON.body ~= "" then
+				local fixedBody = string.gsub(JSON.body, "`[%(%)a-zA-Z]+`", function(str: string)
+					return string.format("'%s'", string.sub(str, 2, #str - 1))
+				end)
+				changelogInfo = string.format("\n\nChangelog:\n%s", fixedBody)
+			end
 
-	-- 		if _G.VIBEZ_VERSION_CHECK then
-	-- 			return
-	-- 		end
+			if _G.VIBEZ_VERSION_CHECK then
+				return
+			end
 
-	-- 		_G.VIBEZ_VERSION_CHECK = true
-	-- 		TestService:Message("\n" .. updateInfo .. changelogInfo)
-	-- 		-- self:_warn(updateInfo .. changelogInfo)
-	-- 	end
-	-- end
+			_G.VIBEZ_VERSION_CHECK = true
+			TestService:Message("\n" .. updateInfo .. changelogInfo)
+			-- self:_warn(updateInfo .. changelogInfo)
+		end
+	end
+	]]
+	--
 
-	_privateKeys[self.apiKey] = self._private.clientScriptName
+	_privateKeys[self._private.Ranker._key] = self._private.clientScriptName
 	TestService:Message(string.format("Vibez v%s has successfully been loaded into this server!", _VERSION))
 
 	self.Loaded = true

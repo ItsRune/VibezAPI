@@ -4,6 +4,8 @@ sidebar_position: 1
 
 # Getting Started
 
+**NOTE**: If you'd prefer to use the module without all the features, we highly recommend looking at the [Vibez Ranking](https://itsrune.github.io/VibezRanking) module. (Recommended for application centers, etc.)
+
 ### Installation
 
 #### Method 1 (Recommended)

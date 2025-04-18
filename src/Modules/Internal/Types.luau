@@ -1,3 +1,5 @@
+local VibezRanking = require(script.Parent.Parent.VibezRanking)
+
 export type RateLimit = {
 	isLimited: boolean,
 	_retryAfter: number,
@@ -294,12 +296,6 @@ export type vibezInternalApi = {
 		extraData: any?
 	) -> (),
 	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
-	_getGroupFromUser: (
-		self: vibezApi,
-		groupId: number,
-		userId: number,
-		force: boolean?
-	) -> { Rank: number, Role: string, Id: number?, errMessage: string? },
 	_getUserIdByName: (self: vibezApi, username: string) -> number,
 
 	_onPlayerRemoved: (self: vibezApi, Player: Player, isPlayerStillInGame: boolean?) -> (),
@@ -321,6 +317,7 @@ export type vibezPrivate = {
 
 	clientScriptName: string,
 	rateLimiter: RateLimit,
+	Ranker: VibezRanking.VibezRankingKind,
 
 	externalConfigCheckDelay: number,
 	lastLoadedExternalConfig: number,
@@ -551,7 +548,7 @@ type activityTrackerContent = {
 	_afkCounter: number,
 	_increment: number,
 	_lastCheck: number,
-	_groupData: { Rank: number, Role: string, Id: number?, errMessage: string? },
+	_groupData: { Rank: number, Role: string, Id: number? }?,
 }
 
 export type ActivityTracker = typeof(setmetatable({} :: activityTrackerContent, {} :: activityTrackerMeta))
