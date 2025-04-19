@@ -62,8 +62,7 @@ local function _debug(starter: string, ...: string): ()
 		return
 	end
 
-	local prefix = string.format("[Debug-vibez_client_%s]:", starter)
-	print(prefix, ...)
+	print(`[vibez_client_debug_{starter}]`, ...)
 end
 
 local function _findFirstChildWhichIsAByName(parent: Instance, name: string, class: string, tries: number?): Instance?

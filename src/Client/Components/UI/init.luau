@@ -2,6 +2,7 @@
 --// Services \\--
 local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 --// Types \\--
@@ -42,9 +43,16 @@ local function _changeSelectorHighlight(Tweens: Tweens, frameName: string)
 			continue
 		end
 
-		local transparencyToShiftTo = (frameName == topButton.Name) and 0 or 0.6
-		Tweens(topButton.Label, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {
-			TextTransparency = transparencyToShiftTo,
+		local TI = TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
+		local textTransparencyToShiftTo = (frameName == topButton.Name) and 0 or 0.6
+		local iconTransparencyToShiftTo = (frameName == topButton.Name) and 0 or 0.5
+
+		Tweens(topButton.Label, TI, {
+			TextTransparency = textTransparencyToShiftTo,
+		}):Play()
+
+		Tweens(topButton.Icon, TI, {
+			ImageTransparency = iconTransparencyToShiftTo,
 		}):Play()
 	end
 end
@@ -53,6 +61,50 @@ end
 local function _safelyLoadModuleAndRun(module: ModuleScript, subCommand: string, ...: any)
 	local _, requiredModule = pcall(require, module)
 	pcall(requiredModule[subCommand], ...)
+end
+
+local function onMouseHoveringOverButtonsFrame(componentData: Definitions.componentData)
+	local TI = TweenInfo.new(0.25, Enum.EasingStyle.Quint)
+	for i = 1, #Buttons.Holder:GetChildren() do
+		local child = Buttons.Holder:GetChildren()[i]
+		if not child:IsA("ImageButton") then
+			continue
+		end
+
+		componentData
+			.Tweens(child.Label.Frame, TI, {
+				Size = UDim2.fromScale(0, 1),
+			})
+			:Play()
+	end
+
+	componentData
+		.Tweens(Content, TI, {
+			Size = UDim2.fromScale(0.8, 0.825),
+		})
+		:Play()
+end
+
+local function onMouseStopsHoveringOverButtonsFrame(componentData: Definitions.componentData)
+	local TI = TweenInfo.new(0.25, Enum.EasingStyle.Quint)
+	for i = 1, #Buttons.Holder:GetChildren() do
+		local child = Buttons.Holder:GetChildren()[i]
+		if not child:IsA("ImageButton") then
+			continue
+		end
+
+		componentData
+			.Tweens(child.Label.Frame, TI, {
+				Size = UDim2.fromScale(1, 1),
+			})
+			:Play()
+	end
+
+	componentData
+		.Tweens(Content, TI, {
+			Size = UDim2.fromScale(0.94, 0.825),
+		})
+		:Play()
 end
 
 local function _openFrame(componentData: Definitions.componentData, frameName: string)
@@ -229,6 +281,42 @@ function _toggleUI(componentData: Definitions.componentData)
 	-- CANCEL: Ensure the ranking frame is always the first to open.
 	-- - If developers can remove tabs, why hard-code 'Ranking' frame?
 	_openFrame(componentData, foundFrameThatsVisible.Name)
+
+	-- Add connection to mouse hovering over buttons frame.
+	if UserInputService.MouseEnabled then
+		componentData._debug(
+			"interface_finalizing_connections",
+			"Establishing connection between 'Buttons' and 'Content' frames."
+		)
+
+		local sideBarOpened = false
+		table.insert(
+			Maid.Parent,
+			RunService.RenderStepped:Connect(function()
+				local playerGui = Player:FindFirstChild("PlayerGui") :: PlayerGui
+				if not playerGui then
+					return
+				end
+
+				-- Unfortunately, resizing the buttons frame causes movement for the buttons so this
+				-- has to be the only solution?
+				local guiObjects = playerGui:GetGuiObjectsAtPosition(Mouse.X, Mouse.Y)
+				local contentExists = table.find(guiObjects, Content)
+				local buttonsExists = table.find(guiObjects, Buttons)
+
+				if
+					(contentExists and not buttonsExists)
+					or (not contentExists and not buttonsExists) and sideBarOpened
+				then
+					sideBarOpened = false
+					onMouseStopsHoveringOverButtonsFrame(componentData)
+				elseif not contentExists and buttonsExists and not sideBarOpened then
+					sideBarOpened = true
+					onMouseHoveringOverButtonsFrame(componentData)
+				end
+			end)
+		)
+	end
 end
 
 function onDestroy(componentData: Definitions.componentData)
@@ -323,14 +411,14 @@ function onSetup(componentData: Definitions.componentData)
 			_onExitButtonClicked(componentData)
 		end)
 
-	componentData._debug("interface_initialization", "Setup completed.")
-
 	-- Apply group name as the title.
 	local groupNameLabel = Top.Left.Title
 	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, componentData.GroupId)
 
 	groupNameLabel.Text = isOk and groupInfo.Name or ""
-	return
+
+	onMouseStopsHoveringOverButtonsFrame(componentData)
+	componentData._debug("interface_initialization", "Setup completed.")
 end
 
 return {
