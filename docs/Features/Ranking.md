@@ -34,7 +34,7 @@ Increments a player's rank by 1.
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 
 ```lua
-local userId = 1
+local userName = "ROBLOX"
 VibezApi:Promote(userId)
 ```
 
@@ -48,7 +48,7 @@ Decrements a player's rank by 1.
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 
 ```lua
-local userId = 1
+local userName = "ROBLOX"
 VibezApi:Demote(userId)
 ```
 
@@ -62,9 +62,8 @@ Sets a player's rank to the lowest rank.
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 
 ```lua
-local userId = 1
-local newRankId = 5
-VibezApi:Fire(userId, newRankId)
+local userName = "ROBLOX"
+VibezApi:Fire(userId)
 ```
 
 ### [setRank](/VibezAPI/api/VibezAPI#setRank)
@@ -78,8 +77,9 @@ Sets a player's rank to a specific rank.
 Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
 
 ```lua
-local userId = 1
-VibezApi:setRank(1, 2)
+local userName = "ROBLOX"
+local newRank = 2
+VibezApi:setRank(1, newRank)
 ```
 
 ## What's this `whoCalled` parameter?
