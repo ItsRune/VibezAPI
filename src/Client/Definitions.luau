@@ -9,6 +9,7 @@ export type componentData = {
 
 	GroupId: number,
 	Data: { [any]: any },
+	Identifier: string,
 
 	TopbarPlus: typeof(_TopbarPlus),
 	Tweens: typeof(_TweenModule),

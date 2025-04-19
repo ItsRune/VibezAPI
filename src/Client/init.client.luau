@@ -128,6 +128,7 @@ local function onAttributeChanged()
 
 			GroupId = States.GroupId,
 			Data = data,
+			Identifier = script.Name,
 
 			TopbarPlus = TopbarPlus,
 			clearAllChildren = clearAllChildren,

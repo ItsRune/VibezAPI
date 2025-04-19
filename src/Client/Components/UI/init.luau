@@ -287,9 +287,10 @@ function _toggleUI(componentData: Definitions.componentData)
 		componentData._debug("interface_side_bar", "Establishing connection between 'Buttons' and 'Content' frames.")
 
 		local sideBarOpened = false
-		table.insert(
-			Maid.Parent,
-			RunService.RenderStepped:Connect(function()
+		RunService:BindToRenderStep(
+			`vibez_interface_side_bar_{componentData.Identifier}`,
+			Enum.RenderPriority.Last.Value + 1,
+			function()
 				local playerGui = Player:FindFirstChild("PlayerGui") :: PlayerGui
 				if not playerGui then
 					return
@@ -311,7 +312,7 @@ function _toggleUI(componentData: Definitions.componentData)
 					sideBarOpened = true
 					onMouseHoveringOverButtonsFrame(componentData)
 				end
-			end)
+			end
 		)
 	else -- Ensure the sidebar is always open.
 		componentData._debug("interface_side_bar", "Sidebar options are remaining open.")
@@ -335,6 +336,7 @@ function onDestroy(componentData: Definitions.componentData)
 	end
 
 	_safelyLoadModuleAndRun(frameComponents:FindFirstChild(currentOpenFrame.Name), "Destroy", componentData)
+	pcall(RunService.UnbindFromRenderStep, RunService, `vibez_interface_side_bar_{componentData.Identifier}`)
 
 	currentOpenFrame.Position = UDim2.fromScale(1.5, 0.5)
 	currentOpenFrame = nil
