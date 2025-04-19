@@ -2,7 +2,11 @@
 sidebar_position: 1
 ---
 
-Let's be honest, there's nothing worse than a potential future worker doing an application and not being automatically ranked by a system, days or even weeks of them spamming the group wall (or discord DMs) begging for their rank. This is why we have the ranking API. It allows you to rank workers in game without having to do it manually.
+Let's be honest, there's nothing worse than a potential future worker doing an application and not being automatically ranked by a system, days or even weeks of them spamming the group wall (or discord DMs) begging for their rank.
+This is why we have the ranking API. It allows you to rank workers in game without having to do it manually.
+
+**NOTE**: Our ranking api can be used separately from this module, we recommend this if you're building a custom ranking system / application center / rank center.
+You can find the module [here](https://create.roblox.com/store/asset/117806589757660/Ranking).
 
 ## Usage
 

@@ -6,7 +6,7 @@ sidebar_position: 2
 
 Our first version of settings were... Well, clunky and messy to say the least. So, we've decided to make it a lot more simple and easier to understand. We've also added a lot more settings to make it more customizable to your needs. Every setting below or on the right are each their own table. You can look at the examples below to see how to use them. If you have any questions, feel free to join our Discord and ask in any of the general channels. We'll be happy to help you out!
 
-<iframe src="https://discord.com/widget?id=528920896497516554&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
+<iframe src="https://discord.com/widget?id=528920896497516554&theme=dark" width="100%" height="500" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
 
 ## Example Usage
 
