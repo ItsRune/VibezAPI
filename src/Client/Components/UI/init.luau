@@ -284,10 +284,7 @@ function _toggleUI(componentData: Definitions.componentData)
 
 	-- Add connection to mouse hovering over buttons frame.
 	if UserInputService.MouseEnabled then
-		componentData._debug(
-			"interface_finalizing_connections",
-			"Establishing connection between 'Buttons' and 'Content' frames."
-		)
+		componentData._debug("interface_side_bar", "Establishing connection between 'Buttons' and 'Content' frames.")
 
 		local sideBarOpened = false
 		table.insert(
@@ -316,6 +313,9 @@ function _toggleUI(componentData: Definitions.componentData)
 				end
 			end)
 		)
+	else -- Ensure the sidebar is always open.
+		componentData._debug("interface_side_bar", "Sidebar options are remaining open.")
+		onMouseHoveringOverButtonsFrame(componentData)
 	end
 end
 
@@ -414,10 +414,8 @@ function onSetup(componentData: Definitions.componentData)
 	-- Apply group name as the title.
 	local groupNameLabel = Top.Left.Title
 	local isOk, groupInfo = pcall(GroupService.GetGroupInfoAsync, GroupService, componentData.GroupId)
-
 	groupNameLabel.Text = isOk and groupInfo.Name or ""
 
-	onMouseStopsHoveringOverButtonsFrame(componentData)
 	componentData._debug("interface_initialization", "Setup completed.")
 end
 
