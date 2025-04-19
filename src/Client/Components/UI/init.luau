@@ -286,6 +286,8 @@ function _toggleUI(componentData: Definitions.componentData)
 	if UserInputService.MouseEnabled then
 		componentData._debug("interface_side_bar", "Establishing connection between 'Buttons' and 'Content' frames.")
 
+		-- Uses render step instead of '.MouseEnter' due to the mouse being detected inside the
+		-- 'Buttons' frame but the top frame being the 'Content' frame.
 		local sideBarOpened = false
 		RunService:BindToRenderStep(
 			`vibez_interface_side_bar_{componentData.Identifier}`,
