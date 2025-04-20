@@ -36,7 +36,6 @@ local checkingMethods = require(script.Modules.Internal.SettingsChecker)
 local Hooks = require(script.Modules.Hooks)
 local ActivityTracker = require(script.Modules.Activity)
 local Cooldowns = require(script.Modules.Internal.Cooldowns)
-local RateLimit = require(script.Modules.RateLimit)
 local Table = require(script.Modules.Table)
 local Promise = require(script.Modules.Promise)
 local Utils = require(script.Modules.Utils)
@@ -970,96 +969,6 @@ function api._setupGlobals(self: Types.vibezApi): ()
 	globalsFolder.Blacklists.Delete.OnInvoke = function(...: any): any
 		return self._private.Ranker:deleteBlacklist(...)
 	end
-end
-
---[=[
-	Uses `RequestAsync` to fetch required assets to make this API wrapper work properly. Automatically handles the API key and necessary headers associated with different routes.
-	@param Route string
-	@param Method any
-	@param Headers { [string]: any }?
-	@param Body { any }?
-	@return boolean, httpResponse?
-
-	@yields
-	@private
-	@within VibezAPI
-	@since 1.0.0
-	@method _http
-]=]
----
-function api._http(
-	self: Types.vibezApi,
-	Route: string,
-	Method: any,
-	Headers: { [string]: any }?,
-	Body: { [any]: any }?
-): (boolean, Types.httpResponse)
-	local canContinue: boolean, err: string? = self._private.rateLimiter:Check()
-	if not canContinue then
-		local message = "You're being rate limited! " .. tostring(err)
-
-		-- Create a fake error response
-		return false,
-			{
-				Success = false,
-				StatusCode = 429,
-				StatusMessage = message,
-				rawBody = "{}",
-				Headers = {
-					["Content-Type"] = "application/json",
-					["x-api-key"] = self._private.Ranker._key,
-				},
-				Body = {
-					success = false,
-					errorMessage = message,
-				},
-			}
-	end
-
-	local apiToUse = self._private.newApiUrl
-	Route = (typeof(Route) == "string") and Route or "/"
-	Method = (typeof(Method) == "string") and string.upper(Method) or "GET"
-	Body = (Method ~= "GET" and Method ~= "HEAD") and Body or nil
-
-	local generatedHeaders = Headers :: { [string]: any }
-	if not Headers or typeof(Headers) ~= "table" then
-		generatedHeaders = { ["Content-Type"] = "application/json" }
-	end
-
-	if Body then
-		local extraLoggerInfo = (RunService:IsStudio()) and " `(Studio PlayTest)`" or ""
-		Body["origin"] = self.Settings.Misc.originLoggerText :: string .. extraLoggerInfo
-	end
-
-	Route = (string.sub(Route, 1, 1) ~= "/") and `/{Route}` or Route
-	generatedHeaders["x-api-key"] = self._private.Ranker._key
-
-	-- Prevents sending api key to external URLs
-	-- Remove from 'Route' extra slash that was added
-	-- Make 'apiToUse' an empty string since "Route" and "apiToUse" get concatenated on request.
-	if string.match(Route, "[http://]|[https://]") ~= nil then
-		Route = string.sub(Route, 2, #Route)
-		apiToUse = ""
-		generatedHeaders["x-api-key"] = nil
-	end
-
-	local Options = {
-		Url = apiToUse .. Route,
-		Method = Method,
-		Headers = generatedHeaders,
-		Body = Body and HttpService:JSONEncode(Body) or nil,
-		Compress = Enum.HttpCompression.None,
-	}
-
-	local success, data: any = pcall(HttpService.RequestAsync, HttpService, Options)
-	local successBody, decodedBody = pcall(HttpService.JSONDecode, HttpService, data.Body)
-
-	if success and successBody then
-		data.rawBody = data.Body
-		data.Body = decodedBody
-	end
-
-	return (success and data.StatusCode >= 200 and data.StatusCode < 300), data
 end
 
 --[=[
@@ -2716,7 +2625,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
 
 	--[=[
-		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, rateLimiter: RateLimit, Ranker: Ranking, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, Cooldowns: {Ranking:{[number]: number},Blacklisting:{[number]: number}}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
+		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, Ranker: Ranking, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, Cooldowns: {Ranking:{[number]: number},Blacklisting:{[number]: number}}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
 		@since 0.1.0
 		@private
 		@within VibezAPI
@@ -2732,7 +2641,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		newApiUrl = "https://leina.vibez.dev",
 
 		clientScriptName = table.concat(string.split(HttpService:GenerateGUID(false), "-"), ""),
-		rateLimiter = RateLimit.new(60, 60),
 		Ranker = VibezRanking.new(apiKey),
 
 		externalConfigCheckDelay = 600, -- 600 = 10 minutes | Change below if changed
@@ -2789,6 +2697,23 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	-- Since the ranking methods are within the _private property, we need to create wrappers for them to work properly.
 	type whoCalledType = { userName: string, userId: number }?
 	local rankDefinitions = require(script.Modules.VibezRanking.Definitions)
+
+	--[=[
+		@method _http
+		@since 0.1.0
+		@within VibezAPI
+		@return Result<any,any>
+		Uses `RequestAsync` to fetch required assets to make this API wrapper work properly. Automatically handles the API key and necessary headers associated with different routes.
+	]=]
+	self._http = function(
+		this: Types.vibezApi,
+		route: string,
+		method: string?,
+		headers: { [string]: any }?,
+		body: { [any]: any }?
+	): rankDefinitions.BaseHttpResponse
+		return this._private.Ranker:_sendHttpRequest(route, method, headers, body)
+	end
 
 	--[=[
 		@method Promote
