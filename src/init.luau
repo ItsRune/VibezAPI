@@ -2197,16 +2197,21 @@ function api.updateKey(self: Types.vibezApi, newApiKey: string): boolean
 	self._private.recentlyChangedKey = true
 
 	local groupId = self._private.Ranker:getGroupId(newApiKey)
+	local shortenedApiKey = `{string.sub(newApiKey, 1, math.ceil(#newApiKey / 2))}...`
+
 	if groupId == -1 and savedKey ~= nil then
 		self._private.Ranker._key = savedKey
-		self:_debug("update_key", "New api key '" .. newApiKey .. "' was invalid and was reverted to the previous one!")
+		self:_debug(
+			"update_key",
+			"New api key '" .. shortenedApiKey .. "' was invalid and was reverted to the previous one!"
+		)
 		self:_warn("We attempted to update your API key, however it resulted in being invalid!")
 		return false
 	elseif groupId == -1 and not savedKey then
 		self:_debug(
 			"update_key",
 			"Api key '"
-				.. newApiKey
+				.. shortenedApiKey
 				.. "' was invalid! Please make sure there are no special characters or spaces in your key!"
 		)
 		warn(
