@@ -202,10 +202,10 @@ Here are some examples of how you can use our global APIs:
 
 ```lua title="ServerScriptService/Welcome_Message.lua"
 local function onPlayerAdded(Player: Player)
-    local vibezGlobal = _G["VibezApi"]
+    local vibezGlobal = _G["Vibez"]
 
     while vibezGlobal == nil do
-        vibezGlobal = _G["VibezApi"]
+        vibezGlobal = _G["Vibez"]
         task.wait(.25)
     end
 
@@ -225,10 +225,10 @@ game:GetService("Players").PlayerAdded:Connect(onPlayerAdded)
 local Players = game:GetService("Players")
 
 local function onPlayerAdded(Player: Player)
-    local vibezGlobal = _G["VibezApi"]
+    local vibezGlobal = _G["Vibez"]
 
     while vibezGlobal == nil do
-        vibezGlobal = _G["VibezApi"]
+        vibezGlobal = _G["Vibez"]
         task.wait(.25)
     end
 
@@ -245,10 +245,10 @@ local function onPlayerAdded(Player: Player)
 end
 
 local function onPlayerLeft(Player: Player)
-    local vibezGlobal = _G["VibezApi"]
+    local vibezGlobal = _G["Vibez"]
 
     while vibezGlobal == nil do
-        vibezGlobal = _G["VibezApi"]
+        vibezGlobal = _G["Vibez"]
         task.wait(.25)
     end
 

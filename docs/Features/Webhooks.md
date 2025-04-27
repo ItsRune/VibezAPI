@@ -9,46 +9,46 @@ Webhooks are a way to send messages to Discord channels without using a bot. The
 
 <div>
     <h4>You can get a webhook link by going to your Discord server settings.</h4>
-    <img src="/VibezAPI/firstStepWebhook.png"></img>
+    <img src="/Vibez/firstStepWebhook.png"></img>
 
     <h4>Navigate to the "Integrations" page.</h4>
-    <img src="/VibezAPI/secondStepWebhook.png"></img>
+    <img src="/Vibez/secondStepWebhook.png"></img>
 
     <h4>Click on "Webhooks" and "New Webhook", customize it however you'd like and copy the webhook link.</h4>
-    <img src="/VibezAPI/thirdStepWebhook.png"></img>
+    <img src="/Vibez/thirdStepWebhook.png"></img>
 </div>
 
 ## Usage
-### [getWebhookBuilder](/VibezAPI/api/VibezAPI#getWebhookBuilder)
+### [getWebhookBuilder](/Vibez/api/Vibez#getWebhookBuilder)
 Creates a new webhook builder.
 
 Parameter(s): <br />
 ``webhookLink: string`` - The webhook link you got from Discord.
 
-Returns: [Webhooks](/VibezAPI/api/Webhooks)
+Returns: [Webhooks](/Vibez/api/Webhooks)
 ```lua
 local webhookLink = "https://discord.com/api/webhooks/"
-local myWebhook = VibezAPI:getWebhookBuilder(webhookLink)
+local myWebhook = Vibez:getWebhookBuilder(webhookLink)
 ```
 
-### [WebhookBuilder:setContent](/VibezAPI/api/Webhooks#setContent)
+### [Builder\:setContent](/Vibez/api/Webhooks#setContent)
 Sets the content of the message.
 
 Parameter(s): <br />
 ``content: string`` - The content of the message.
 
-Returns: [Webhooks](/VibezAPI/api/Webhooks)
+Returns: [Webhooks](/Vibez/api/Webhooks)
 ```lua
 myWebhook:setContent("Hello World!")
 ```
 
-### [WebhookBuilder:addEmbed](/VibezAPI/api/Webhooks#addEmbed)
+### [Builder\:addEmbed](/Vibez/api/Webhooks#addEmbed)
 Adds an embed to the message with raw embed data.
 
 Parameter(s): <br />
 ``embed: table`` - The embed data.
 
-Returns: [Webhooks](/VibezAPI/api/Webhooks)
+Returns: [Webhooks](/Vibez/api/Webhooks)
 ```lua
 myWebhook:addEmbed({
     title = "My Title",
@@ -56,13 +56,13 @@ myWebhook:addEmbed({
 })
 ```
 
-### [WebhookBuilder:addEmbedWithBuilder](/VibezAPI/api/Webhooks#addEmbedWithBuilder)
+### [Builder\:addEmbedWithBuilder](/Vibez/api/Webhooks#addEmbedWithBuilder)
 Adds an embed to the message with a builder.
 
 Parameter(s): <br />
 ``...(embedCreator: EmbedBuilder) -> EmbedBuilder`` - The embed builder.
 
-Returns: [Webhooks](/VibezAPI/api/Webhooks)
+Returns: [Webhooks](/Vibez/api/Webhooks)
 ```lua
 myWebhook:addEmbedWithBuilder(function(embed)
     return embed
@@ -71,7 +71,7 @@ myWebhook:addEmbedWithBuilder(function(embed)
 end)
 ```
 
-### [WebhookBuilder:Send](/VibezAPI/api/Webhooks#Send)
+### [Builder\:Send](/Vibez/api/Webhooks#Send)
 Sends the message.
 
 Parameter(s): <br />
@@ -80,13 +80,13 @@ Parameter(s): <br />
 myWebhook:Send()
 ```
 
-### [WebhookBuilder:setData](/VibezAPI/api/Webhooks#setData)
+### [Builder\:setData](/Vibez/api/Webhooks#setData)
 Sets the data of the message.
 
 Parameter(s): <br />
 ``data: table`` - The data of the message.
 
-Returns: [Webhooks](/VibezAPI/api/Webhooks)
+Returns: [Webhooks](/Vibez/api/Webhooks)
 ```lua
 myWebhook:setData({
     content = "Hello World!",
@@ -99,24 +99,24 @@ myWebhook:setData({
 })
 ```
 
-### [WebhookBuilder:setUsername](/VibezAPI/api/Webhooks#setUsername)
+### [Builder\:setUsername](/Vibez/api/Webhooks#setUsername)
 Sets the username of the webhook.
 
 Parameter(s): <br />
 ``username: string`` - The username of the webhook.
 
-Returns: [Webhooks](/VibezAPI/api/Webhooks)
+Returns: [Webhooks](/Vibez/api/Webhooks)
 ```lua
 myWebhook:setUsername("My Username")
 ```
 
-### [WebhookBuilder:setTTS](/VibezAPI/api/Webhooks#setTTS) <img src="https://img.shields.io/badge/BROKEN-ff6161"></img>
+### [Builder\:setTTS](/Vibez/api/Webhooks#setTTS) <img src="https://img.shields.io/badge/BROKEN-ff6161"></img>
 Sets the TTS of the webhook.
 
 Parameter(s): <br />
 ``tts: boolean`` - The TTS of the webhook.
 
-Returns: [Webhooks](/VibezAPI/api/Webhooks)
+Returns: [Webhooks](/Vibez/api/Webhooks)
 ```lua
 myWebhook:setTTS(true)
 ```
@@ -132,7 +132,7 @@ local Players = game:GetService("Players")
 
 --// Variables \\--
 local myWebhook = "Webhook_Link_Here"
-local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key")
+local Vibez = require(game:GetService("ServerScriptService").Vibez)("API Key")
 
 --// Functions \\--
 local function sendWebhook(Player: Player, state: "joined" | "left")
@@ -167,7 +167,7 @@ Players.PlayerRemoving:Connect(onPlayerRemoving)
 <br />
 
 ```lua
-local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API Key", {
+local Vibez = require(game:GetService("ServerScriptService").Vibez)("API Key", {
     nameOfGameForLogging = "Colors Example"
 })
 

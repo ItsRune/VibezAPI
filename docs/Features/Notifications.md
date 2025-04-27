@@ -8,7 +8,7 @@ Notifications are a way to tell the user if their request went through successfu
 
 ### When are notifications used?
 
-Notifications are mainly used when using the: Beta UI, [Commands](/VibezAPI/docs/Features/Commands/About/), or RankSticks. Notifications are intended to tell the user if their request went throught successfully or not.
+Notifications are mainly used when using the: Beta UI, [Commands](/Vibez/docs/Features/Commands/About/), or RankSticks. Notifications are intended to tell the user if their request went throught successfully or not.
 
 ### Can I send custom notifications?
 
@@ -16,7 +16,7 @@ Yes, you can use our notification handler to send custom notifications. The meth
 Example:
 
 ```lua
-VibezAPI:notifyPlayer(Player, "Hello there!")
+Vibez:notifyPlayer(Player, "Hello there!")
 ```
 
 ### General Information

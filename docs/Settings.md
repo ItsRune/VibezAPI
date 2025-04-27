@@ -11,7 +11,7 @@ Our first version of settings were... Well, clunky and messy to say the least. S
 ## Example Usage
 
 ```lua
-local Vibez = require(game:GetService("ServerScriptService").VibezAPI)("API KEY", {
+local Vibez = require(game:GetService("ServerScriptService").Vibez)("API KEY", {
     Commands = {
         Enabled = true,
         MinRank = 200,

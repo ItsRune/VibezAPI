@@ -25,20 +25,20 @@ local Vibez = require(14946453963)("API Key", {
 ```
 
 ## Usage
-### [getActivity](/VibezAPI/api/VibezAPI#getActivity)
+### [getActivity](/Vibez/api/Vibez#getActivity)
 Gets a player's current activity. (Leave blank for everyone's activity)
 
 Parameter(s): <br />
 ``userId: (string | number | Player)?`` - The user id of the player you want to get the activity of. **OPTIONAL**<br />
 
-Returns: [activityResponse](/VibezAPI/api/VibezAPI#activityResponse)
+Returns: [activityResponse](/Vibez/api/Vibez#activityResponse)
 
 ```lua
-local allPlayerActivity = VibezApi:getActivity()
-local myActivity = VibezApi:getActivity(107392833)
+local allPlayerActivity = Vibez:getActivity()
+local myActivity = Vibez:getActivity(107392833)
 ```
 
-### [saveActivity](/VibezAPI/api/VibezAPI#saveActivity)
+### [saveActivity](/Vibez/api/Vibez#saveActivity)
 Saves a player's activity.
 
 Parameter(s): <br />
@@ -47,10 +47,10 @@ Parameter(s): <br />
 ``secondsSpent: number`` - The amount of seconds the player has spent. <br />
 ``messagesSent: number`` - The amount of messages the player has sent. <br />
 
-Returns: [httpResponse](/VibezAPI/api/VibezAPI#httpResponse)
+Returns: [httpResponse](/Vibez/api/Vibez#httpResponse)
 
 ```lua
-VibezApi:saveActivity(107392833, 200, 10, 5)
+Vibez:saveActivity(107392833, 200, 10, 5)
 ```
 
 ## Examples

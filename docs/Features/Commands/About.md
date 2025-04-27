@@ -9,10 +9,10 @@ We made commands because we realized that maybe some developers aren't experienc
 Our commands work by taking the prefix, first checking that it's correct and removing it from the entire command. Then it splits the command into pieces, leaving the command's name and arguments. It then checks if the command exists, and if it does, it runs the command with the arguments. If it doesn't, it will ignore the message and it's contents.
 
 ### Can I create my own commands?
-Yes! You can create your own commands. Head over to the [Adding Commands](/VibezAPI/docs/Features/Commands/Adding%20Commands) page to learn how to create your own commands.
+Yes! You can create your own commands. Head over to the [Adding Commands](/Vibez/docs/Features/Commands/Adding%20Commands) page to learn how to create your own commands.
 
 ### Can I create my own shorteners?
-Yes! You can create your own shorteners. Head over to the [Command Operation Codes](/VibezAPI/docs/Features/Commands/Command%20Operation%20Codes) page to learn how to create your own shorteners.
+Yes! You can create your own shorteners. Head over to the [Command Operation Codes](/Vibez/docs/Features/Commands/Command%20Operation%20Codes) page to learn how to create your own shorteners.
 
 ### Command Settings
 ```lua
@@ -28,8 +28,9 @@ Alias = {},
 
 ### How can I use the module with another admin system?
 We understand that many people use other admin systems that have much more complex features and would prefer to use that instead. Below we have listed a few examples of the top
-admin systems and how you can use the module with them. Please make sure you are using the [Global API](/VibezAPI/docs/Features/Global) to use the module with these admin systems.
+admin systems and how you can use the module with them. Please make sure you are using the [Global API](/Vibez/docs/Features/Global) to use the module with these admin systems.
 
+<!--
 <details>
 <summary>Basic Admin Essentials</summary>
 <br />
@@ -68,7 +69,7 @@ local Plugin = function(...)
 		local vibezApi = nil
 
 		while vibezApi == nil do
-			vibezApi = _G["VibezApi"]
+			vibezApi = _G["Vibez"]
 			task.wait(.25)
 		end
 
@@ -683,3 +684,5 @@ end
 ```
 
 </details>
+
+!-->

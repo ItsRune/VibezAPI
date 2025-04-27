@@ -13,7 +13,7 @@
 ]=]
 
 --[=[
-	@prop Api VibezAPI
+	@prop Api Vibez
 	@private
 	@within Webhooks
 ]=]
@@ -44,7 +44,7 @@ local Types = require(script.Parent.Internal.Types)
 
 --[=[
 	Creates the hook class.
-	@param vibezApi vibezApi
+	@param vibezApi Vibez
 	@param webhook string
 	@return Webhooks
 	

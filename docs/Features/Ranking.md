@@ -26,51 +26,51 @@ Examples:
 - `"Worker"`
 - `roleId`
 
-[**whoCalled: (See Below)**](/VibezAPI/docs/Features/Ranking#whats-this-whocalled-parameter)
+[**whoCalled: (See Below)**](/Vibez/docs/Features/Ranking#whats-this-whocalled-parameter)
 
-### [Promote](/VibezAPI/api/VibezAPI#Promote)
+### [Promote](/Vibez/api/Vibez#Promote)
 
 Increments a player's rank by 1.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
-Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+Returns: [rankResponse](/Vibez/api/Vibez#rankResponse)
 
 ```lua
 local userName = "ROBLOX"
-VibezApi:Promote(userId)
+Vibez:Promote(userId)
 ```
 
-### [Demote](/VibezAPI/api/VibezAPI#Demote)
+### [Demote](/Vibez/api/Vibez#Demote)
 
 Decrements a player's rank by 1.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
-Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+Returns: [rankResponse](/Vibez/api/Vibez#rankResponse)
 
 ```lua
 local userName = "ROBLOX"
-VibezApi:Demote(userId)
+Vibez:Demote(userId)
 ```
 
-### [Fire](/VibezAPI/api/VibezAPI#Fire)
+### [Fire](/Vibez/api/Vibez#Fire)
 
 Sets a player's rank to the lowest rank.
 
 `userId: number | string | Player` <br />
 `whoCalled: { userName: string, userId: number }?`
 
-Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+Returns: [rankResponse](/Vibez/api/Vibez#rankResponse)
 
 ```lua
 local userName = "ROBLOX"
-VibezApi:Fire(userId)
+Vibez:Fire(userId)
 ```
 
-### [setRank](/VibezAPI/api/VibezAPI#setRank)
+### [setRank](/Vibez/api/Vibez#setRank)
 
 Sets a player's rank to a specific rank.
 
@@ -78,30 +78,30 @@ Sets a player's rank to a specific rank.
 `rank: number | string` <br />
 `whoCalled: { userName: string, userId: number }?`
 
-Returns: [rankResponse](/VibezAPI/api/VibezAPI#rankResponse)
+Returns: [rankResponse](/Vibez/api/Vibez#rankResponse)
 
 ```lua
 local userName = "ROBLOX"
 local newRank = 2
-VibezApi:setRank(1, newRank)
+Vibez:setRank(1, newRank)
 ```
 
 ## What's this `whoCalled` parameter?
 
 Under the hood of the API, we use the `whoCalled` parameter to generate logs within a Discord channel of the action, who did it, and who was affected. **THIS PARAMETER IS OPTIONAL**. This is useful for auditing purposes, and to see who's abusing the API. If you supply nothing, the wrapper will automatically supply **SYSTEM** for the username, and the log generated will look different than with a proper user. If you supply a user's ID and name, the log will look like this:
 
-<img src="/VibezAPI/rankingExampleWithUser.png"></img>
+<img src="/Vibez/rankingExampleWithUser.png"></img>
 
 If you supply nothing, the log will look like this:
 
-<img src="/VibezAPI/rankingExampleAutomatic.png"></img>
+<img src="/Vibez/rankingExampleAutomatic.png"></img>
 
 ### How would I use this?
 
 When issuing a function with the wrapper that has this included, just create a new parameter with the `userName` and `userId` keys, and supply the values. Here's an example:
 
 ```lua
-VibezApi:Promote(1, { userName = "ltsRune", userId = 107392833 })
+Vibez:Promote(1, { userName = "ltsRune", userId = 107392833 })
 ```
 
 ## Why isn't it working?
@@ -132,7 +132,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 
 --// Variables \\--
-local vibezApi = require(14946453963)(apiKey)
+local Vibez = require(14946453963)(apiKey)
 local dataStoreToUse = DataStoreService:GetDataStore("pointRanks_" .. game.PlaceId)
 local userCache = {}
 
@@ -157,7 +157,7 @@ local function onPlayerAdded(Player: Player)
 	end)
 
 	table.insert(connections, pointStats:GetPropertyChangedSignal("Value"):Connect(function()
-		local userGroupData = vibezApi:_getGroupFromUser(vibezApi.GroupId, Player.UserId)
+		local userGroupData = Vibez:_getGroupFromUser(Vibez.GroupId, Player.UserId)
 		local copiedData = userCache[Player.UserId][2] or {}
 
 		if not userGroupData or userGroupData.Rank == 0 then
@@ -179,7 +179,7 @@ local function onPlayerAdded(Player: Player)
 				userGroupData.Rank < data.Rank
 				and pointStats.Value >= data.pointsRequired
 			then
-				local response = vibezApi:setRank(Player, data.Rank)
+				local response = Vibez:setRank(Player, data.Rank)
 
 				if response.success then
 					table.insert(copiedData, data.Rank)
