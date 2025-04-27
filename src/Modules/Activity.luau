@@ -70,7 +70,7 @@ local Types = require(script.Parent.Internal.Types)
 	@since 1.0.0
 ]=]
 ---
-function Activity.new(VibezAPI: Types.vibezApi, forPlayer: Player): Types.ActivityTracker
+function Activity.new(VibezAPI: Types.VibezKind, forPlayer: Player): Types.ActivityTracker
 	assert(
 		typeof(VibezAPI) == "table" and VibezAPI["isVibez"] == true,
 		"Expected 'Vibez' class and received something else!"

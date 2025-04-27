@@ -11,7 +11,7 @@ local Table = require(script.Parent.Parent.Table)
 local clientInterface = (script.Parent.Parent.Parent.Client.Components.UI :: any).Interface
 
 --// Functions \\--
-local function test(self: Types.vibezApi, expr: boolean, checkName: string): boolean
+local function test(self: Types.VibezKind, expr: boolean, checkName: string): boolean
 	if not self.Settings.Debug.logMessages then
 		return expr
 	end
@@ -32,7 +32,7 @@ end
 	print(Data) --> { ["Test"] = "Hello!" }
 	```
 ]]
-local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, path: string): any
+local function fixDiscrepencies(self: Types.VibezKind, Data: any, Default: any, path: string): any
 	local pathSplit = string.split(path, ".")
 	local ancestorKey = (#pathSplit > 1) and pathSplit[2] or "<UNKNOWN_ANCESTOR>"
 	local parentKey = (#pathSplit > 2) and pathSplit[#pathSplit - 1] or "<UNKNOWN_PARENT>"
@@ -182,7 +182,7 @@ local function fixDiscrepencies(self: Types.vibezApi, Data: any, Default: any, p
 end
 
 local function removeAllIgnoreNilChecks(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	Data: any,
 	currentCount: number?
 ): ({ [any]: any }?, number)
@@ -203,7 +203,7 @@ local function removeAllIgnoreNilChecks(
 	return Data, removedCount
 end
 
-local function applyMissing(self: Types.vibezApi, Data: any, Default: { [any]: any })
+local function applyMissing(self: Types.VibezKind, Data: any, Default: { [any]: any })
 	for i in Default do
 		local TYPE = typeof(Data[i])
 		if test(self, TYPE == "table" and Table.Count(Data[i]) ~= 0, "apply_missing_nil_check") then

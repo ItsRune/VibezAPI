@@ -1,7 +1,7 @@
 gitRepoUrl = "https://github.com/ItsRune/Vibez"
 
 [[classOrder]]
-section = "Vibez"
+section = "Main"
 classes = ["Vibez", "Webhooks", "RateLimiter", "EmbedBuilder", "ActivityTracker"]
 
 [[classOrder]]
