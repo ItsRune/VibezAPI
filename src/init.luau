@@ -2780,6 +2780,17 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		return this._private.Ranker:setRank(user, rankId, whoCalled)
 	end
 
+	--[=[
+		@method updateLoggerName
+		@since 0.1.0
+		@within Vibez
+		@return ()
+		Sets the Vibez logger text.
+	]=]
+	self.updateLoggerName = function(this: Types.VibezKind, text: string)
+		return this._private.Ranker:setLoggingOriginationText(text)
+	end
+
 	-- We'll have to set the settings debug/warning messages before
 	-- the settings check so that debug/warnings print properly.
 	self.Settings.Debug.logMessages = (

@@ -1,13 +1,13 @@
 {
-  "name": "API_V2",
-  "tree": {
-    "$className": "DataModel",
+    "name": "Vibez",
+    "tree": {
+        "$className": "DataModel",
 
-    "ServerScriptService": {
-      "MainModule": {
-        "$ignoreUnknownInstances": true,
-        "$path": "./src"
-      }
+        "ServerScriptService": {
+            "MainModule": {
+                "$ignoreUnknownInstances": true,
+                "$path": "./src"
+            }
+        }
     }
-  }
 }
