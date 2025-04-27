@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[4723],{84410:e=>{e.exports=JSON.parse('{"sourceUrl":"https://github.com/ItsRune/Vibez/blob/master","baseUrl":"/Vibez/","classOrder":[{"section":"Main","classes":["Vibez","Webhooks","RateLimiter","EmbedBuilder","ActivityTracker"]},{"section":"Ranker","classes":["Ranking","Result"]}],"apiCategories":[]}')}}]);
