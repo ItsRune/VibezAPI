@@ -512,7 +512,10 @@ export type vibezPublicApi = {
 	removeArgumentPrefix: (self: VibezKind, operationName: string) -> VibezKind,
 }
 
-export type VibezKind = typeof(setmetatable({} :: vibezProperties & vibezInternalApi & vibezPublicApi, {}))
+export type VibezKind = typeof(setmetatable(
+	{} :: vibezProperties & vibezInternalApi & vibezPublicApi,
+	{} :: vibezInternalApi
+))
 
 export type vibezHooks = {
 	Api: { any },

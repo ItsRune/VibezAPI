@@ -1,7 +1,8 @@
-gitRepoUrl = "https://github.com/ItsRune/VibezAPI"
+gitRepoUrl = "https://github.com/ItsRune/Vibez"
 
 [[classOrder]]
-classes = ["VibezAPI", "Webhooks", "RateLimiter", "EmbedBuilder", "ActivityTracker"]
+section = "Vibez"
+classes = ["Vibez", "Webhooks", "RateLimiter", "EmbedBuilder", "ActivityTracker"]
 
 [[classOrder]]
 section = "Ranker"
@@ -11,7 +12,7 @@ classes = ["Ranking", "Result"]
 [docusaurus]
 onBrokenLinks = "ignore"
 onBrokenMarkdownLinks = "ignore"
-favicon = "https://github.com/ItsRune/VibezAPI/blob/903c060edf6b7982f6c04bc68626f07c2a653255/.moonwave/static/favicon.png?raw=true"
+favicon = "https://github.com/ItsRune/Vibez/blob/903c060edf6b7982f6c04bc68626f07c2a653255/.moonwave/static/favicon.png?raw=true"
 
 # Home page settings
 [home]
@@ -21,15 +22,15 @@ includeReadme = false
 # Home page features
 [[home.features]]
 title = "Flexibility"
-description = "VibezAPI is designed to be flexible and easy to use. It's designed to be used in any project, big or small."
+description = "Vibez is designed to be flexible and easy to use. It's designed to be used in any project, big or small."
 
 [[home.features]]
 title = "Easy to Use"
-description = "Simplicity is key, and VibezAPI is no exception. It's designed to be easy to use, and easy to understand."
+description = "Simplicity is key, and Vibez is no exception. It's designed to be easy to use, and easy to understand."
 
 [[home.features]]
 title = "Open Source"
-description = "VibezAPI is open source, meaning you can contribute to it, and make it better for everyone."
+description = "Vibez is open source, meaning you can contribute to it, and make it better for everyone."
 
 # Navigation bar items
 [navbar]
@@ -42,7 +43,7 @@ position = "right"
 
 [navbar.logo]
 alt = "Vibez"
-src = "https://github.com/ItsRune/VibezAPI/blob/10a41c5c42e209e883cab36f7f2c24d2489c4039/.moonwave/static/typography.png?raw=true"
+src = "https://github.com/ItsRune/Vibez/blob/10a41c5c42e209e883cab36f7f2c24d2489c4039/.moonwave/static/typography.png?raw=true"
 width = 64
 height = 64
 
@@ -57,11 +58,11 @@ title = "Documentation"
 
 [[footer.links.items]]
 label = "Getting Started"
-href = "/VibezAPI/docs/intro"
+href = "/Vibez/docs/intro"
 
 [[footer.links.items]]
 label = "API Reference"
-href = "/VibezAPI/api/VibezAPI"
+href = "/Vibez/api/Vibez"
 
 # Footer Community
 [[footer.links]]
@@ -85,4 +86,4 @@ href = "https://www.roblox.com/users/107392833/profile"
 
 [[footer.links.items]]
 label = "Github"
-href = "https://github.com/ItsRune/VibezAPI"
+href = "https://github.com/ItsRune/Vibez"
