@@ -53,7 +53,7 @@ local _privateKeys = {} :: { [string]: string? }
 	@param username string
 	@return Color3
 
-	@within VibezAPI
+	@within Vibez
 	@ignore
 ]=]
 local function generateNameColorForNotification(username: string): Color3
@@ -92,7 +92,7 @@ end
 	@param Action string
 	@return string
 
-	@within VibezAPI
+	@within Vibez
 	@ignore
 ]=]
 local function getActionFunctionFromInvoke(Action: string)
@@ -117,18 +117,18 @@ end
 
 --[=[
 	Main handler for client invokation on the module.
-	@param self VibezAPI
+	@param self Vibez
 	@param Player Player
 	@param Action string
 	@param Origin "Interface" | "Sticks" | "Commands",
 	@param ... ...any
 	@return any
 
-	@within VibezAPI
+	@within Vibez
 	@ignore
 ]=]
 local function onServerInvoke(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	Player: Player,
 	Action: string,
 	Origin: "Interface" | "Sticks" | "Commands",
@@ -561,12 +561,12 @@ end
 
 --[=[
 	Handler for main remote event.
-	@param self VibezAPI
+	@param self Vibez
 	@param Player Player
 	@param Command string
 	@param ... ...any
 
-	@within VibezAPI
+	@within Vibez
 	@ignore
 ]=]
 local function onServerEvent(self: any, Player: Player, Command: string, ...: any)
@@ -657,7 +657,7 @@ end
 	Invokes a protected-call to google.com
 	@return (boolean, string)
 
-	@within VibezAPI
+	@within Vibez
 	@ignore
 ]=]
 local function checkHttp()
@@ -670,11 +670,11 @@ end
 	@return ()
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@method _setupCommands
 ]=]
 ---
-function api._setupCommands(self: Types.vibezApi)
+function api._setupCommands(self: Types.VibezKind)
 	type commandBase = { [number]: { Name: string, Alias: { string? }, Func: (Player: Player, Args: { string }) -> () } }
 	local baseCommands: commandBase = {
 		{
@@ -890,12 +890,12 @@ end
 	@return ()
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.4.0
 	@method _setupGlobals
 ]=]
 ---
-function api._setupGlobals(self: Types.vibezApi): ()
+function api._setupGlobals(self: Types.VibezKind): ()
 	if
 		ServerStorage:FindFirstChild(self._private.clientScriptName)
 		or self.Settings.Misc.createGlobalVariables == false
@@ -979,17 +979,17 @@ end
 	Allows for partial naming, example:
 	```lua
 	-- Using Frivo's group ID
-	local rankNumber = VibezAPI:_getGroupRankFromName("facili") --> Expected: 250 (Facility Developer)
+	local rankNumber = Vibez:_getGroupRankFromName("facili") --> Expected: 250 (Facility Developer)
 	```
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.1.0
 	@method _getGroupRankFromName
 ]=]
 ---
-function api._getGroupRankFromName(self: Types.vibezApi, groupRoleName: string): number?
+function api._getGroupRankFromName(self: Types.VibezKind, groupRoleName: string): number?
 	if not groupRoleName or typeof(groupRoleName) ~= "string" or groupRoleName == "" then
 		return nil
 	end
@@ -1014,12 +1014,12 @@ end
 	@param Player Player
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.5.0
 	@method _onPlayerAdded
 ]=]
 ---
-function api._onPlayerAdded(self: Types.vibezApi, Player: Player)
+function api._onPlayerAdded(self: Types.VibezKind, Player: Player)
 	-- Ensure API loads with all settings before initializing client.
 	local counter = 0
 	repeat
@@ -1126,12 +1126,12 @@ end
 	@param Player Player
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.5.0
 	@method _onPlayerRemoved
 ]=]
 ---
-function api._onPlayerRemoved(self: Types.vibezApi, Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
+function api._onPlayerRemoved(self: Types.VibezKind, Player: Player, isPlayerStillInGame: boolean?) -- This method is being handled twice when game is shutting down.
 	-- Check for and submit activity data.
 	for _, v in pairs(ActivityTracker.Keys) do
 		local class = v[Player.UserId]
@@ -1181,12 +1181,12 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.1.0
 	@method _getUserIdByName
 ]=]
 ---
-function api._getUserIdByName(_self: Types.vibezApi, username: string): number
+function api._getUserIdByName(_self: Types.VibezKind, username: string): number
 	local isOk, userId = pcall(Players.GetUserIdFromNameAsync, Players, username)
 	return isOk and userId or -1
 end
@@ -1200,13 +1200,13 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.10.4
 	@method _fixFormattedString
 ]=]
 ---
 function api._fixFormattedString(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	String: string,
 	Player: { Name: string, UserId: number } | Player,
 	Custom: { onlyApplyCustom: boolean, Codes: { { code: string, equates: string } } }
@@ -1249,12 +1249,12 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.1.0
 	@method _getNameById
 ]=]
 ---
-function api._getNameById(_self: Types.vibezApi, userId: number): string
+function api._getNameById(_self: Types.VibezKind, userId: number): string
 	local fixedUserId = tonumber(userId)
 	if not fixedUserId then
 		return tostring(userId)
@@ -1269,12 +1269,12 @@ end
 	@return RemoteFunction
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.1.0
 	@method _createRemote
 ]=]
 ---
-function api._createRemote(self: Types.vibezApi)
+function api._createRemote(self: Types.VibezKind)
 	local remoteName: string = self._private.clientScriptName
 	local function findRemotes()
 		local event, func
@@ -1322,12 +1322,12 @@ end
 	@return number?
 
 	@yields
-	@within VibezAPI
+	@within Vibez
 	@since 0.11.0
 	@method notifyPlayer
 ]=]
 ---
-function api.notifyPlayer(self: Types.vibezApi, Player: Player, Message: string): ()
+function api.notifyPlayer(self: Types.VibezKind, Player: Player, Message: string): ()
 	if self.Settings.Notifications.Enabled == false then
 		self:_warn(string.format("Notification request for %s (%d): ", Player.Name, Player.UserId), Message)
 		return
@@ -1344,13 +1344,13 @@ end
 	@return {Player}
 
 	@yields
-	@within VibezAPI
+	@within Vibez
 	@since 0.4.0
 	@method getUsersForCommands
 ]=]
 ---
 function api.getUsersForCommands(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	playerWhoCalled: Player,
 	usernames: { string | number },
 	ignoreExternal: boolean?
@@ -1450,12 +1450,12 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.9.0
 	@method _giveSticks
 ]=]
 ---
-function api._giveSticks(self: Types.vibezApi, Player: Player)
+function api._giveSticks(self: Types.VibezKind, Player: Player)
 	local stickTypes = HttpService:JSONDecode(self._private.stickTypes)
 	local rankStick = (self.Settings.RankSticks["sticksModel"] == nil) and script.RankSticks
 		or self.Settings.RankSticks["sticksModel"] :: any
@@ -1490,12 +1490,12 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.9.0
 	@method _removeSticks
 ]=]
 ---
-function api._removeSticks(self: Types.vibezApi, Player: Player): ()
+function api._removeSticks(self: Types.VibezKind, Player: Player): ()
 	local character = Player.Character
 	local backpack: Backpack? = Player.Backpack
 
@@ -1523,20 +1523,20 @@ end
 	Gives the ranking sticks to the player. Succession depends on whether they pass permissions check OR if permissions check is turned off
 	@param User Player | string | number
 	@param shouldCheckPermissions boolean?
-	@return VibezAPI
+	@return Vibez
 
 	@yields
 	@tag Chainable
-	@within VibezAPI
+	@within Vibez
 	@since 0.9.1
 	@method giveRankSticks
 ]=]
 ---
 function api.giveRankSticks(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	User: Player | string | number,
 	shouldCheckPermissions: boolean?
-): Types.vibezApi
+): Types.VibezKind
 	local Player = self:_verifyUser(User, "Player") :: Player
 	if not Player then
 		return self
@@ -1556,16 +1556,16 @@ end
 --[=[
 	Sets the ranking stick's tool.
 	@param tool Tool | Model
-	@return VibezAPI
+	@return Vibez
 
 	@yields
 	@tag Chainable
-	@within VibezAPI
+	@within Vibez
 	@since 0.9.1
 	@method setRankStickTool
 ]=]
 ---
-function api.setRankStickTool(self: Types.vibezApi, tool: any): Types.vibezApi
+function api.setRankStickTool(self: Types.VibezKind, tool: any): Types.VibezKind
 	if typeof(tool) ~= "Instance" or (not tool:IsA("Tool") and not tool:IsA("Model")) then
 		self:_warn("Ranking Sticks have to be either a 'Tool' or a 'Model'!")
 		return self
@@ -1627,12 +1627,12 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.1.0
 	@method _onPlayerChatted
 ]=]
 ---
-function api._onPlayerChatted(self: Types.vibezApi, Player: Player, message: string)
+function api._onPlayerChatted(self: Types.VibezKind, Player: Player, message: string)
 	-- Check for activity tracker to increment messages sent.
 	local token = Utils.rotateCharacters(string.reverse(self._private.Ranker._key), 128)
 	local existingTracker = (ActivityTracker.Keys[token] ~= nil) and ActivityTracker.Keys[token][Player.UserId] or nil
@@ -1689,12 +1689,12 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.8.0
 	@method _checkPlayerForRankChange
 ]=]
 ---
-function api._checkPlayerForRankChange(self: Types.vibezApi, userId: number)
+function api._checkPlayerForRankChange(self: Types.VibezKind, userId: number)
 	local target = Players:GetPlayerByUserId(userId)
 	if target == nil then
 		return
@@ -1714,12 +1714,12 @@ end
 	@param ... ...string
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 1.0.2
 	@method _warn
 ]=]
 ---
-function api._warn(self: Types.vibezApi, ...: string)
+function api._warn(self: Types.VibezKind, ...: string)
 	if self.Settings.Misc.ignoreWarnings then
 		return
 	end
@@ -1733,12 +1733,12 @@ end
 	@param ... ...string
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 1.0.2
 	@method _debug
 ]=]
 ---
-function api._debug(self: Types.vibezApi, starter: string, ...: string)
+function api._debug(self: Types.VibezKind, starter: string, ...: string)
 	if not self.Settings or not self.Settings.Debug or not self.Settings.Debug.logMessages then
 		return
 	end
@@ -1752,13 +1752,13 @@ end
 	@return ()
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.7.0
 	@method _addLog
 ]=]
 ---
 function api._addLog(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	calledBy: Player,
 	Action: string,
 	triggeringAction: "Commands" | "Interface" | "RankSticks",
@@ -1787,13 +1787,13 @@ end
 --[=[
 	Builds the attributes of the settings for workspace.
 
-	@within VibezAPI
+	@within Vibez
 	@private
 	@since 0.9.0
 	@method _buildAttributes
 ]=]
 ---
-function api._buildAttributes(self: Types.vibezApi)
+function api._buildAttributes(self: Types.VibezKind)
 	local function _convertEnumToString(
 		enum: Enum.Font | Enum.FontSize | Enum.EasingDirection | Enum.EasingStyle | Enum.KeyCode | string | number
 	): any
@@ -1980,10 +1980,13 @@ end
 	@return { User: Player, Rank: number }?
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.3.0
 ]=]
-function api._playerIsValidStaff(self: Types.vibezApi, Player: Player | number | string): { Rank: number, User: Player }
+function api._playerIsValidStaff(
+	self: Types.VibezKind,
+	Player: Player | number | string
+): { Rank: number, User: Player }
 	local userId = self:_verifyUser(Player, "Id") :: number
 	return self._private.requestCaches.validStaff[userId]
 end
@@ -1995,12 +1998,12 @@ end
 	@return number | string | Player
 	
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.9.2
 	@method _verifyUser
 ]=]
 function api._verifyUser(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	User: Player | number | string,
 	typeToReturn: "UserId" | "Player" | "Name" | "Id"
 ): Player | number | string
@@ -2042,14 +2045,14 @@ end
 	@param commandName string
 	@param commandAliases {string}?
 	@param commandOperation (Player: Player, Args: { string }, addLog: (calledBy: Player, Action: string, affectedUsers: {Player}?, ...any) -> { calledBy: Player, affectedUsers: { Player }?, affectedCount: number?, Metadata: any }) -> ()
-	@return VibezAPI
+	@return Vibez
 	
-	@within VibezAPI
+	@within Vibez
 	@since 0.3.1
 	@method addCommand
 ]=]
 function api.addCommand(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	commandName: string,
 	commandAliases: { string? },
 	commandOperation: (
@@ -2106,19 +2109,19 @@ end
 	@param operationName string
 	@param operationCode string
 	@param operationFunction (playerToCheck: Player, incomingArgument: string, internalFunctions: { getGroupRankFromName: (groupRoleName: string) -> number?, getGroupFromUser: (groupId: number, userId: number) -> {any}?, Http: (Route: string, Method: string?, Headers: {[string]: any}, Body: {any}) -> httpResponse, addLog: ( calledBy: Player, Action: string, affectedUsers: {{ Name: string, UserId: number }}?, ...: any) -> () }) -> boolean
-	@return VibezAPI
+	@return Vibez
 	
 	:::caution
 	This method will not work if there's already an existing operation name!
 	:::
 	
-	@within VibezAPI
+	@within Vibez
 	@tag Chainable
 	@since 0.3.1
 	@method addArgumentPrefix
 ]=]
 function api.addArgumentPrefix(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	operationName: string,
 	operationCode: string,
 	operationFunction: (
@@ -2128,7 +2131,7 @@ function api.addArgumentPrefix(
 		internalFunctions: Types.vibezCommandFunctions
 	) -> boolean,
 	metaData: { [string]: boolean }?
-): Types.vibezApi
+): Types.VibezKind
 	if self._private.commandOperationCodes[operationName] then
 		self:_warn(`Command operation code '{operationCode}' already exists!`)
 		return self
@@ -2162,19 +2165,19 @@ end
 --[=[
 	Removes a command operation code.
 	@param operationName string
-	@return VibezAPI
+	@return Vibez
 
 	```lua
 	Vibez:removeArgumentPrefix("Team")
 	```
 
-	@within VibezAPI
+	@within Vibez
 	@tag Chainable
 	@since 0.3.1
 	@method removeArgumentPrefix
 ]=]
 ---
-function api.removeArgumentPrefix(self: Types.vibezApi, operationName: string): Types.vibezApi
+function api.removeArgumentPrefix(self: Types.VibezKind, operationName: string): Types.VibezKind
 	self._private.commandOperationCodes[operationName] = nil
 	return self
 end
@@ -2185,12 +2188,12 @@ end
 	@return boolean
 
 	@yields
-	@within VibezAPI
+	@within Vibez
 	@since 0.2.0
 	@method updateKey
 ]=]
 ---
-function api.updateKey(self: Types.vibezApi, newApiKey: string): boolean
+function api.updateKey(self: Types.VibezKind, newApiKey: string): boolean
 	local savedKey = self._private.Ranker._key
 
 	self._private.Ranker._key = newApiKey
@@ -2232,12 +2235,12 @@ end
 
 	@yields
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 0.1.1
 	@method isPlayerBooster
 ]=]
 ---
-function api.isPlayerABooster(self: Types.vibezApi, User: number | string | Player): boolean?
+function api.isPlayerABooster(self: Types.VibezKind, User: number | string | Player): boolean?
 	local userId = self:_verifyUser(User, "UserId")
 
 	if not userId then
@@ -2270,14 +2273,14 @@ function api.isPlayerABooster(self: Types.vibezApi, User: number | string | Play
 end
 
 --[=[
-	Destroys the VibezAPI class.
+	Destroys the Vibez class.
 
-	@within VibezAPI
+	@within Vibez
 	@since 0.1.0
 	@method Destroy
 ]=]
 ---
-function api.Destroy(self: Types.vibezApi)
+function api.Destroy(self: Types.VibezKind)
 	local fullMaid = Table.FlatMap(self._private.Maid, function(connectionValue: any)
 		return connectionValue
 	end)
@@ -2335,28 +2338,28 @@ end
 	@param webhook string
 	@return Webhooks
 
-	@within VibezAPI
+	@within Vibez
 	@since 0.5.0
 	@method getWebhookBuilder
 ]=]
 ---
-function api.getWebhookBuilder(self: Types.vibezApi, webhook: string): Types.vibezHooks
+function api.getWebhookBuilder(self: Types.VibezKind, webhook: string): Types.vibezHooks
 	local newHook = Hooks.new(self, webhook)
 	return newHook
 end
 
 --[=[
 	Gets a player's or everyone's current activity
-	@return VibezAPI?
+	@return Vibez?
 
 	@deprecated v0.10.9
 	@tag Chainable
-	@within VibezAPI
+	@within Vibez
 	@since 0.8.0
 	@method waitUntilLoaded
 ]=]
 ---
-function api.waitUntilLoaded(self: Types.vibezApi): Types.vibezApi?
+function api.waitUntilLoaded(self: Types.VibezKind): Types.VibezKind?
 	self:_warn("Method 'waitUntilLoaded' is deprecated and shouldn't be used in newer games.")
 	self:_debug("deprecated_method_wait_until_loaded", "Attempted to use deprecated method.")
 	return self.Loaded and self or nil
@@ -2380,19 +2383,19 @@ end
 	@param name string
 	@param action string<Promote | Demote | Fire | Blacklist>
 	@param callback (result: responseBody) -> ()
-	@return VibezAPI
+	@return Vibez
 
-	@within VibezAPI
+	@within Vibez
 	@since 0.9.0
 	@method bindToAction
 ]=]
 ---
 function api.bindToAction(
-	self: Types.vibezApi,
+	self: Types.VibezKind,
 	name: string,
 	action: string,
 	callback: (result: Types.responseBody) -> ()
-): Types.vibezApi
+): Types.VibezKind
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[string.lower(action)] == nil then
@@ -2415,14 +2418,14 @@ end
 	Unbinds a custom function from a method.
 	@param name string
 	@param action string<Promote | Demote | Fire | Blacklist>
-	@return VibezAPI
+	@return Vibez
 
-	@within VibezAPI
+	@within Vibez
 	@since 0.9.0
 	@method unbindFromAction
 ]=]
 ---
-function api.unbindFromAction(self: Types.vibezApi, name: string, action: string): Types.vibezApi
+function api.unbindFromAction(self: Types.VibezKind, name: string, action: string): Types.VibezKind
 	action = (string.lower(tostring(action)) == "blacklist") and "addBlacklist" or action
 
 	if self._private.Binds[action] == nil then
@@ -2447,11 +2450,11 @@ end
 	@return ()
 
 	@private
-	@within VibezAPI
+	@within Vibez
 	@since 1.0.1
 	@method _initialize
 ]=]
-function api._initialize(self: Types.vibezApi): ()
+function api._initialize(self: Types.VibezKind): ()
 	if self._private._initialized then
 		return
 	end
@@ -2543,30 +2546,30 @@ end
 --// Constructor \\--
 --[=[
 	@function new
-	@within VibezAPI
+	@within Vibez
 	@param apiKey string -- Your Vibez API key.
 	@param extraOptions extraOptionsType -- Extra settings to configure the api to work for you.
-	@return VibezAPI
+	@return Vibez
 
 	:::caution Notice
 	This method can be used as a normal function or invoke the ".new" function:    
-	`require(game:GetService("ServerScriptService").VibezAPI)("API Key")`
-	`require(game:GetService("ServerScriptService").VibezAPI).new("API Key")`
+	`require(game:GetService("ServerScriptService").Vibez)("API Key")`
+	`require(game:GetService("ServerScriptService").Vibez).new("API Key")`
 	:::
 
 	Constructs the main Vibez API class.
 
 	```lua
 	local myKey = "YOUR_API_KEY_HERE"
-	local VibezAPI = require(game:GetService("ServerScriptService").VibezAPI)
-	local Vibez = VibezAPI(myKey)
+	local Module = require(game:GetService("ServerScriptService").Vibez)
+	local Vibez = Module(myKey)
 	```
 
 	@server
 	@since 1.0.1
 ]=]
 ---
-function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.vibezApi?
+function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.VibezKind?
 	if RunService:IsClient() and not RunService:IsStudio() then
 		Debris:AddItem(script, 0)
 		error("[Vibez]: Cannot fetch API on the client!")
@@ -2574,12 +2577,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	end
 
 	if not checkHttp() then
-		error("[VibezAPI]: Http is not enabled! Please enable it before trying to interact with our API!")
+		error("[Vibez]: Http is not enabled! Please enable it before trying to interact with our API!")
 		return
 	end
 
 	--[=[
-		@class VibezAPI
+		@class Vibez
 		:::info
 		Hey there! We recommend beginning at the introduction page! [Click Here](/docs/intro)
 		:::
@@ -2593,7 +2596,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@prop Version string
 		@since 0.11.0
-		@within VibezAPI
+		@within Vibez
 		A string containing the current loaded version of the wrapper.
 	]=]
 	self.Version = _VERSION
@@ -2601,7 +2604,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@prop isVibez boolean
 		@since 0.11.0
-		@within VibezAPI
+		@within Vibez
 		A boolean to determine whether the wrapper is indeed related to Vibez.
 	]=]
 	self.isVibez = true
@@ -2609,7 +2612,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@prop Loaded boolean
 		@since 0.4.0
-		@within VibezAPI
+		@within Vibez
 		Determines whether the API has loaded.
 	]=]
 	self.Loaded = false
@@ -2617,14 +2620,14 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@prop GroupId number
 		@since 0.2.0
-		@within VibezAPI
+		@within Vibez
 		Holds the groupId associated with the API Key.
 	]=]
 
 	--[=[
 		@prop Settings extraOptionsType
 		@since 0.1.0
-		@within VibezAPI
+		@within Vibez
 		Holds a copy of the settings for the API.
 	]=]
 	self.Settings = Table.Copy(baseSettings, true) -- Performs a deep copy
@@ -2633,7 +2636,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		@prop _private {Event: RemoteEvent?, Function: RemoteFunction?, _initialized: boolean, _lastVersionCheck: number, recentlyChangedKey: boolean, newApiUrl: string, clientScriptName: string, Ranker: Ranking, externalConfigCheckDelay: number, lastLoadedExternalConfig: boolean, Maid: {[number]: {RBXScriptConnection?}}, Cooldowns: {Ranking:{[number]: number},Blacklisting:{[number]: number}}, usersWithSticks: {number}, stickTypes: string, requestCaches: {nitro: {any}, validStaff: {number}, groupInfo: {[number]: {any}?}}, commandOperations: {any}, commandOperationCodes: {[string]: {Code: string, Execute: (playerWhoFired: Player, playerToCheck: Player, incomingArgument: string) -> boolean}}, Binds: {[string]: {[string]: (...any) -> any?}}}
 		@since 0.1.0
 		@private
-		@within VibezAPI
+		@within Vibez
 		From caches to simple booleans/instances/numbers, this table holds all the information necessary for this API to work. 
 	]=]
 	self._private = {
@@ -2706,12 +2709,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@method _http
 		@since 0.1.0
-		@within VibezAPI
+		@within Vibez
 		@return Result<any,any>
 		Uses `RequestAsync` to fetch required assets to make this API wrapper work properly. Automatically handles the API key and necessary headers associated with different routes.
 	]=]
 	self._http = function(
-		this: Types.vibezApi,
+		this: Types.VibezKind,
 		route: string,
 		method: string?,
 		headers: { [string]: any }?,
@@ -2723,12 +2726,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@method Promote
 		@since 0.1.0
-		@within VibezAPI
+		@within Vibez
 		@return rankResponse
 		Increments a player's group rank by 1.
 	]=]
 	self.Promote = function(
-		this: Types.vibezApi,
+		this: Types.VibezKind,
 		user: Types.userType,
 		whoCalled: whoCalledType
 	): rankDefinitions.SetRankResponse | rankDefinitions.Error
@@ -2738,12 +2741,12 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@method Demote
 		@since 0.1.0
-		@within VibezAPI
+		@within Vibez
 		@return rankResponse
 		Decrements a player's group rank by 1.
 	]=]
 	self.Demote = function(
-		this: Types.vibezApi,
+		this: Types.VibezKind,
 		user: Types.userType,
 		whoCalled: whoCalledType
 	): rankDefinitions.SetRankResponse | rankDefinitions.Error
@@ -2753,23 +2756,23 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	--[=[
 		@method Fire
 		@since 0.1.0
-		@within VibezAPI
+		@within Vibez
 		@return boolean
 		Sets a player's group rank back to 1.
 	]=]
-	self.Fire = function(this: Types.vibezApi, user: Types.userType, whoCalled: whoCalledType): boolean
+	self.Fire = function(this: Types.VibezKind, user: Types.userType, whoCalled: whoCalledType): boolean
 		return this._private.Ranker:Fire(user, whoCalled)
 	end
 
 	--[=[
 		@method setRank
 		@since 0.1.0
-		@within VibezAPI
+		@within Vibez
 		@return rankResponse
 		Sets a player's group rank to the defined rank/role.
 	]=]
 	self.setRank = function(
-		this: Types.vibezApi,
+		this: Types.VibezKind,
 		user: Types.userType,
 		rankId: string | number,
 		whoCalled: whoCalledType
@@ -3004,7 +3007,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		-- [%d]+.[%d]+.[%d]+
 		local isOk, response, JSON
 		isOk, response =
-			pcall(HttpService.GetAsync, HttpService, "https://api.github.com/repos/ItsRune/VibezAPI/releases/latest")
+			pcall(HttpService.GetAsync, HttpService, "https://api.github.com/repos/ItsRune/Vibez/releases/latest")
 		if not isOk then
 			return
 		end
@@ -3061,7 +3064,7 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	self.Loaded = true
 
 	-- Cast to the Vibez API Type.
-	return self :: Types.vibezApi
+	return self :: Types.VibezKind
 end
 
 --[=[
@@ -3071,16 +3074,16 @@ end
 	@return Folder?
 
 	```lua
-	local globals = VibezAPI.getGlobalsForKey("API KEY")
+	local globals = Vibez.getGlobalsForKey("API KEY")
 	globals.Notifications:Invoke(Player, "Hello World!")
 	```
 
-	@within VibezAPI
+	@within Vibez
 	@since 0.11.0
 ]=]
 ---
 return setmetatable({
-	isVibezAPI = true,
+	isVibez = true,
 
 	awaitGlobals = function(): ()
 		warn("[Vibez]: Method 'awaitGlobals' is deprecated, please use 'getGlobalsForKey' instead.")
@@ -3090,7 +3093,7 @@ return setmetatable({
 		-- local counter = 0
 
 		-- while mod == nil do
-		-- 	mod = _G["VibezApi"]
+		-- 	mod = _G["Vibez"]
 		-- 	counter += 1
 
 		-- 	if counter >= 1000 then
@@ -3114,7 +3117,7 @@ return setmetatable({
 
 	new = Constructor,
 }, {
-	__call = function(t: { [any]: any }, apiKey: string, options: Types.vibezSettings?): Types.vibezApi?
+	__call = function(t: { [any]: any }, apiKey: string, options: Types.vibezSettings?): Types.VibezKind?
 		return rawget(t, "new")(apiKey, options)
 	end :: Types.vibezConstructorCall,
 })
@@ -3123,14 +3126,14 @@ return setmetatable({
 	@interface groupIdResponse
 	.success boolean
 	.groupId number?
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
 	@interface errorResponse
 	.success boolean
 	.errorMessage string
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
@@ -3138,28 +3141,28 @@ return setmetatable({
 	.success boolean
 	.message string
 	.data { newRank: { id: number, name: string, rank: number, memberCount: number }, oldRank: { id: number, name: string, rank: number, groupInformation: { id: number, name: string, memberCount: number, hasVerifiedBadge: boolean } } }
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
 	@interface blacklistResponse
 	.success boolean
 	.message string
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
 	@interface fullBlacklists
 	.success boolean
 	.blacklists: { [number | string]: { reason: string, blacklistedBy: number } }
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
 	@interface infoResponse
 	.success boolean
 	.message string
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
@@ -3167,12 +3170,12 @@ return setmetatable({
 	.secondsUserHasSpent number
 	.messagesUserHasSent number
 	.detailsLogs [ {timestampLeftAt: number, secondsUserHasSpent: number, messagesUserHasSent: number}? ]
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
 	@type responseBody groupIdResponse | errorResponse | rankResponse
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 --[=[
@@ -3183,7 +3186,7 @@ return setmetatable({
 	.StatusMessage string?
 	.Success boolean
 	.rawBody string
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Commands
@@ -3197,7 +3200,7 @@ return setmetatable({
 	.Alias {[string]: string}
 	.Removed {string?}
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- RankSticks
@@ -3211,7 +3214,7 @@ return setmetatable({
 	.Removed {string?}
 	.Animation { R6: number, R15: number }
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Notifications
@@ -3225,7 +3228,7 @@ return setmetatable({
 	.entranceTweenInfo { Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number }
 	.exitTweenInfo { Style: Enum.EasingStyle, Direction: Enum.EasingDirection, timeItTakes: number }
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Interface
@@ -3239,7 +3242,7 @@ return setmetatable({
 	.Activation { Keybind: Enum.KeyCode, iconButtonPosition: "Center" | "Left" | "Right", iconButtonImage: string, iconToolTip: string }
 	.nonViewableTabs { string? }
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Logs
@@ -3248,7 +3251,7 @@ return setmetatable({
 	.Enabled boolean
 	.MinRank number<0-255>
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Activity Tracker
@@ -3263,7 +3266,7 @@ return setmetatable({
 	.kickIfFails boolean
 	.failMessage string
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Cooldowns
@@ -3273,7 +3276,7 @@ return setmetatable({
 	.Ranking number
 	.Blacklisting number
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Misc
@@ -3284,7 +3287,7 @@ return setmetatable({
 	.overrideGroupCheckForStudio boolean
 	.createGlobalVariables boolean
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Debug
@@ -3292,7 +3295,7 @@ return setmetatable({
 	@interface debugOptions
 	.logMessages boolean
 	@private
-	@within VibezAPI
+	@within Vibez
 ]=]
 
 -- Base
@@ -3306,5 +3309,5 @@ return setmetatable({
 	.Cooldowns cooldownOptions
 	.Misc miscOptions
 	.Debug debugOptions
-	@within VibezAPI
+	@within Vibez
 ]=]

@@ -1,4 +1,7 @@
 {
+    "ToleranceType": "==|<|>|>=|<=",
+    "QuestionType": "Multi Select|Multiple Choice|Submit|Short Answer|Long Answer",
+    
     "AppCenter": {
         "apiKey": "string",
         "autoSaveInterval": "number",
@@ -45,23 +48,16 @@
                 "Questions": [
                     {
                         "Question": "string",
-                        "Type": "Long Answer|Short Answer|Multiple Choice|Multi Select",
-                        "Meta": {
-                            "Max": "number?",
-                            "Buttons": [
-                                {
-                                    "Text": "Banana?",
-                                    "isCorrect": "boolean?"
-                                }
-                            ]
-                        }
+                        "Type": "QuestionType",
+                        "Meta": "QuestionMeta"
                     }
                 ]
             }
         ]
     },
 
-    "QuestionTypeMetadata": {
+    "QuestionMeta": {
+        "Submit": {},
         "Multi Select": {
             "Max": "number",
             "Buttons": [
@@ -69,7 +65,25 @@
                     "Text": "string",
                     "isCorrect": "boolean"
                 }
+            ] 
+        },
+        "Multiple Choice": {
+            "Buttons": [
+                {
+                    "Text": "string",
+                    "isCorrect": "boolean"
+                }
             ]
+        },
+        "Long Answer": {
+            "Placeholder": "string"
+        },
+        "Short Answer": {
+            "Placeholder": "string"
+        },
+        "Scale": {
+            "minimumRequired": "number",
+            "Tolerance": "ToleranceType"
         }
     }
 }

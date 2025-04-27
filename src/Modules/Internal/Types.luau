@@ -236,10 +236,10 @@ export type vibezSettings = {
 }
 
 export type vibezCommandFunctions = {
-	getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
-	getGroupFromUser: (self: vibezApi, groupId: number, userId: number) -> { any }?,
+	getGroupRankFromName: (self: VibezKind, groupRoleName: string) -> number?,
+	getGroupFromUser: (self: VibezKind, groupId: number, userId: number) -> { any }?,
 	Http: (
-		self: vibezApi,
+		self: VibezKind,
 		Route: string,
 		Method: string?,
 		Headers: { [string]: any }?,
@@ -249,24 +249,24 @@ export type vibezCommandFunctions = {
 
 export type vibezInternalApi = {
 	__index: vibezInternalApi,
-	_initialize: (self: vibezApi, apiKey: string) -> (),
-	_buildAttributes: (self: vibezApi) -> (),
-	_setupCommands: (self: vibezApi) -> (),
-	_createRemote: (self: vibezApi) -> (),
-	_getNameById: (self: vibezApi, userId: number) -> string,
-	_setupGlobals: (self: vibezApi) -> (),
+	_initialize: (self: VibezKind, apiKey: string) -> (),
+	_buildAttributes: (self: VibezKind) -> (),
+	_setupCommands: (self: VibezKind) -> (),
+	_createRemote: (self: VibezKind) -> (),
+	_getNameById: (self: VibezKind, userId: number) -> string,
+	_setupGlobals: (self: VibezKind) -> (),
 	_fixFormattedString: (
-		self: vibezApi,
+		self: VibezKind,
 		String: string,
 		Player: { Name: string, UserId: number } | Player,
 		Custom: { onlyApplyCustom: boolean, Codes: { { code: string, equates: string } } }
 	) -> string,
 
-	_getRoleIdFromRank: (self: vibezApi, rank: number | string) -> number?,
+	_getRoleIdFromRank: (self: VibezKind, rank: number | string) -> number?,
 
-	_onInternalErrorLog: (self: vibezApi, message: string, stack: string) -> (),
+	_onInternalErrorLog: (self: VibezKind, message: string, stack: string) -> (),
 	_http: (
-		self: vibezApi,
+		self: VibezKind,
 		Route: string,
 		Method: any,
 		Headers: { [string]: any }?,
@@ -274,32 +274,32 @@ export type vibezInternalApi = {
 		useOldApi: boolean?
 	) -> (boolean, httpResponse),
 
-	_onPlayerChatted: (self: vibezApi, Player: Player, message: string) -> (),
-	_checkPlayerForRankChange: (self: vibezApi, userId: number) -> (),
+	_onPlayerChatted: (self: VibezKind, Player: Player, message: string) -> (),
+	_checkPlayerForRankChange: (self: VibezKind, userId: number) -> (),
 	_verifyUser: (
-		self: vibezApi,
+		self: VibezKind,
 		User: Player | number | string,
 		typeToReturn: "UserId" | "Player" | "Name" | "Id"
 	) -> Player | number | string,
 
-	_giveSticks: (self: vibezApi, Player: Player) -> (),
-	_removeSticks: (self: vibezApi, Player: Player) -> (),
-	_playerIsValidStaff: (self: vibezApi, Player: any) -> { [any]: any },
-	_warn: (self: vibezApi, ...any) -> (),
-	_debug: (self: vibezApi, ...any) -> (),
+	_giveSticks: (self: VibezKind, Player: Player) -> (),
+	_removeSticks: (self: VibezKind, Player: Player) -> (),
+	_playerIsValidStaff: (self: VibezKind, Player: any) -> { [any]: any },
+	_warn: (self: VibezKind, ...any) -> (),
+	_debug: (self: VibezKind, ...any) -> (),
 	_addLog: (
-		self: vibezApi,
+		self: VibezKind,
 		calledBy: Player,
 		Action: string,
 		triggeringAction: "Commands" | "Interface" | "RankSticks",
 		affectedUsers: { { Name: string, UserId: number } },
 		extraData: any?
 	) -> (),
-	_getGroupRankFromName: (self: vibezApi, groupRoleName: string) -> number?,
-	_getUserIdByName: (self: vibezApi, username: string) -> number,
+	_getGroupRankFromName: (self: VibezKind, groupRoleName: string) -> number?,
+	_getUserIdByName: (self: VibezKind, username: string) -> number,
 
-	_onPlayerRemoved: (self: vibezApi, Player: Player, isPlayerStillInGame: boolean?) -> (),
-	_onPlayerAdded: (self: vibezApi, Player: Player) -> (),
+	_onPlayerRemoved: (self: VibezKind, Player: Player, isPlayerStillInGame: boolean?) -> (),
+	_onPlayerAdded: (self: VibezKind, Player: Player) -> (),
 }
 
 export type vibezPrivate = {
@@ -385,7 +385,7 @@ export type vibezPrivate = {
 					...any
 				) -> (),
 				getUsersForCommands: (
-					self: vibezApi,
+					self: VibezKind,
 					playerWhoCalled: Player,
 					usernames: { string | number }
 				) -> { Player }
@@ -409,81 +409,81 @@ export type vibezProperties = {
 export type vibezPublicApi = {
 	-- Misc methods
 	bindToAction: (
-		self: vibezApi,
+		self: VibezKind,
 		name: string,
 		action: "Promote" | "Demote" | "Fire" | "Blacklist",
 		callback: (result: responseBody) -> ()
-	) -> vibezApi,
-	unbindFromAction: (self: vibezApi, name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist") -> vibezApi,
-	updateLoggerName: (self: vibezApi, newTitle: string) -> vibezApi,
-	getWebhookBuilder: (self: vibezApi, webhook: string) -> vibezHooks,
-	waitUntilLoaded: (self: vibezApi) -> vibezApi?,
-	updateKey: (self: vibezApi, newApiKey: string) -> boolean,
-	Destroy: (self: vibezApi) -> nil,
+	) -> VibezKind,
+	unbindFromAction: (self: VibezKind, name: string, action: "Promote" | "Demote" | "Fire" | "Blacklist") -> VibezKind,
+	updateLoggerName: (self: VibezKind, newTitle: string) -> VibezKind,
+	getWebhookBuilder: (self: VibezKind, webhook: string) -> vibezHooks,
+	waitUntilLoaded: (self: VibezKind) -> VibezKind?,
+	updateKey: (self: VibezKind, newApiKey: string) -> boolean,
+	Destroy: (self: VibezKind) -> nil,
 
-	setRankStickTool: (self: vibezApi, tool: any) -> vibezApi,
-	getGroupId: (self: vibezApi) -> number,
+	setRankStickTool: (self: VibezKind, tool: any) -> VibezKind,
+	getGroupId: (self: VibezKind) -> number,
 
-	isPlayerABooster: (self: vibezApi, User: number | string | Player) -> boolean?,
-	notifyPlayer: (self: vibezApi, Player: Player, Message: string) -> (),
+	isPlayerABooster: (self: VibezKind, User: number | string | Player) -> boolean?,
+	notifyPlayer: (self: VibezKind, Player: Player, Message: string) -> (),
 
 	-- Blacklists
 	addBlacklist: (
-		self: vibezApi,
+		self: VibezKind,
 		userToBlacklist: Player | string | number,
 		Reason: string?,
 		blacklistExecutedBy: Player | string | number
 	) -> (blacklistResponse | errorResponse | infoResponse)?,
 	deleteBlacklist: (
-		self: vibezApi,
+		self: VibezKind,
 		userToDelete: Player | string | number
 	) -> (blacklistResponse | errorResponse | infoResponse)?,
-	getBlacklists: (self: vibezApi, userId: userType) -> (blacklistResponse | errorResponse | infoResponse)?,
-	isUserBlacklisted: (self: vibezApi, userId: userType) -> ...any,
+	getBlacklists: (self: VibezKind, userId: userType) -> (blacklistResponse | errorResponse | infoResponse)?,
+	isUserBlacklisted: (self: VibezKind, userId: userType) -> ...any,
 
 	-- Ranking
 	Promote: (
-		self: vibezApi,
+		self: VibezKind,
 		userId: userType,
 		whoCalled: { userName: string, userId: number }?
 	) -> responseBody | errorResponse,
 	Demote: (
-		self: vibezApi,
+		self: VibezKind,
 		userId: userType,
 		whoCalled: { userName: string, userId: number }?
 	) -> responseBody | errorResponse,
 	Fire: (
-		self: vibezApi,
+		self: VibezKind,
 		userId: userType,
 		whoCalled: { userName: string, userId: number }?
 	) -> responseBody | errorResponse,
 	setRank: (
-		self: vibezApi,
+		self: VibezKind,
 		userId: userType,
 		rankId: string | number,
 		whoCalled: { userName: string, userId: number }?
 	) -> responseBody | errorResponse,
 
 	--- Ranking Sticks
-	giveRankSticks: (self: vibezApi, User: userType, shouldCheckPermissions: boolean?) -> vibezApi,
-	setRankStickModel: (self: vibezApi, tool: Tool | Model) -> (),
+	giveRankSticks: (self: VibezKind, User: userType, shouldCheckPermissions: boolean?) -> VibezKind,
+	setRankStickModel: (self: VibezKind, tool: Tool | Model) -> (),
 
 	-- Activity
-	removeActivity: (self: vibezApi, userId: userType) -> boolean,
+	removeActivity: (self: VibezKind, userId: userType) -> boolean,
 	saveActivity: (
-		self: vibezApi,
+		self: VibezKind,
 		userId: string | number,
 		userRank: number,
 		secondsSpent: number?,
 		messagesSent: (number | { string })?,
 		shouldFetchGroupRank: boolean?
 	) -> (infoResponse | errorResponse)?,
-	getActivity: (self: vibezApi, userId: string | number) -> activityResponse | errorResponse,
+	getActivity: (self: VibezKind, userId: string | number) -> activityResponse | errorResponse,
 
 	-- Commands
-	getUsersForCommands: (self: vibezApi, playerWhoCalled: Player, usernames: { string | number }) -> { Player },
+	getUsersForCommands: (self: VibezKind, playerWhoCalled: Player, usernames: { string | number }) -> { Player },
 	addCommand: (
-		self: vibezApi,
+		self: VibezKind,
 		commandName: string,
 		commandAliases: { string? },
 		commandOperation: (
@@ -498,7 +498,7 @@ export type vibezPublicApi = {
 		) -> ()
 	) -> boolean,
 	addArgumentPrefix: (
-		self: vibezApi,
+		self: VibezKind,
 		operationName: string,
 		operationCode: string,
 		operationFunction: (
@@ -508,17 +508,17 @@ export type vibezPublicApi = {
 			internalFunctions: vibezCommandFunctions
 		) -> boolean,
 		metaData: { [string]: boolean }?
-	) -> vibezApi,
-	removeArgumentPrefix: (self: vibezApi, operationName: string) -> vibezApi,
+	) -> VibezKind,
+	removeArgumentPrefix: (self: VibezKind, operationName: string) -> VibezKind,
 }
 
-export type vibezApi = typeof(setmetatable({} :: vibezProperties & vibezInternalApi & vibezPublicApi, {}))
+export type VibezKind = typeof(setmetatable({} :: vibezProperties & vibezInternalApi & vibezPublicApi, {}))
 
 export type vibezHooks = {
 	Api: { any },
 	webhook: string,
 	toSend: { any? },
-	new: (vibezApi: { any }, webhook: string) -> vibezHooks,
+	new: (VibezKind: { any }, webhook: string) -> vibezHooks,
 	addEmbedWithBuilder: (self: vibezHooks, handler: (embedCreator: embedCreator) -> Embed) -> vibezHooks,
 	addEmbed: (self: vibezHooks, data: { [string]: any }) -> vibezHooks,
 	_parseWebhook: (self: vibezHooks, webhookToUse: string?) -> { ID: string, Token: string }?,
@@ -541,7 +541,7 @@ type activityTrackerContent = {
 	isLeaving: boolean,
 	isAfk: boolean,
 
-	_api: vibezApi,
+	_api: VibezKind,
 	_token: string,
 	_seconds: number,
 	_messages: number,
@@ -581,7 +581,7 @@ export type Embed = {
 		},
 	},
 	url: string,
-	_api: vibezApi,
+	_api: VibezKind,
 	_used: boolean,
 }
 
@@ -596,8 +596,8 @@ export type embedCreator = Embed & {
 	-- setTimestamp: (self: embedCreator, timeStamp: number | "Auto") -> embedCreator,
 }
 
-export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> vibezApi?
-export type vibezConstructorCall = (t: { [any]: any }, apiKey: string, extraOptions: vibezSettings?) -> vibezApi
+export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> VibezKind?
+export type vibezConstructorCall = (t: { [any]: any }, apiKey: string, extraOptions: vibezSettings?) -> VibezKind
 
 export type widgetTypes = "" -- Add more if we decide to add more. (Social media platforms)
 
