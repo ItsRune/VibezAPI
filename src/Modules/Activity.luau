@@ -61,7 +61,7 @@ local Types = require(script.Parent.Internal.Types)
 
 --[=[
 	Creates a new activity object for the player.
-	@param VibezAPI VibezAPI
+	@param api Vibez
 	@param forPlayer Player
 	@return ActivityTracker
 
@@ -70,11 +70,8 @@ local Types = require(script.Parent.Internal.Types)
 	@since 1.0.0
 ]=]
 ---
-function Activity.new(VibezAPI: Types.VibezKind, forPlayer: Player): Types.ActivityTracker
-	assert(
-		typeof(VibezAPI) == "table" and VibezAPI["isVibez"] == true,
-		"Expected 'Vibez' class and received something else!"
-	)
+function Activity.new(api: Types.VibezKind, forPlayer: Player): Types.ActivityTracker
+	assert(typeof(api) == "table" and api["isVibez"] == true, "Expected 'Vibez' class and received something else!")
 
 	-- Await a random number to ensure processing is in effect at different load-times.
 	local RNG = Random.new(tick())
@@ -90,7 +87,7 @@ function Activity.new(VibezAPI: Types.VibezKind, forPlayer: Player): Types.Activ
 	end
 
 	-- Rotate the characters within the key to prevent any bad-actors. (If this module ends up in a client-replicated service)
-	local reversedKey = Utils.rotateCharacters(string.reverse(VibezAPI.apiKey), 128)
+	local reversedKey = Utils.rotateCharacters(string.reverse(api._private.Ranker._key), 128)
 	local keyTracker = Activity.Keys[reversedKey] or {}
 	local existingTracker = keyTracker[forPlayer.UserId]
 
@@ -107,12 +104,12 @@ function Activity.new(VibezAPI: Types.VibezKind, forPlayer: Player): Types.Activ
 	self.isAfk = false
 
 	self._token = reversedKey
-	self._api, self._player = VibezAPI, forPlayer
+	self._api, self._player = api, forPlayer
 	self._seconds, self._messages, self._afkCounter, self._increment = 0, 0, 0, 1
 	self._lastCheck = DateTime.now().UnixTimestamp
 
 	local groupData = self._api._private.Ranker:_getGroupFromUser(self._api.GroupId, forPlayer.UserId)
-	if groupData:isErr() then
+	if groupData:isOk() then
 		self._api:_warn(string.format("Setting up activity tracking for %s.", tostring(forPlayer)))
 
 		keyTracker[self._player.UserId] = self

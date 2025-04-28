@@ -231,6 +231,7 @@ export type vibezSettings = {
 
 	Debug: {
 		logMessages: boolean,
+		silenceSettingsCheck: boolean,
 		logClientMessages: boolean,
 	},
 }
@@ -399,7 +400,6 @@ export type vibezProperties = {
 	isVibez: boolean,
 	Loaded: boolean,
 	GroupId: number,
-	apiKey: string,
 	Version: string,
 
 	Settings: vibezSettings,

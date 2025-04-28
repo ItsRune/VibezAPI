@@ -29,9 +29,9 @@ local Maid = {
 --// UI Variables \\--
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
-local UI = script.Interface
-local Frame = UI.Frame
-local Content, Top, Buttons = Frame.Content, Frame.Top, Frame.Buttons
+local UI = script:FindFirstChild("Interface")
+local Frame = UI and UI.Frame or nil
+local Content, Top, Buttons = UI and Frame.Content or nil, UI and Frame.Top or nil, UI and Frame.Buttons or nil
 local currentOpenFrame, isToggled = nil, false
 local onSetup, onDestroy, _toggleUI, topBarButton
 
@@ -359,7 +359,13 @@ function onSetup(componentData: Definitions.componentData)
 
 	if not componentData.Data.useBeta then
 		componentData._warn("Vibez Setup", "Setting up V1 Interface.")
-
+		oldUIData.Setup(componentData)
+		return
+	elseif componentData.Data.useBeta and UI == nil then
+		componentData._warn(
+			"Vibez Setup",
+			"V2 Interface is not within this instance of the wrapper! Please ensure you're using the right version...\nSetting up V1 Interface."
+		)
 		oldUIData.Setup(componentData)
 		return
 	end

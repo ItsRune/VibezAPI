@@ -102,6 +102,7 @@ end
 
 -- Rotates characters for a simple ROT cipher.
 function Utils.rotateCharacters(Input: string, Key: number, splitter: string?, shouldDecode: boolean?)
+	Input = tostring(Input)
 	local splitIndex = splitter or ""
 	local bytes = shouldDecode and string.split(Input, splitIndex) or string.split(Input, "")
 

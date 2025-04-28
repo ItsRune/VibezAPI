@@ -8,7 +8,7 @@ local Types = require(script.Parent.Types)
 local Table = require(script.Parent.Parent.Table)
 
 --// Variables \\--
-local clientInterface = (script.Parent.Parent.Parent.Client.Components.UI :: any).Interface
+local clientInterface = (script.Parent.Parent.Parent.Client.Components.UI :: any):FindFirstChild("Interface")
 
 --// Functions \\--
 local function test(self: Types.VibezKind, expr: boolean, checkName: string): boolean
@@ -47,10 +47,16 @@ local function fixDiscrepencies(self: Types.VibezKind, Data: any, Default: any, 
 		if
 			test(
 				self,
-				latestKey == "nonViewableTabs" and #Data >= #clientInterface.Frame.Buttons:GetChildren() - 1,
+				latestKey == "nonViewableTabs"
+					and clientInterface ~= nil
+					and #Data >= #clientInterface.Frame.Buttons:GetChildren() - 1,
 				"interface_viewable_tabs_validator"
 			)
 		then
+			if not clientInterface then
+				return Default
+			end
+
 			self:_warn(
 				optionalKeyStarter
 					.. " makes all frame tabs invisible with it's current configuration. Either disable the 'Interface' or make atleast 1 tab visible."

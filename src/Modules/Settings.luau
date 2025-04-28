@@ -135,6 +135,7 @@ return {
 
 	Debug = {
 		logMessages = false, -- Toggles whether we dump the console full of information about what's happening behind the scenes.
+		silenceSettingsCheck = false, -- Determines whether 'logMessages' with show debug info about the settings checker.
 		logClientMessages = false, -- Toggles dump-age of the client's console.
 	},
 }

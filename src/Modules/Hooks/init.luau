@@ -308,13 +308,16 @@ end
 ---
 function Class:Send(): Types.httpResponse
 	local webhookData = self:_parseWebhook()
-	local isOk, response =
+	local result =
 		self.Api:_http(string.format("/hooks/%s/%s", webhookData.ID, webhookData.Token), "post", nil, self.toSend)
 
-	if not isOk or response.StatusCode ~= 200 then
-		self.Api:_warn(response.Body.message)
+	if result:isErr() then
+		self.Api:_warn(result:unwrapErr())
+		return
 	end
 
+	local response = result:unwrap()
+	warn(response)
 	self.Api:_debug("webhooks_send", "Sent webhook data with a response code of '" .. response.StatusCode .. "'.")
 	return response
 end

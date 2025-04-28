@@ -11,13 +11,13 @@
 	Profile: https://www.roblox.com/users/107392833/profile
 	Created: 9/11/2023 15:01 EDT
 	Updated: 4/27/2025 12:34 EST
-	Version: 0.12.0
+	Version: 0.12.1
 
 	Note: If you don't know what you're doing, I would
 	not	recommend messing with anything. We don't offer
 	support for modified modules.
 ]]
-local _VERSION = "0.12.0"
+local _VERSION = "0.12.1"
 
 --// Services \\--
 local Debris = game:GetService("Debris")
@@ -2791,27 +2791,6 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		return this._private.Ranker:setLoggingOriginationText(text)
 	end
 
-	-- We'll have to set the settings debug/warning messages before
-	-- the settings check so that debug/warnings print properly.
-	self.Settings.Debug.logMessages = (
-		extraOptions
-		and extraOptions["Debug"] ~= nil
-		and typeof(extraOptions["Debug"]["logMessages"]) == "boolean"
-		and extraOptions["Debug"]["logMessages"]
-	) or baseSettings.Debug.logMessages
-	self.Settings.Debug.logClientMessages = (
-		extraOptions
-		and extraOptions["Debug"] ~= nil
-		and typeof(extraOptions["Debug"]["logClientMessages"]) == "boolean"
-		and extraOptions["Debug"]["logClientMessages"]
-	) or baseSettings.Debug.logClientMessages
-	self.Settings.Misc.ignoreWarnings = (
-		extraOptions
-		and extraOptions["Misc"] ~= nil
-		and typeof(extraOptions["Misc"]["ignoreWarnings"]) == "boolean"
-		and extraOptions["Misc"]["ignoreWarnings"]
-	) or baseSettings.Misc.ignoreWarnings
-
 	--/ Command Operation Codes \--
 	self:addArgumentPrefix(
 		"shortenedUsername",
@@ -2888,6 +2867,36 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 				== string.lower(incomingArgument)
 	end)
 
+	-- We'll have to set the settings debug/warning messages before
+	-- the settings check so that debug/warnings print properly.
+	self.Settings.Debug.logMessages = (
+		extraOptions
+		and extraOptions["Debug"] ~= nil
+		and typeof(extraOptions["Debug"]["logMessages"]) == "boolean"
+		and extraOptions["Debug"]["logMessages"]
+	) or baseSettings.Debug.logMessages
+
+	self.Settings.Debug.logClientMessages = (
+		extraOptions
+		and extraOptions["Debug"] ~= nil
+		and typeof(extraOptions["Debug"]["logClientMessages"]) == "boolean"
+		and extraOptions["Debug"]["logClientMessages"]
+	) or baseSettings.Debug.logClientMessages
+
+	self.Settings.Debug.silenceSettingsCheck = (
+		extraOptions
+		and extraOptions["Debug"] ~= nil
+		and typeof(extraOptions["Debug"]["silenceSettingsCheck"]) == "boolean"
+		and extraOptions["Debug"]["silenceSettingsCheck"]
+	) or baseSettings.Debug.silenceSettingsCheck
+
+	self.Settings.Misc.ignoreWarnings = (
+		extraOptions
+		and extraOptions["Misc"] ~= nil
+		and typeof(extraOptions["Misc"]["ignoreWarnings"]) == "boolean"
+		and extraOptions["Misc"]["ignoreWarnings"]
+	) or baseSettings.Misc.ignoreWarnings
+
 	--/ Configuration Fixing \--
 	local wereOptionsAttempted = not (extraOptions == nil)
 	extraOptions = (typeof(extraOptions) == "table") and extraOptions or {} :: Types.vibezSettings
@@ -2904,12 +2913,22 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 			self.Settings.Debug = baseSettings.Debug
 		end
 
+		-- Silence the settings check.
+		if self.Settings.Debug.silenceSettingsCheck then
+			self:_warn("Silenced the settings check.")
+			self.Settings.Debug.logMessages = false
+		end
+
 		-- Recursively fixes the settings table with custom logic for certain sections.
 		local modified = checkingMethods.settingsCheck(self, extraOptions, baseSettings, "Settings")
 		modified = checkingMethods.applyMissing(self, modified, baseSettings)
 		local removedUnknownKeys, removalCount = checkingMethods.removeNilChecks(self, modified)
 
 		self.Settings = removedUnknownKeys
+		self.Settings.Debug.logMessages = (
+			extraOptions and extraOptions.Debug and extraOptions.Debug.logMessages or false
+		)
+
 		self:_debug("settings_nil_keys_removal", "Removed '" .. removalCount .. "' unknown keys.")
 	end
 
