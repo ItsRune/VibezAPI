@@ -33,7 +33,7 @@ return {
 	Notifications = {
 		Enabled = true,
 
-		-- Specific color codes that we use can be changed here.
+		-- These colors are mainly used on the client for notifications / logs.
 		Colors = {
 			Users = Color3.fromRGB(255, 191, 0),
 			Actions = Color3.fromRGB(255, 179, 79),

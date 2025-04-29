@@ -116,6 +116,7 @@ local function onAttributeChanged()
 
 	System.isWarningsAllowed = States.Misc.ignoreWarnings
 	System.areDebugPrintsAllowed = States.Misc.showDebugMessages
+	System.Colors = States.Notifications.Colors
 
 	for key: string, data: { [any]: any } in pairs(States) do
 		if key == "GroupId" then
@@ -126,6 +127,7 @@ local function onAttributeChanged()
 			remoteFunction = remoteFunction,
 			remoteEvent = remoteEvent,
 
+			customRichTextColors = System.Colors,
 			GroupId = States.GroupId,
 			Data = data,
 			Identifier = script.Name,

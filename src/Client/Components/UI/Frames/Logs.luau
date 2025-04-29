@@ -19,36 +19,12 @@ type LogInformation = {
 
 --// Variables \\--
 local Definitions = require(script.Parent.Parent.Parent.Parent.Definitions)
+local customRichText = require(script.Parent.Parent.Modules.CustomRichText)
 local hasWarned = false
 local nextLayoutOrder = 999999
 local Maid = {}
 
 --// Functions \\--
-local function _applyColorToLogText(logText: string, colorType: "Admin" | "Action" | "Data")
-	local Colors = {
-		["Admin"] = Color3.fromRGB(255, 121, 73),
-		["Action"] = Color3.fromRGB(255, 81, 81),
-		["Data"] = Color3.fromRGB(210, 210, 210),
-	}
-
-	if not Colors[colorType] then
-		return logText
-	end
-
-	local function clampColor(x: number)
-		return math.clamp(math.floor(x), 0, 255)
-	end
-
-	local Color = Colors[colorType]
-	return string.format(
-		'<font color="rgb(%d, %d, %d)">%s</font>',
-		clampColor(Color.R * 255),
-		clampColor(Color.G * 255),
-		clampColor(Color.B * 255),
-		logText
-	)
-end
-
 local function _fixStringForAction(componentData: Definitions.componentData, logInfo: LogInformation): string
 	local userNamesAndIds = componentData.Table.Map(logInfo.affectedUsers, function(Target: Player)
 		return string.format("%s (%d)", Target.Name, Target.UserId)
@@ -58,11 +34,14 @@ local function _fixStringForAction(componentData: Definitions.componentData, log
 	local fixedString = (#userNamesAndIds > 3) and table.concat(userNamesAndIds, ", ", 1, 3) .. "..."
 		or table.concat(userNamesAndIds, ", ")
 
-	local baseString = string.format(
-		"%s used action '%s' on player(s) '%s'",
-		_applyColorToLogText(logInfo.calledBy.Name, "Admin"),
-		_applyColorToLogText(logInfo.Action, "Action"),
-		_applyColorToLogText(fixedString, "Data")
+	local baseString = customRichText(
+		componentData,
+		string.format(
+			"<User>%s</User> used action '<Action>%s</Action>' on player(s) '<User>%s</User>'",
+			logInfo.calledBy.Name,
+			logInfo.Action,
+			fixedString
+		)
 	)
 
 	if logInfo.Action == "Blacklist" then

@@ -1039,7 +1039,7 @@ function api._onPlayerAdded(self: Types.VibezKind, Player: Player)
 
 	-- Check if player is currently blacklisted.
 	if self.Settings.Blacklists.Enabled then
-		local isBlacklisted, blacklistReason, blacklistedBy = self:isUserBlacklisted(Player)
+		local isBlacklisted, blacklistReason, blacklistedBy = self._private.Ranker:isUserBlacklisted(Player)
 
 		if isBlacklisted then
 			local blacklistedByUsernameIsOk, blacklistedByUsername =
@@ -1064,12 +1064,12 @@ function api._onPlayerAdded(self: Types.VibezKind, Player: Player)
 			self:_debug(
 				"user_blacklist_check",
 				"'"
-					.. Player.Name
-					.. "' was blacklisted by '"
-					.. (blacklistedByUsernameIsOk and blacklistedByUsername or blacklistedBy)
-					.. "' for '"
-					.. blacklistReason
-					.. "'!"
+						.. Player.Name
+						.. "' was blacklisted by '"
+						.. (blacklistedByUsernameIsOk and blacklistedByUsername or blacklistedBy)
+						.. "' for '"
+						.. blacklistReason
+					or "Unknown" .. "'!"
 			)
 			return
 		end

@@ -7,44 +7,12 @@ local Workspace = game:GetService("Workspace")
 
 --// Variables \\--
 local Definitions = require(script.Parent.Parent.Definitions)
+local customRichText = require(script.Parent.UI.Modules.CustomRichText)
 local notifGui = script.Notifications
+local notificationCount = 0
 local Maid = {}
 
 --// Functions \\--
-local function _fixNotificationStatus(componentData: Definitions.componentData, message: string): string
-	local customFormatCodes: { [string]: string } = {
-		["User"] = "Users",
-		["Action"] = "Actions",
-		["Group"] = "Group",
-		["Error"] = "Error",
-		["Warn"] = "Warning",
-		["Info"] = "Info",
-		["Success"] = "Success",
-	}
-
-	for i in customFormatCodes do
-		local puncuationSet = "!%?%(%)%*&%%#%$@,%./\\"
-		local capture = `<{i}>([%w%s{puncuationSet}]+)</{i}>`
-		local matched
-
-		repeat
-			matched = message:match(capture)
-
-			if not matched then
-				continue
-			end
-
-			local newFormat = '<font color="%s">%s</font>'
-			local colorName = customFormatCodes[i]
-			local colorHex = componentData.Data.Colors[colorName] or "#000000"
-
-			message = message:gsub(capture, newFormat:format(colorHex, matched))
-		until matched == nil
-	end
-
-	return message
-end
-
 local function _verifyDynamicEnum(parentEnum: any, dynamicProperty: string): any
 	local enumItem = parentEnum[dynamicProperty]
 
@@ -62,7 +30,7 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 	local notificationSettings = Settings.Notifications
 
 	if not dontAllowFormatting then
-		Message = _fixNotificationStatus(componentData, Message)
+		Message = customRichText(componentData, Message)
 		componentData._debug("notification_formatting_result", Message)
 	end
 
@@ -88,6 +56,8 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 		return
 	end
 
+	notificationCount += 1
+
 	newItem.Parent = notifGui.Holder
 	newItem.TextWrapped = true
 	newItem.TextScaled = true
@@ -97,6 +67,7 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 	newItem.Position = UDim2.fromScale(0.5, 1)
 	newItem.AnchorPoint = Vector2.new(0.5, 1)
 	newItem.BackgroundTransparency = 1
+	newItem:SetAttribute("desiredSize", UDim2.fromOffset(textSize.X, textSize.Y))
 
 	local tweenInInfo = TweenInfo.new(
 		notificationSettings.entranceTweenInfo.timeItTakes,
@@ -123,8 +94,23 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 		return v ~= newItem
 	end) :: { any }
 
+	-- TODO: Issue with positioning where, when notifications are spammed it could potentially cause
+	-- a 'traffic jam' where positions overlap.
 	if #children > 0 then
 		coroutine.wrap(function()
+			-- local lastSize = 0
+			-- for i = notificationCount - #children, notificationCount - 1 do
+			-- 	local child = children[notificationCount - i]
+			-- 	local expected = child:GetAttribute("desiredSize") :: UDim2
+
+			-- 	lastSize += expected.Y.Offset
+			-- 	print(lastSize, notificationCount - i, expected)
+
+			-- 	Tweens(child, tweenInInfo, {
+			-- 		Size = expected,
+			-- 		Position = UDim2.new(0.5, 0, 1, expected.Y.Offset - textSize.Y),
+			-- 	})
+			-- end
 			for _, v in pairs(children) do
 				Tweens(v, tweenInInfo, {
 					Position = UDim2.new(0.5, 0, 1, v.Position.Y.Offset - textSize.Y),

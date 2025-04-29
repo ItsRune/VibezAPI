@@ -63,11 +63,16 @@ local function _safelyLoadModuleAndRun(module: ModuleScript, subCommand: string,
 	pcall(requiredModule[subCommand], ...)
 end
 
-local function onMouseHoveringOverButtonsFrame(componentData: Definitions.componentData)
+local function onMouseHoveringOverButtonsFrame(componentData: Definitions.componentData, override: boolean?)
 	local TI = TweenInfo.new(0.25, Enum.EasingStyle.Quint)
 	for i = 1, #Buttons.Holder:GetChildren() do
 		local child = Buttons.Holder:GetChildren()[i]
 		if not child:IsA("ImageButton") then
+			continue
+		end
+
+		if override then
+			child.Label.Frame.Size = UDim2.fromScale(0, 1)
 			continue
 		end
 
@@ -78,6 +83,10 @@ local function onMouseHoveringOverButtonsFrame(componentData: Definitions.compon
 			:Play()
 	end
 
+	if override then
+		Content.Size = UDim2.fromScale(0.8, 0.825)
+	end
+
 	componentData
 		.Tweens(Content, TI, {
 			Size = UDim2.fromScale(0.8, 0.825),
@@ -85,11 +94,16 @@ local function onMouseHoveringOverButtonsFrame(componentData: Definitions.compon
 		:Play()
 end
 
-local function onMouseStopsHoveringOverButtonsFrame(componentData: Definitions.componentData)
+local function onMouseStopsHoveringOverButtonsFrame(componentData: Definitions.componentData, override: boolean?)
 	local TI = TweenInfo.new(0.25, Enum.EasingStyle.Quint)
 	for i = 1, #Buttons.Holder:GetChildren() do
 		local child = Buttons.Holder:GetChildren()[i]
 		if not child:IsA("ImageButton") then
+			continue
+		end
+
+		if override then
+			child.Label.Frame.Size = UDim2.fromScale(1, 1)
 			continue
 		end
 
@@ -98,6 +112,11 @@ local function onMouseStopsHoveringOverButtonsFrame(componentData: Definitions.c
 				Size = UDim2.fromScale(1, 1),
 			})
 			:Play()
+	end
+
+	if override then
+		Content.Size = UDim2.fromScale(0.94, 0.825)
+		return
 	end
 
 	componentData
@@ -284,6 +303,7 @@ function _toggleUI(componentData: Definitions.componentData)
 
 	-- Add connection to mouse hovering over buttons frame.
 	if UserInputService.MouseEnabled then
+		onMouseStopsHoveringOverButtonsFrame(componentData, true)
 		componentData._debug("interface_side_bar", "Establishing connection between 'Buttons' and 'Content' frames.")
 
 		-- Uses render step instead of '.MouseEnter' due to the mouse being detected inside the
@@ -318,7 +338,7 @@ function _toggleUI(componentData: Definitions.componentData)
 		)
 	else -- Ensure the sidebar is always open.
 		componentData._debug("interface_side_bar", "Sidebar options are remaining open.")
-		onMouseHoveringOverButtonsFrame(componentData)
+		onMouseHoveringOverButtonsFrame(componentData, true)
 	end
 end
 
