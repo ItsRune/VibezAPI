@@ -23,9 +23,41 @@ local function _verifyDynamicEnum(parentEnum: any, dynamicProperty: string): any
 	return enumItem
 end
 
-local function _onNotification(componentData: Definitions.componentData, dontAllowFormatting: boolean, Message: string)
-	local Tweens, Table = componentData.Tweens, componentData.Table
+local function _restackFrames(componentData: Definitions.componentData, tweenInInfo: TweenInfo)
+	local Tweens = componentData.Tweens
+	local children = notifGui.Holder:GetChildren()
 
+	table.sort(children, function(a, b)
+		return a.LayoutOrder > b.LayoutOrder
+	end)
+
+	local projectedSize = 0
+	for i = 1, #children do
+		local child = children[i]
+		local expected: UDim2 = child:GetAttribute("Destroying") and UDim2.fromScale(0, 0)
+			or child:GetAttribute("desiredSize")
+
+		local Tween = Tweens(child, tweenInInfo, {
+			Size = expected,
+			Position = UDim2.new(0.5, 0, 1, projectedSize),
+		})
+
+		Tween:onCompleted(function()
+			if not child:GetAttribute("Destroying") then
+				return
+			end
+
+			child:Destroy()
+		end)
+
+		Tween:Play()
+
+		projectedSize -= expected.Y.Offset
+	end
+end
+
+local function _onNotification(componentData: Definitions.componentData, dontAllowFormatting: boolean, Message: string)
+	local Tweens = componentData.Tweens
 	local Settings = HttpService:JSONDecode(tostring(Workspace:GetAttribute(script.Parent.Parent.Name)))
 	local notificationSettings = Settings.Notifications
 
@@ -58,10 +90,12 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 
 	notificationCount += 1
 
+	newItem.Name = "Notification"
 	newItem.Parent = notifGui.Holder
 	newItem.TextWrapped = true
 	newItem.TextScaled = true
 	newItem.FontFace = notificationFont
+	newItem.LayoutOrder = notificationCount
 	newItem.TextColor3 = Color3.new(1, 1, 1)
 	newItem.Size = UDim2.new(0, textSize.X, 0, 0)
 	newItem.Position = UDim2.fromScale(0.5, 1)
@@ -87,53 +121,36 @@ local function _onNotification(componentData: Definitions.componentData, dontAll
 		Size = UDim2.fromScale(0, 0),
 	})
 
+	_restackFrames(componentData, tweenInInfo)
 	tweenIn:Play()
 
-	-- Filter others to move upwards
-	local children = Table.Filter(notifGui.Holder:GetChildren(), function(v: any)
-		return v ~= newItem
-	end) :: { any }
-
-	-- TODO: Issue with positioning where, when notifications are spammed it could potentially cause
-	-- a 'traffic jam' where positions overlap.
-	if #children > 0 then
-		coroutine.wrap(function()
-			-- local lastSize = 0
-			-- for i = notificationCount - #children, notificationCount - 1 do
-			-- 	local child = children[notificationCount - i]
-			-- 	local expected = child:GetAttribute("desiredSize") :: UDim2
-
-			-- 	lastSize += expected.Y.Offset
-			-- 	print(lastSize, notificationCount - i, expected)
-
-			-- 	Tweens(child, tweenInInfo, {
-			-- 		Size = expected,
-			-- 		Position = UDim2.new(0.5, 0, 1, expected.Y.Offset - textSize.Y),
-			-- 	})
-			-- end
-			for _, v in pairs(children) do
-				Tweens(v, tweenInInfo, {
-					Position = UDim2.new(0.5, 0, 1, v.Position.Y.Offset - textSize.Y),
-				}):Play()
-			end
-		end)()
-	end
-
-	coroutine.wrap(function()
+	task.defer(function()
 		task.wait(notificationSettings.delayUntilRemoval)
+		newItem:SetAttribute("Destroying", true)
 		tweenOut:setCallback(function(state: Enum.PlaybackState?)
 			if state ~= Enum.PlaybackState.Completed then
 				return
 			end
 
-			Debris:AddItem(newItem, 0)
+			newItem:Destroy()
+			_restackFrames(componentData, tweenInInfo)
 		end)
 
 		tweenOut:Play()
-	end)()
+	end)
 end
 
-local function onDestroy(componentData: { [any]: any })
+local function onDestroy(componentData: Definitions.componentData)
+	componentData.Table.ForEach(
+		componentData.Table.Filter(notifGui.Holder:GetChildren(), function(v)
+			return v.Name == "Notification"
+		end),
+		function(v)
+			v:Destroy()
+		end
+	)
+
+	notificationCount = 0
 	componentData.Disconnect(Maid)
 	table.clear(Maid)
 end
