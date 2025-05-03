@@ -400,6 +400,17 @@ function onSetup(componentData: Definitions.componentData)
 		)
 	end
 
+	for _, ignoredTab: string in ipairs(componentData.Data.nonViewableTabs) do
+		for _, tab: GuiButton in ipairs(Buttons.Holder:GetChildren()) do
+			if tab.Name:lower():sub(1, #ignoredTab) ~= ignoredTab:lower() then
+				continue
+			end
+
+			tab.Visible = false
+			componentData._debug("interface_tab_removal", `'{tab.Name}' tab has been hidden.`)
+		end
+	end
+
 	local interfaceData = componentData.Data
 	if topBarButton ~= nil then
 		componentData._debug(
@@ -407,22 +418,6 @@ function onSetup(componentData: Definitions.componentData)
 			"Initialization of topbar button failed due to one already existing."
 		)
 		return
-	end
-
-	for _, viewableTab: string in ipairs(componentData.Data.nonViewableTabs) do
-		local debugView = table.create(#componentData.Data.nonViewableTabs)
-
-		for _, tab: GuiLabel in ipairs(Buttons.Holder:GetChildren()) do
-			if string.lower(viewableTab) == string.lower(tab.Name) then
-				table.insert(debugView, tab.Name)
-				tab.Visible = false
-			end
-		end
-
-		componentData._debug(
-			"interface_tabs_view",
-			"Disabled " .. #debugView .. " tabs. (" .. table.concat(debugView, ", ") .. ")"
-		)
 	end
 
 	--stylua: ignore
