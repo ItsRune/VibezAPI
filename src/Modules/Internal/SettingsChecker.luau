@@ -49,7 +49,7 @@ local function fixDiscrepencies(self: Types.VibezKind, Data: any, Default: any, 
 				self,
 				latestKey == "nonViewableTabs"
 					and clientInterface ~= nil
-					and #Data >= #clientInterface.Frame.Buttons:GetChildren() - 1,
+					and #Data >= #clientInterface.Frame.Buttons.Holder:GetChildren() - 1,
 				"interface_viewable_tabs_validator"
 			)
 		then
@@ -177,6 +177,10 @@ local function fixDiscrepencies(self: Types.VibezKind, Data: any, Default: any, 
 		then
 			return Data
 		elseif test(self, Default == nil, "optional_key_doesnt_exist") then
+			if parentKey == "nonViewableTabs" then
+				return Data
+			end
+
 			self:_warn(optionalKeyInvalidError)
 		end
 	else
