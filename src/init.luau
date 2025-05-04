@@ -26,7 +26,6 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 local TestService = game:GetService("TestService")
 
@@ -43,6 +42,7 @@ local baseSettings = require(script.Modules.Settings)
 local VibezRanking = require(script.Modules.VibezRanking)
 
 --// Constants \\--
+local VibezCache: { [string]: Types.VibezKind } = {}
 local api = {} :: Types.vibezInternalApi & Types.vibezPublicApi
 local _privateKeys = {} :: { [string]: string? }
 
@@ -889,13 +889,16 @@ end
 	~~Sets up the _G API.~~ **Creates RemoteFunctions within ServerStorage under a direct folder with that specific wrapper.**
 	@return ()
 
+	@deprecated
 	@private
 	@within Vibez
 	@since 0.4.0
 	@method _setupGlobals
 ]=]
 ---
-function api._setupGlobals(self: Types.VibezKind): ()
+function api._setupGlobals(_self: Types.VibezKind): ()
+	return nil
+	--[[
 	if
 		ServerStorage:FindFirstChild(self._private.clientScriptName)
 		or self.Settings.Misc.createGlobalVariables == false
@@ -969,6 +972,7 @@ function api._setupGlobals(self: Types.VibezKind): ()
 	globalsFolder.Blacklists.Delete.OnInvoke = function(...: any): any
 		return self._private.Ranker:deleteBlacklist(...)
 	end
+	]]
 end
 
 --[=[
@@ -2581,6 +2585,11 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		return
 	end
 
+	-- Check the cache for the existing wrapper.
+	if VibezCache[apiKey] ~= nil then
+		return VibezCache[apiKey]
+	end
+
 	--[=[
 		@class Vibez
 		:::info
@@ -3024,10 +3033,16 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 		return
 	end
 
-	-- Setup the global variables for use.
-	if self.Settings.Misc.createGlobalVariables then
-		self:_setupGlobals()
+	-- Add this vibez instance into the cache.
+	if VibezCache[apiKey] == nil then
+		VibezCache[apiKey] = self
 	end
+
+	-- (DEPRECATED)
+	-- Setup the global variables for use.
+	-- if self.Settings.Misc.createGlobalVariables then
+	-- 	self:_setupGlobals()
+	-- end
 
 	--[[
 	-- This code will be kept in case I brick the module again with my descriptive comments. :rolling_eyes:
@@ -3097,54 +3112,8 @@ function Constructor(apiKey: string, extraOptions: Types.vibezSettings?): Types.
 	return self :: Types.VibezKind
 end
 
---[=[
-	@function getGlobalsForKey
-	Awaits for the Global API to be loaded.
-	@param apiKey string
-	@return Folder?
-
-	```lua
-	local globals = Vibez.getGlobalsForKey("API KEY")
-	globals.Notifications:Invoke(Player, "Hello World!")
-	```
-
-	@within Vibez
-	@since 0.11.0
-]=]
----
 return setmetatable({
 	isVibez = true,
-
-	awaitGlobals = function(): ()
-		warn("[Vibez]: Method 'awaitGlobals' is deprecated, please use 'getGlobalsForKey' instead.")
-
-		-- _G Api is removed in this version.
-		-- local mod = nil
-		-- local counter = 0
-
-		-- while mod == nil do
-		-- 	mod = _G["Vibez"]
-		-- 	counter += 1
-
-		-- 	if counter >= 1000 then
-		-- 		break
-		-- 	end
-
-		-- 	task.wait()
-		-- end
-
-		-- return mod
-	end,
-
-	getGlobalsForKey = function(apiKey: string): Folder?
-		local vibezKey: string? = _privateKeys[apiKey]
-		return (vibezKey ~= nil) and ServerStorage:FindFirstChild(vibezKey) :: Folder or nil
-	end,
-
-	getGUIDFromKey = function(apiKey: string): string?
-		return _privateKeys[apiKey] :: string?
-	end,
-
 	new = Constructor,
 }, {
 	__call = function(t: { [any]: any }, apiKey: string, options: Types.vibezSettings?): Types.VibezKind?
