@@ -26,7 +26,6 @@ local HttpService = game:GetService("HttpService")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 local TestService = game:GetService("TestService")
 
@@ -897,7 +896,7 @@ end
 	@method _setupGlobals
 ]=]
 ---
-function api._setupGlobals(self: Types.VibezKind): ()
+function api._setupGlobals(_self: Types.VibezKind): ()
 	return nil
 	--[[
 	if
