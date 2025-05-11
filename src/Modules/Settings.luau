@@ -70,6 +70,31 @@ return {
 		MaxRank = 255, -- Maximum rank required for the interface.
 		maxUsersForSelection = 5, -- Max users to be selected via the interface. (At once)
 
+		-- Page's "MinRank" will inherit the minimum rank on the UI if less than the UI's
+		-- minimum rank.
+		Pages = {
+			Ranking = {
+				Enabled = true,
+				MinRank = 0,
+			},
+
+			Logs = {
+				Enabled = true,
+				MinRank = 0,
+			},
+
+			Notifications = {
+				Enabled = true,
+				MinRank = 0,
+			},
+
+			Profile = {
+				Enabled = true,
+				MinRank = 0,
+				disabledWidgets = { "settings_check_ignore_nil_tbl" },
+			},
+		},
+
 		Suggestions = {
 			searchPlayersOutsideServer = false, -- Determines whether our interface will allow players outside of the server to be searched.
 			outsideServerTagText = "External", -- The text shown when a player is searched outside of the server.

@@ -226,6 +226,14 @@ function _toggleUI(componentData: Definitions.componentData)
 		)
 	end
 
+	-- Setup profile tab button
+	table.insert(
+		Maid.Children,
+		Buttons.Profile.MouseButton1Click:Connect(function()
+			_openFrame(componentData, "Profile")
+		end)
+	)
+
 	-- Exit button
 	table.insert(
 		Maid.Children,
@@ -289,6 +297,11 @@ function _toggleUI(componentData: Definitions.componentData)
 	local visibleFrames = componentData.Table.Filter(Buttons.Holder:GetChildren(), function(button: GuiBase2d)
 		return button:IsA("ImageButton") and button.Visible == true
 	end)
+
+	-- Add profile button
+	if Buttons.Profile.Visible then
+		table.insert(visibleFrames, Buttons.Profile)
+	end
 
 	local foundFrameThatsVisible = visibleFrames[1]
 	if not foundFrameThatsVisible then
@@ -401,6 +414,11 @@ function onSetup(componentData: Definitions.componentData)
 	end
 
 	for _, ignoredTab: string in ipairs(componentData.Data.nonViewableTabs) do
+		if string.lower(ignoredTab) == "profile" then
+			Buttons.Profile.Visible = false
+			continue
+		end
+
 		for _, tab: GuiButton in ipairs(Buttons.Holder:GetChildren()) do
 			if tab.Name:lower():sub(1, #ignoredTab) ~= ignoredTab:lower() then
 				continue

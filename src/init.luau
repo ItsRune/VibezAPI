@@ -543,6 +543,19 @@ local function onServerInvoke(
 		end
 
 		return self._private.actionStorage.Logs
+	elseif Action == "ActivityRequest" then
+		local Target = Data[1] or Player
+
+		-- Permissions Check
+		if Target ~= Player then
+			return {}
+		end
+
+		local activityInfo = self._private.Ranker:getActivity(Target, true)
+		-- No data: {"message":"Data for the current week not found"}
+
+		print(activityInfo)
+		return activityInfo
 	else
 		-- Maybe actually log it somewhere... I have no clue where though.
 		self:_warn(
@@ -1938,6 +1951,8 @@ function api._buildAttributes(self: Types.VibezKind)
 		UI = {
 			Status = self.Settings.Interface.Enabled,
 			useBeta = self.Settings.Interface.useBetaUI,
+
+			Pages = self.Settings.Interface.Pages,
 
 			MinRank = self.Settings.Interface.MinRank,
 			MaxRank = self.Settings.Interface.MaxRank,

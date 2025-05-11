@@ -46,6 +46,7 @@ local Table = require(script.Modules.Table)
 local Tweens = require(script.Modules.TweenService)
 local TopbarPlus = require(script.Modules.TopbarPlus)
 local buttonClickBubble = require(script.Modules.ButtonClickBubble)
+local Graphing = require(script.Modules.Graphing)
 local Definitions = require(script.Definitions)
 
 --// Functions \\--
@@ -138,6 +139,7 @@ local function onAttributeChanged()
 			Tweens = Tweens,
 			Table = Table,
 			buttonClickBubble = buttonClickBubble,
+			Graphing = Graphing,
 
 			_warn = _warn,
 			_debug = _debug,

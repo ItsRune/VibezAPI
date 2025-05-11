@@ -1,15 +1,5 @@
 local VibezRanking = require(script.Parent.Parent.VibezRanking)
 
-export type RateLimit = {
-	isLimited: boolean,
-	_retryAfter: number,
-	_counter: number,
-	_maxCount: number,
-	_counterStartedAt: number,
-	_limiterKey: string,
-	Check: (self: RateLimit) -> (boolean, string?),
-}
-
 export type userBlacklistResponse = {
 	success: boolean,
 	message: string,
@@ -96,6 +86,9 @@ export type httpResponse = {
 	rawBody: string?,
 }
 
+type InterfacePages = "Profile" | "Ranking" | "Logs" | "Notifications"
+type InterfaceWidgets = "Activity" | "All"
+
 export type vibezSettings = {
 	Commands: {
 		Enabled: boolean,
@@ -167,6 +160,14 @@ export type vibezSettings = {
 		-- For Beta UI use only.
 		useBetaUI: boolean,
 		maxUsersForSelection: number,
+
+		Pages: {
+			[InterfacePages]: {
+				Enabled: boolean,
+				MinRank: number,
+				disabledWidgets: { InterfaceWidgets? },
+			},
+		},
 
 		Suggestions: {
 			searchPlayersOutsideServer: boolean,
@@ -317,7 +318,6 @@ export type vibezPrivate = {
 	newApiUrl: string,
 
 	clientScriptName: string,
-	rateLimiter: RateLimit,
 	Ranker: VibezRanking.VibezRankingKind,
 
 	externalConfigCheckDelay: number,
