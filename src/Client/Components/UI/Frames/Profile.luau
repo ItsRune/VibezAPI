@@ -22,15 +22,85 @@ local function _loadWidgets(Frame: any, componentData: Definitions.componentData
 
 	for i = 1, #allWidgets do
 		local widget = allWidgets[i]
+		local ignored = componentData.Table.Find(ignoredWidgets, function(name)
+			return string.sub(string.lower(widget.Name), 1, #name) == string.lower(name)
+		end)
+
+		if ignored then
+			widget.Visible = false
+			continue
+		end
+
+		widget.Visible = true
 		if not widget:IsA("Frame") or widget.Name == "Buffer" then
 			continue
 		end
 
 		if widget.Name == "Activity" then
-			-- local graph = componentData.Graphing.new(widget.Graph)
-			local activity = componentData.remoteFunction:InvokeServer("ActivityRequest")
+			local now = DateTime.now().UnixTimestamp
+			local activity = { --componentData.remoteFunction:InvokeServer("ActivityRequest")
+				detailedLogs = {
+					{
+						timestampLeftAt = now - (60 * 20),
+						secondsUserHasSpent = 10,
+						messagesUserHasSent = 20,
+					},
 
-			print(activity)
+					{
+						timestampLeftAt = now - (3600 * 20),
+						secondsUserHasSpent = 10,
+						messagesUserHasSent = 20,
+					},
+
+					{
+						timestampLeftAt = now - (3600 * 36),
+						secondsUserHasSpent = 10,
+						messagesUserHasSent = 100,
+					},
+				},
+				secondsUserHasSpent = 100,
+				messagesUserHasSent = 30,
+			}
+
+			-- Do computation to fix each point to a single day.
+			table.sort(activity.detailedLogs, function(a, b)
+				return a.timestampLeftAt < b.timestampLeftAt
+			end)
+
+			local secondsTracked = {}
+			local messagesSent = {}
+
+			for i = 1, #activity.detailedLogs do
+				local log = activity.detailedLogs[i]
+
+				-- Change to millis if that's what's being used.
+				local date = os.date("!*t", log.timestampLeftAt) :: { [any]: any }
+				local currentDay = date.wday
+
+				if secondsTracked[currentDay] ~= nil then
+					secondsTracked[currentDay] += log.secondsUserHasSpent
+					messagesSent[currentDay] += log.messagesUserHasSent
+					continue
+				end
+
+				secondsTracked[currentDay] = log.secondsUserHasSpent
+				messagesSent[currentDay] = log.messagesUserHasSent
+			end
+
+			for i = 1, 7 do
+				if secondsTracked[i] == nil then
+					secondsTracked[i] = 0
+					messagesSent[i] = 0
+				end
+			end
+
+			-- Render graph
+			local Content = componentData.Graphing.new(widget.Body, {
+				Seconds = secondsTracked,
+				Messages = messagesSent,
+			})
+
+			task.delay(0.3, Content.Render, Content)
 		elseif widget.Name == "User" then
 			local Player = Players.LocalPlayer
 			widget.Body.DisplayName.Text = `Nickname: {Player.DisplayName}`
@@ -68,7 +138,6 @@ local function onSetup(Frame: Frame, componentData: Definitions.componentData)
 	local profileFrameCustomization = componentData.Data.Pages.Profile
 
 	onDestroy(Frame, componentData)
-
 	_loadWidgets(Frame, componentData, profileFrameCustomization.disabledWidgets)
 end
 
