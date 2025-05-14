@@ -12,15 +12,28 @@ type Public = {
 	Frame: any,
 	_points: { [string]: { number } },
 	_connections: { RBXScriptConnection },
+	_components: any,
 }
 type Private = typeof(Class)
 export type GraphKind = typeof(setmetatable({} :: Public, {} :: Private))
 
-function Graph.new(Frame: any, Activity: { [string]: {} }): GraphKind
+local function generateUniqueColorForName(name: string): Color3
+	local split = name:split("")
+	local allBytes = Table.Reduce(split, function(acc: number, val: string)
+		return acc + tostring(val):byte()
+	end, 0)
+
+	local rand = Random.new(allBytes)
+	local hue, sat = rand:NextNumber(), rand:NextNumber()
+	return Color3.fromHSV(hue, sat, 1)
+end
+
+function Graph.new(componentData: any, Frame: any, Activity: { [string]: {} }): GraphKind
 	local self = setmetatable({}, Class)
 
 	self.Frame = Frame
 	self.StartAtZero = true
+	self._components = componentData
 	self._points = Activity
 	self._connections = {}
 
@@ -55,13 +68,26 @@ function Class.Render(self: GraphKind)
 
 	-- FIXME: Mixed points keys with both messages and seconds, should just take 1 and plot 2 points on the bar.
 	-- self._points: { [string]: { number } }
+	local iter = 0
 	for Key, Points in self._points do
+		local keyColor = generateUniqueColorForName(Key)
+		iter += 1
+
 		for i = 1, #Points do
 			local Column = self.Frame.Columns[i]
 			local Value = Points[i]
 			local YScale = Range == 0 and 0.9 or 0.9 - (((Value - Min) / Range) * 0.9)
-			print(YScale, i)
-			TweenService(Column.Bar, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			local Bar = Column.Bar
+
+			if iter ~= 1 then
+				Bar = Column.Bar:Clone()
+				Bar.ZIndex = iter * -1
+			end
+
+			Bar.Point.BackgroundColor3 = keyColor
+			self._components.MouseHover:Add(Bar.Point, `{Value} {string.lower(Key)}`)
+
+			TweenService(Bar, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 				Size = UDim2.fromScale(0.2, YScale + 0.05),
 			}):Play()
 			task.wait(0.1)
@@ -75,7 +101,7 @@ function Class.Destroy(self: GraphKind): ()
 	end
 
 	local children = self.Frame.Columns:GetChildren()
-	for i = 1, children do
+	for _ = 1, children do
 		children.Bar.Size = UDim2.fromScale(0.2, 0.05)
 	end
 

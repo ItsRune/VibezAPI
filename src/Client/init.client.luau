@@ -42,6 +42,7 @@ local System = {
 }
 
 --// Modules \\--
+local MouseHover = require(script.Components.UI.Modules.MouseHover)
 local Table = require(script.Modules.Table)
 local Tweens = require(script.Modules.TweenService)
 local TopbarPlus = require(script.Modules.TopbarPlus)
@@ -138,8 +139,11 @@ local function onAttributeChanged()
 			Disconnect = Disconnect,
 			Tweens = Tweens,
 			Table = Table,
-			buttonClickBubble = buttonClickBubble,
-			Graphing = Graphing,
+
+			-- Prevent loading modules for a component that doesn't need it.
+			buttonClickBubble = (key == "UI") and buttonClickBubble or nil,
+			Graphing = (key == "UI") and Graphing or nil,
+			MouseHover = (key == "UI") and MouseHover.new() or nil,
 
 			_warn = _warn,
 			_debug = _debug,

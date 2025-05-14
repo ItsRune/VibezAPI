@@ -3,6 +3,7 @@ local _TopbarPlus = require(script.Parent.Modules.TopbarPlus)
 local _TweenModule = require(script.Parent.Modules.TweenService)
 local _buttonBubbleClick = require(script.Parent.Modules.ButtonClickBubble)
 local _Graphing = require(script.Parent.Modules.Graphing)
+local _MouseHover = require(script.Parent.Components.UI.Modules.MouseHover)
 
 type HexColors = {
 	Actions: string,
@@ -31,6 +32,7 @@ export type componentData = {
 	buttonClickBubble: typeof(_buttonBubbleClick),
 	Table: typeof(_Table),
 	Graphing: typeof(_Graphing),
+	MouseHover: _MouseHover.MouseHoverKind,
 
 	_warn: (starter: string, ...any) -> (),
 	_debug: (starter: string, ...any) -> (),

@@ -12,7 +12,7 @@ local Maid = {}
 type WidgetType = "Activity" | "User" | "Group"
 
 --// Functions \\--
-local function onDestroy(Frame: Frame, componentData: Definitions.componentData)
+local function onDestroy(_frame: Frame, componentData: Definitions.componentData)
 	componentData.Disconnect(Maid)
 	table.clear(Maid)
 end
@@ -37,30 +37,7 @@ local function _loadWidgets(Frame: any, componentData: Definitions.componentData
 		end
 
 		if widget.Name == "Activity" then
-			local now = DateTime.now().UnixTimestamp
-			local activity = { --componentData.remoteFunction:InvokeServer("ActivityRequest")
-				detailedLogs = {
-					{
-						timestampLeftAt = now - (60 * 20),
-						secondsUserHasSpent = 10,
-						messagesUserHasSent = 20,
-					},
-
-					{
-						timestampLeftAt = now - (3600 * 20),
-						secondsUserHasSpent = 10,
-						messagesUserHasSent = 20,
-					},
-
-					{
-						timestampLeftAt = now - (3600 * 36),
-						secondsUserHasSpent = 10,
-						messagesUserHasSent = 100,
-					},
-				},
-				secondsUserHasSpent = 100,
-				messagesUserHasSent = 30,
-			}
+			local activity = componentData.remoteFunction:InvokeServer("ActivityRequest")
 
 			-- Do computation to fix each point to a single day.
 			table.sort(activity.detailedLogs, function(a, b)
@@ -70,8 +47,8 @@ local function _loadWidgets(Frame: any, componentData: Definitions.componentData
 			local secondsTracked = {}
 			local messagesSent = {}
 
-			for i = 1, #activity.detailedLogs do
-				local log = activity.detailedLogs[i]
+			for x = 1, #activity.detailedLogs do
+				local log = activity.detailedLogs[x]
 
 				-- Change to millis if that's what's being used.
 				local date = os.date("!*t", log.timestampLeftAt) :: { [any]: any }
@@ -87,15 +64,15 @@ local function _loadWidgets(Frame: any, componentData: Definitions.componentData
 				messagesSent[currentDay] = log.messagesUserHasSent
 			end
 
-			for i = 1, 7 do
-				if secondsTracked[i] == nil then
-					secondsTracked[i] = 0
-					messagesSent[i] = 0
+			for x = 1, 7 do
+				if secondsTracked[x] == nil then
+					secondsTracked[x] = 0
+					messagesSent[x] = 0
 				end
 			end
 
 			-- Render graph
-			local Content = componentData.Graphing.new(widget.Body, {
+			local Content = componentData.Graphing.new(componentData, widget.Body, {
 				Seconds = secondsTracked,
 				Messages = messagesSent,
 			})
