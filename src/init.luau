@@ -1757,7 +1757,12 @@ end
 ]=]
 ---
 function api._debug(self: Types.VibezKind, starter: string, ...: string)
-	if not self.Settings or not self.Settings.Debug or not self.Settings.Debug.logMessages then
+	if
+		not self.Settings
+		or not self.Settings.Debug
+		or not self.Settings.Debug.logMessages
+		or (self.Settings.Debug.specific ~= "" and not starter:match(self.Settings.Debug.specific))
+	then
 		return
 	end
 
@@ -1987,6 +1992,7 @@ function api._buildAttributes(self: Types.VibezKind)
 		Misc = {
 			ignoreWarnings = self.Settings.Misc.ignoreWarnings,
 			showDebugMessages = self.Settings.Debug.logClientMessages,
+			specificDebugMessages = self.Settings.Debug.specific,
 		},
 	}
 

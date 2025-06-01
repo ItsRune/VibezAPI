@@ -234,6 +234,7 @@ export type vibezSettings = {
 		logMessages: boolean,
 		silenceSettingsCheck: boolean,
 		logClientMessages: boolean,
+		specific: string,
 	},
 }
 
@@ -601,7 +602,5 @@ export type embedCreator = Embed & {
 
 export type vibezConstructor = (apiKey: string, extraOptions: vibezSettings?) -> VibezKind?
 export type vibezConstructorCall = (t: { [any]: any }, apiKey: string, extraOptions: vibezSettings?) -> VibezKind
-
-export type widgetTypes = "" -- Add more if we decide to add more. (Social media platforms)
 
 return nil
